@@ -28,6 +28,7 @@ apps:
     plugs:
       - home
       - network
+      - opengl
   vsftpd:
     command: usr/sbin/vsftpd $SNAP/etc/vsftpd.conf
     daemon: simple
@@ -72,6 +73,7 @@ parts:
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage-packages:
       - inotify-tools
+      - nvidia-cudnn
 
   ftp:
     plugin: nil

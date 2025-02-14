@@ -286,6 +286,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: sudo snap install --dangerous ./snap-*/pumaguard*snap

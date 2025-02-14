@@ -51,9 +51,14 @@ parts:
     build-packages:
       - git
       - python3-pip
-    override-build: |
+    override-pull: |
       VERSION=$(git describe --tags | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//')
-      craftctl set version="v${VERSION}"
+      if [[ -n ${VERSION} ]]; then
+        craftctl set version="v${VERSION}"
+      else
+        craftctl set version="undefined"
+      fi
+    override-build: |
       pip install poetry
       poetry version "${VERSION}"
       craftctl default

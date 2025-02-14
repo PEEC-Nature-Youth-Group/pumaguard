@@ -52,6 +52,7 @@ parts:
       - git
       - python3-pip
     override-pull: |
+      craftctl default
       VERSION=$(git describe --tags | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//')
       if [[ -n ${VERSION} ]]; then
         craftctl set version="v${VERSION}"

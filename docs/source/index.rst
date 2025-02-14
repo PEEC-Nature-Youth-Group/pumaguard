@@ -77,7 +77,7 @@ classification tasks. The training process includes data augmentation
 techniques to improve model generalization.
 
 All data used here can be found in the `data folder
-<https://github.com/PEEC-Nature-Youth-Group/pumaguard/tree/main/data>`__.
+<https://github.com/PEEC-Nature-Youth-Group/training-data>`__.
 
 All models (:index:`weights`) are published in the `models repository
 <https://github.com/PEEC-Nature-Youth-Group/pumaguard-models>`__.

@@ -189,6 +189,9 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update models
+        run: git submodule update --init --depth 1 models
       - name: Get snap version
         id: get_snap_version
         run: |

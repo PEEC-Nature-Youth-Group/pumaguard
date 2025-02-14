@@ -191,7 +191,9 @@ jobs:
           fetch-tags: true
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update models
-        run: git submodule update --init --depth 1 models
+        run: |
+          git submodule set-url models https://github.com/PEEC-Nature-Youth-Group/pumaguard-models.git
+          git submodule update --init --depth 1 models
       - name: Get snap version
         id: get_snap_version
         run: |

@@ -60,9 +60,9 @@ parts:
       else
         craftctl set version="undefined"
       fi
-    override-build: |
       pip install poetry
       poetry version "${VERSION}"
+    override-build: |
       craftctl default
       cp --recursive models ${CRAFT_PART_INSTALL}/models
       cp --recursive settings ${CRAFT_PART_INSTALL}/settings

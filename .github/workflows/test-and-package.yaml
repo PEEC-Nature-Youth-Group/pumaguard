@@ -155,40 +155,43 @@ jobs:
     steps:
       - name: Check container free disk space
         run: df --human-readable /
-      - name: Remove unecessary packages
-        run: |
-          sudo apt remove --auto-remove --purge \
-            azure-cli \
-            \*dotnet\* \
-            google-chrome-stable \
-            google-cloud-cli \
-            \*jdk\* \
-            microsoft-edge-stable \
-            \*mono\* \
-            \*mysql\* \
-            powershell \
-            r-base\*
-      - name: Remove unecessary snaps
-        run: |
-          snap list \
-            | awk '{print $1}' \
-            | grep -E '(gnome|firefox|gtk)' \
-            | xargs --verbose sudo snap remove --purge
-      - name: Check container free disk space again
-        run: df --human-readable /
       - name: Get largest installed packages
         run: |
-          #!/bin/bash
-          set -e -u -x
-          apt list --installed \
-            | grep -v Listing \
-            | awk -F / '{print $1}' \
-            | xargs apt-cache --no-all-versions show \
-            | awk 'BEGIN{ size = 0; package = "" } /^Installed-Size:/{size = $2 } /^Package:/{package = $2} //{ if (size > 0 && package != "") { print size, package; size = 0; package = "" }}' \
-            | sort --reverse --numeric-sort \
-            | head --lines 30
+          dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
+            sort --human-numeric-sort --key 2 --reverse | \
+            head --lines 20
+      - name: Remove unnecessary packages
+        run: |
+          sudo apt-get remove --auto-remove --purge \
+            azure-cli \
+            microsoft-edge-stable \
+            google-cloud-cli \
+            google-chrome-stable \
+            \*temurin\* \
+            \*llvm\* \
+            powershell \
+            \*dotnet\* \
+            firefox \
+            \*jdk\* \
+            \*g++\* \
+            \*mysql\*
+      - name: Get largest installed packages
+        run: |
+          dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
+            sort --human-numeric-sort --key 2 --reverse | \
+            head --lines 20
       - name: Get installed snaps
         run: snap list
+      - name: Check disk allocation
+        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+      - name: Check disk allocation (/usr)
+        run: du --human-readable --max-depth 1 /usr 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+      - name: Check disk allocation (/usr/local)
+        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+      - name: Check disk allocation (/opt)
+        run: du --human-readable --max-depth 1 /opt 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+      - name: Check container free disk space
+        run: df --human-readable /
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -198,6 +201,8 @@ jobs:
         run: |
           git submodule set-url models https://github.com/PEEC-Nature-Youth-Group/pumaguard-models.git
           git submodule update --init --depth 1 models
+      - name: Check container free disk space
+        run: df --human-readable /
       - name: Get snap version
         id: get_snap_version
         run: |

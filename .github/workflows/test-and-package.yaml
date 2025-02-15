@@ -19,6 +19,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -28,6 +30,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry
           poetry install
+      - name: Get version
+        run: |
       - name: Lint Python Notebooks
         run: make lint-notebooks
 
@@ -301,6 +305,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: sudo snap install --dangerous ./snap-*/pumaguard*snap

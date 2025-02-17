@@ -54,12 +54,11 @@ parts:
     override-pull: |
       set -e -u -x
       craftctl default
-      VERSION=$(git describe --tags | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//')
-      if [[ -v VERSION ]] && [[ -n ${VERSION} ]]; then
-        craftctl set version="v${VERSION}"
-      else
-        craftctl set version="undefined"
+      VERSION=$(git describe --tags 2> /dev/null | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//') || VERSION='undefined'
+      if [[ ${VERSION} == undefined ]] && [[ -f version ]]; then
+        VERSION=$(cat version)
       fi
+      craftctl set version="v${VERSION}"
       pip install poetry
       poetry version "${VERSION}"
     override-build: |

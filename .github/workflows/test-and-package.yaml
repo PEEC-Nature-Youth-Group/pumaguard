@@ -14,6 +14,7 @@ env:
   PYTHON_VERSION: "3.10" # Needs to work with Tensorflow
 
 jobs:
+
   lint-notebooks:
     runs-on: ubuntu-24.04
 
@@ -174,6 +175,10 @@ jobs:
           dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
             sort --human-numeric-sort --key 2 --reverse | \
             head --lines 20
+      - name: Check disk allocation
+        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort
+      - name: Check disk allocation
+        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort
       - name: Remove unnecessary packages
         run: |
           sudo apt-get remove --auto-remove --purge \
@@ -234,7 +239,15 @@ jobs:
 
   release:
     runs-on: ubuntu-24.04
-    needs: [build-python, build-snap, lint-notebooks, functional-poetry, functional-snap, lint-ansible]
+    needs:
+      [
+        build-python,
+        build-snap,
+        lint-notebooks,
+        functional-poetry,
+        functional-snap,
+        lint-ansible,
+      ]
     permissions: write-all
 
     steps:

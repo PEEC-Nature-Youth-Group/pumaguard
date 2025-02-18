@@ -76,7 +76,7 @@ class Preset():
         self.base_output_directory = settings.get(
             'base-output-directory', 'undefined')
         self.verification_path = settings.get(
-            'verification-path', 'verification')
+            'verification-path', 'stable/stable_test')
         lions = settings.get('lion-directories', ['undefined'])
         if not isinstance(lions, list) or \
                 not all(isinstance(p, str) for p in lions):

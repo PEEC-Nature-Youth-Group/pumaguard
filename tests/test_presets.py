@@ -47,7 +47,7 @@ epochs: 2400
 image-dimensions: [128, 128]
 with-augmentation: True
 batch-size: 2
-model-function: pretrained
+model-function: xception
 model-version: light-test
 alpha: 1e-3
 base-data-directory: /path/to/data
@@ -75,7 +75,7 @@ no-lion-directories:
         self.assertTrue(hasattr(self.base_preset, 'with_augmentation'))
         self.assertEqual(self.base_preset.batch_size, 2)
         self.assertEqual(self.base_preset.alpha, 1e-3)
-        self.assertEqual(self.base_preset.model_function_name, 'pretrained')
+        self.assertEqual(self.base_preset.model_function_name, 'xception')
 
     def test_tf_compat(self):
         """

@@ -116,7 +116,6 @@ class Preset():
             'base-data-directory': os.path.relpath(
                 self.base_data_directory,
                 os.path.dirname(__file__)),
-            'verification-path': self.verification_path,
             'batch-size': self.batch_size,
             'color-mode': self.color_mode,
             'epochs': self.epochs,
@@ -130,6 +129,7 @@ class Preset():
                 self.base_data_directory,
                 self.no_lion_directories),
             'notebook': self.notebook_number,
+            'verification-path': self.verification_path,
             'with-augmentation': self.with_augmentation,
         }.items()
 

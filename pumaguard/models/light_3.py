@@ -18,15 +18,15 @@ class LightModel3(Model):
     Ultra-light CNN model for binary image classification (<10k params).
     """
 
-    @property
-    def model_name(self) -> str:
+    @staticmethod
+    def model_name() -> str:
         """
         Get the model name.
         """
         return 'light-3-model'
 
-    @property
-    def model_description(self) -> str:
+    @staticmethod
+    def model_description() -> str:
         """
         Get a description of the model.
         """

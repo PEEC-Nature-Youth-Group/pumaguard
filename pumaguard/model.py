@@ -73,16 +73,16 @@ class Model(ABC):
         The uncompiled Keras model.
         """
 
-    @property
+    @staticmethod
     @abstractmethod
-    def model_name(self) -> str:
+    def model_name() -> str:
         """
         Get the model name.
         """
 
-    @property
+    @staticmethod
     @abstractmethod
-    def model_description(self) -> str:
+    def model_description() -> str:
         """
         Get a description of the model.
         """

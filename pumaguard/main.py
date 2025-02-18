@@ -84,7 +84,7 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
     if args.list_models:
         logger.info('available models:')
         for name, model in __MODELS__.items():
-            logger.info('  %s: %s', name, model.model_description)
+            logger.info('  %s: %s', name, model.model_description())
         sys.exit(0)
 
     model_path = args.model_path if hasattr(args, 'model_path') \

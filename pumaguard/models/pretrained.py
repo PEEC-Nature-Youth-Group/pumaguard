@@ -19,15 +19,15 @@ class PretrainedModel(Model):
     The pre-trained model (Xception).
     """
 
-    @property
-    def model_name(self) -> str:
+    @staticmethod
+    def model_name() -> str:
         """
         Get the model name.
         """
         return 'pretrained'
 
-    @property
-    def model_description(self) -> str:
+    @staticmethod
+    def model_description() -> str:
         """
         Get a description of the model.
         """

@@ -19,15 +19,15 @@ class MobileNetV3Model(Model):
     The MobileNetV3 model (MobileNetV3Small).
     """
 
-    @property
-    def model_name(self) -> str:
+    @staticmethod
+    def model_name() -> str:
         """
         Get the model name.
         """
         return 'mobilenetv3'
 
-    @property
-    def model_description(self) -> str:
+    @staticmethod
+    def model_description() -> str:
         """
         Get a description of the model.
         """

@@ -18,15 +18,15 @@ class Conv2DModel(Model):
     A simple model using a single Conv2D layer.
     """
 
-    @property
-    def model_name(self) -> str:
+    @staticmethod
+    def model_name() -> str:
         """
         Get the model name.
         """
         return "conv2d"
 
-    @property
-    def model_description(self) -> str:
+    @staticmethod
+    def model_description() -> str:
         """
         Get a description of the model.
         """

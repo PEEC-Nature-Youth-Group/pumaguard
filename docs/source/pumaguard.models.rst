@@ -28,6 +28,14 @@ pumaguard.models.light\_3 module
    :undoc-members:
    :show-inheritance:
 
+pumaguard.models.mobilenetv3 module
+-----------------------------------
+
+.. automodule:: pumaguard.models.mobilenetv3
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pumaguard.models.pretrained module
 ----------------------------------
 

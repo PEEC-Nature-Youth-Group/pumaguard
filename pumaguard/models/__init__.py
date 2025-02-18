@@ -3,19 +3,19 @@ The models.
 """
 
 from pumaguard.models import (
-    conv2d,
-    light,
+    light_1,
     light_2,
     light_3,
+    light_4,
     mobilenetv3,
-    pretrained,
+    xception,
 )
 
 __MODELS__ = {
-    'pretrained': pretrained.PretrainedModel,
-    'light-model': light.LightModel,
+    'xception': xception.XceptionModel,
+    'light-model': light_1.LightModel1,
     'light-2-model': light_2.LightModel2,
     'light-3-model': light_3.LightModel3,
     'mobilenetv3': mobilenetv3.MobileNetV3Model,
-    'conv2d-model': conv2d.Conv2DModel,
+    'conv2d-model': light_4.LightModel4,
 }

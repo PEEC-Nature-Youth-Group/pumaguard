@@ -4,18 +4,10 @@ pumaguard.models package
 Submodules
 ----------
 
-pumaguard.models.conv2d module
-------------------------------
+pumaguard.models.light\_1 module
+--------------------------------
 
-.. automodule:: pumaguard.models.conv2d
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pumaguard.models.light module
------------------------------
-
-.. automodule:: pumaguard.models.light
+.. automodule:: pumaguard.models.light_1
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,6 +28,14 @@ pumaguard.models.light\_3 module
    :undoc-members:
    :show-inheritance:
 
+pumaguard.models.light\_4 module
+--------------------------------
+
+.. automodule:: pumaguard.models.light_4
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pumaguard.models.mobilenetv3 module
 -----------------------------------
 
@@ -44,10 +44,10 @@ pumaguard.models.mobilenetv3 module
    :undoc-members:
    :show-inheritance:
 
-pumaguard.models.pretrained module
-----------------------------------
+pumaguard.models.xception module
+--------------------------------
 
-.. automodule:: pumaguard.models.pretrained
+.. automodule:: pumaguard.models.xception
    :members:
    :undoc-members:
    :show-inheritance:

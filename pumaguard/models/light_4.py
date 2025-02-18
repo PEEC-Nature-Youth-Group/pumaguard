@@ -1,5 +1,5 @@
 """
-The Conv2D model.
+Yet another light model.
 """
 
 from typing import (
@@ -13,7 +13,7 @@ from pumaguard.model import (
 )
 
 
-class Conv2DModel(Model):
+class LightModel4(Model):
     """
     A simple model using a single Conv2D layer.
     """

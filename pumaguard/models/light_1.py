@@ -13,7 +13,7 @@ from pumaguard.model import (
 )
 
 
-class LightModel(Model):
+class LightModel1(Model):
     """
     A light model.
     """

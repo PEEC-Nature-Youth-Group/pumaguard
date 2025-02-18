@@ -14,7 +14,7 @@ from pumaguard.model import (
 )
 
 
-class PretrainedModel(Model):
+class XceptionModel(Model):
     """
     The pre-trained model (Xception).
     """
@@ -24,7 +24,7 @@ class PretrainedModel(Model):
         """
         Get the model name.
         """
-        return 'pretrained'
+        return 'xception'
 
     @staticmethod
     def model_description() -> str:

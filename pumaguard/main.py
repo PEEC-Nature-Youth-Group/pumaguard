@@ -116,6 +116,13 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger('PumaGuard')
 
+    file_handler = logging.FileHandler('pumaguard.log')
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
     global_args_parser = create_global_parser()
     parser = argparse.ArgumentParser(
         description='''The goal of this project is to accurately classify

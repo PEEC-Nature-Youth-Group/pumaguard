@@ -4,6 +4,14 @@ pumaguard.models package
 Submodules
 ----------
 
+pumaguard.models.conv2d module
+------------------------------
+
+.. automodule:: pumaguard.models.conv2d
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 pumaguard.models.light module
 -----------------------------
 

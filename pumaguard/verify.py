@@ -39,7 +39,7 @@ def configure_subparser(parser: argparse.ArgumentParser):
     parser.add_argument(
         '--verification-path',
         help='Path to verification data set (default = %(default)s)',
-        default='verification'
+        default='stable/stable_test',
     )
     parser.add_argument(
         'image',

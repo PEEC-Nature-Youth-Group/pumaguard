@@ -134,6 +134,10 @@ release:
 configure-pi-zero:
 	ansible-playbook --inventory pi-zero, --ask-become-pass scripts/configure-pi.yaml
 
+.PHONY: configure-pi-5
+configure-pi-5:
+	ansible-playbook --inventory pi-5, --ask-become-pass scripts/configure-pi.yaml
+
 .PHONY: verify
 verify:
 	TF_VERSION=$(shell grep 'looking for model' verify.output | sed --regexp-extended 's/^.*(tf2[.][0-9]+)_.*$$/\1/')

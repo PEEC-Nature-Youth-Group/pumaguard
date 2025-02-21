@@ -110,6 +110,7 @@
 
     - name: Install poetry
       ansible.builtin.pip:
+        break_system_packages: true
         name: poetry
 
     - name: Add bash completions for poetry

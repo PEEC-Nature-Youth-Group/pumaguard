@@ -56,10 +56,10 @@ def verify_model(presets: Preset, model: keras.Model):
     """
     logger.info('verifying model')
     lion_directory = os.path.join(
-        presets.base_data_directory, presets.verification_path, 'Lion')
+        presets.base_data_directory, presets.verification_path, 'lion')
     lions = os.listdir(lion_directory)
     no_lion_directory = os.path.join(
-        presets.base_data_directory, presets.verification_path, 'No Lion')
+        presets.base_data_directory, presets.verification_path, 'no-lion')
     no_lions = os.listdir(no_lion_directory)
     confusion = {
         'TP': 0.0, 'TN': 0.0, 'FP': 0.0, 'FN': 0.0,

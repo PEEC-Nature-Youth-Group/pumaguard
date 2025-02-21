@@ -65,9 +65,9 @@ snap:
 	snapcraft
 
 FUNCTIONAL_FILES = \
-    "data/stable/angle 1/Lion/SYFW2061.JPG" \
-    "data/stable/angle 2/Lion/SYFW0270.JPG" \
-    "data/stable/angle 2/Lion/SYFW0270_bright.JPG"
+    "data/stable/angle 1/lion/SYFW2061.JPG" \
+    "data/stable/angle 2/lion/SYFW0270.JPG" \
+    "data/stable/angle 2/lion/SYFW0270_bright.JPG"
 
 .PHONY: run-functional
 run-functional:
@@ -146,7 +146,7 @@ verify:
 
 .PHONY: train
 train:
-	pumaguard train --epochs 1 --model-output . --settings models/model_settings_9_light-3_512_512.yaml --data-path data --lions data/stable/angle\ 1/Lion --no-lions data/stable/angle\ 1/No\ lion/ --no-load-previous-session
+	pumaguard train --epochs 1 --model-output . --settings models/model_settings_9_light-3_512_512.yaml --data-path data --lions data/stable/angle\ 1/lion --no-lions data/stable/angle\ 1/no-lion/ --no-load-previous-session
 
 .PHONY: pre-commit
 pre-commit: lint docs

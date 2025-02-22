@@ -179,6 +179,8 @@ def main():
 
     configure_presets(args, presets)
 
+    logger.debug('presets: %s', str(presets))
+
     if args.command == 'train':
         train.main(args, presets)
     elif args.command == 'server':

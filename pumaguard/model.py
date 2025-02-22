@@ -31,7 +31,7 @@ class Model(ABC):
     The base class for Models.
     """
 
-    _distribution_strategy = None
+    _distribution_strategy: tf.distribute.Strategy = None
     _initialized = False
     _instance: Any = None
     _model = None

@@ -69,7 +69,7 @@ no-lion-directories:
         self.assertEqual(self.base_preset.model_version, 'light-test')
         self.assertEqual(self.base_preset.base_data_directory, '/path/to/data')
         self.assertEqual(self.base_preset.verification_path,
-                      '/path/to/verification')
+                         '/path/to/verification')
         self.assertEqual(
             self.base_preset.base_output_directory, '/path/to/output')
         self.assertIn('/path/to/data/lion', self.base_preset.lion_directories)
@@ -79,6 +79,8 @@ no-lion-directories:
         self.assertEqual(self.base_preset.batch_size, 2)
         self.assertEqual(self.base_preset.alpha, 1e-3)
         self.assertEqual(self.base_preset.model_function_name, 'xception')
+        self.assertEqual(self.base_preset.validation_lion_directories, [])
+        self.assertEqual(self.base_preset.validation_no_lion_directories, [])
 
     def test_tf_compat(self):
         """

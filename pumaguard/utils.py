@@ -52,12 +52,15 @@ def copy_images(work_directory, lion_images, no_lion_images):
     print('Copied all images')
 
 
-def organize_data(presets: Preset, work_directory: str):
+def organize_data(presets: Preset, work_directory: str,
+                  validation_directory: str):
     """
     Organizes the data and splits it into training and validation datasets.
     """
-    logger.debug('organizing training data, work directory is %s',
-                 work_directory)
+    logger.debug('organizing training data, work directory is %s, '
+                 'validation directory is %s',
+                 work_directory, validation_directory)
+
     logger.debug('lion images in    %s', presets.lion_directories)
     logger.debug('no-lion images in %s', presets.no_lion_directories)
     lion_images = []
@@ -79,6 +82,33 @@ def organize_data(presets: Preset, work_directory: str):
                 lion_images=lion_images,
                 no_lion_images=no_lion_images)
 
+    if len(presets.validation_lion_directories) == 0 and \
+            len(presets.validation_no_lion_directories) == 0:
+        return
+
+    logger.debug('validation lion images in    %s',
+                 presets.validation_lion_directories)
+    logger.debug('validation no-lion images in %s',
+                 presets.validation_no_lion_directories)
+    lion_images = []
+    for lion in presets.validation_lion_directories:
+        lion_images += glob.glob(os.path.join(lion, '*JPG'))
+    no_lion_images = []
+    for no_lion in presets.validation_no_lion_directories:
+        no_lion_images += glob.glob(os.path.join(no_lion, '*JPG'))
+
+    print(f'Found {len(lion_images)} images tagged as `lion`')
+    print(f'Found {len(no_lion_images)} images tagged as `no-lion`')
+    print(f'In total {len(lion_images) + len(no_lion_images)} images')
+
+    shutil.rmtree(validation_directory, ignore_errors=True)
+    os.makedirs(f'{validation_directory}/lion')
+    os.makedirs(f'{validation_directory}/no_lion')
+
+    copy_images(work_directory=validation_directory,
+                lion_images=lion_images,
+                no_lion_images=no_lion_images)
+
 
 def image_augmentation(image, with_augmentation: bool, augmentation_layers):
     """
@@ -90,7 +120,9 @@ def image_augmentation(image, with_augmentation: bool, augmentation_layers):
     return image
 
 
-def create_datasets(presets: Preset, work_directory: str, color_mode: str):
+def create_datasets(presets: Preset, training_directory: str,
+                    validation_directory: str,
+                    color_mode: str):
     """
     Create the training and validation datasets.
     """
@@ -105,13 +137,16 @@ def create_datasets(presets: Preset, work_directory: str, color_mode: str):
         # keras.layers.Rescaling(1./255),
     ]
 
+    with_validation_split = len(presets.validation_lion_directories) == 0 and \
+        len(presets.validation_no_lion_directories) == 0
+
     # Create datasets(training, validation)
-    training_dataset, validation_dataset = \
+    datasets = \
         keras.preprocessing.image_dataset_from_directory(
-            work_directory,
+            training_directory,
             batch_size=presets.batch_size,
-            validation_split=0.2,
-            subset='both',
+            validation_split=(0.2 if with_validation_split else None),
+            subset=('both' if with_validation_split else None),
             # Seed is always the same in order to ensure that we can reproduce
             # the same training session
             seed=123,
@@ -119,6 +154,21 @@ def create_datasets(presets: Preset, work_directory: str, color_mode: str):
             image_size=presets.image_dimensions,
             color_mode=color_mode,
         )
+
+    if with_validation_split:
+        training_dataset = datasets[0]
+        validation_dataset = datasets[1]
+    else:
+        training_dataset = datasets
+        validation_dataset = \
+            keras.preprocessing.image_dataset_from_directory(
+                validation_directory,
+                batch_size=presets.batch_size,
+                seed=123,
+                shuffle=True,
+                image_size=presets.image_dimensions,
+                color_mode=color_mode,
+            )
 
     training_dataset = training_dataset.map(
         lambda img, label: (image_augmentation(

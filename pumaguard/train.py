@@ -122,14 +122,24 @@ def configure_subparser(parser: argparse.ArgumentParser):
             default=os.path.join(os.path.dirname(__file__), '../data')),
     )
     parser.add_argument(
-        '--lions',
+        '--lion',
         help='Directory with lion images',
         nargs='+',
     )
     parser.add_argument(
-        '--no-lions',
+        '--no-lion',
         help='Directory with images not showing lions',
         nargs='+',
+    )
+    parser.add_argument(
+        '--validation-lion',
+        help=('Directory with lion images for validation '
+              '(this disables the automatic splitting of training data)'),
+    )
+    parser.add_argument(
+        '--validation-no-lion',
+        help=('Directory with images not showing lions for validation '
+              '(this disables the automatic splitting of training data)'),
     )
     parser.add_argument(
         '--epochs',
@@ -191,22 +201,40 @@ def main(options: argparse.Namespace, presets: Preset):
         presets.lion_directories = []
         presets.no_lion_directories = []
 
-    lion_directories = options.lions if options.lions else []
+    lion_directories = options.lion if options.lion else []
     if len(lion_directories) > 0:
         presets.lion_directories = [
             os.path.relpath(path, presets.base_data_directory)
             for path in lion_directories
         ]
 
-    no_lion_directories = options.no_lions if options.no_lions else []
+    no_lion_directories = options.no_lion if options.no_lion else []
     if len(no_lion_directories) > 0:
         presets.no_lion_directories = [
             os.path.relpath(path, presets.base_data_directory)
             for path in no_lion_directories
         ]
 
-    logger.debug('getting lion images from    %s', presets.lion_directories)
-    logger.debug('getting no-lion images from %s', presets.no_lion_directories)
+    validation_lion_directories = options.validation_lion \
+        if options.validation_lion else []
+    if len(validation_lion_directories) > 0:
+        presets.validation_lion_directories = [
+            os.path.relpath(path, presets.base_data_directory)
+            for path in validation_lion_directories
+        ]
+
+    logger.debug('getting lion images from    %s',
+                 presets.lion_directories)
+    logger.debug('getting no-lion images from %s',
+                 presets.no_lion_directories)
+
+    if len(presets.validation_lion_directories) > 0 or \
+            len(presets.validation_no_lion_directories) > 0:
+        logger.info('using validation data from directories')
+        logger.debug('getting validation lion images from    %s',
+                     presets.validation_lion_directories)
+        logger.debug('getting validation no-lion images from %s',
+                     presets.validation_no_lion_directories)
 
     if options.epochs:
         presets.epochs = options.epochs
@@ -245,13 +273,21 @@ def main(options: argparse.Namespace, presets: Preset):
         fd.write(yaml.safe_dump(dict(presets), indent=2))
 
     work_directory = tempfile.mkdtemp(prefix='pumaguard-work-')
-    organize_data(presets=presets, work_directory=work_directory)
+    validation_directory = tempfile.mkdtemp(prefix='pumaguard-validation-')
+
+    logger.debug('work directory is %s', work_directory)
+    logger.debug('validation directory is %s', validation_directory)
+
+    organize_data(presets=presets, work_directory=work_directory,
+                  validation_directory=validation_directory)
 
     logger.info('using color_mode %s', presets.color_mode)
     logger.info('image dimensions %s', presets.image_dimensions)
 
     training_dataset, validation_dataset = create_datasets(
-        presets, work_directory, presets.color_mode)
+        presets=presets, training_directory=work_directory,
+        validation_directory=validation_directory,
+        color_mode=presets.color_mode)
 
     full_history = TrainingHistory(presets)
 

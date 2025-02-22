@@ -41,11 +41,13 @@ class Preset():
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
+        self.validation_lion_directories: list[str] = []
         self.load_history_from_file = True
         self.load_model_from_file = True
         self.model_function_name = 'xception'
         self.model_version = 'undefined'
         self.no_lion_directories: list[str] = []
+        self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
         if version.parse(tf.__version__) < version.parse('2.17'):
             self.tf_compat = '2.15'
@@ -88,6 +90,19 @@ class Preset():
             raise ValueError(
                 'expected no-lion-directories to be a list of paths')
         self.no_lion_directories = no_lions
+        validation_lions = settings.get('validation-lion-directories', [])
+        if not isinstance(validation_lions, list) or \
+                not all(isinstance(p, str) for p in validation_lions):
+            raise ValueError(
+                'expected validation-lion-directories to be a list of paths')
+        self.validation_lion_directories = validation_lions
+        validation_no_lions = settings.get(
+            'validation-no-lion-directories', [])
+        if not isinstance(validation_no_lions, list) or \
+                not all(isinstance(p, str) for p in validation_no_lions):
+            raise ValueError('expected validation-no-lion-directories '
+                             'to be a list of paths')
+        self.validation_no_lion_directories = validation_no_lions
         self.with_augmentation = settings.get('with-augmentation', False)
         self.batch_size = settings.get('batch-size', 1)
         self.alpha = float(settings.get('alpha', 1e-5))
@@ -123,15 +138,27 @@ class Preset():
             'lion-directories': self._relative_paths(
                 self.base_data_directory,
                 self.lion_directories),
+            'validation-lion-directories': self._relative_paths(
+                self.base_data_directory,
+                self.validation_lion_directories),
             'model-function': self.model_function_name,
             'model-version': self.model_version,
             'no-lion-directories': self._relative_paths(
                 self.base_data_directory,
                 self.no_lion_directories),
+            'validation-no-lion-directories': self._relative_paths(
+                self.base_data_directory,
+                self.validation_no_lion_directories),
             'notebook': self.notebook_number,
             'verification-path': self.verification_path,
             'with-augmentation': self.with_augmentation,
         }.items()
+
+    def __str__(self):
+        """
+        Serialize this class.
+        """
+        return yaml.dump(dict(self), indent=2)
 
     @property
     def alpha(self) -> float:
@@ -396,6 +423,21 @@ class Preset():
         self._lion_directories = copy.deepcopy(lions)
 
     @property
+    def validation_lion_directories(self) -> list[str]:
+        """
+        The directories containing lion images for validation.
+        """
+        return [os.path.join(self.base_data_directory, lion)
+                for lion in self._validation_lion_directories]
+
+    @validation_lion_directories.setter
+    def validation_lion_directories(self, lions: list[str]):
+        """
+        Set the lion directories for validation.
+        """
+        self._validation_lion_directories = copy.deepcopy(lions)
+
+    @property
     def no_lion_directories(self) -> list[str]:
         """
         The directories containing no_lion images.
@@ -409,6 +451,21 @@ class Preset():
         Set the no_lion directories.
         """
         self._no_lion_directories = copy.deepcopy(no_lions)
+
+    @property
+    def validation_no_lion_directories(self) -> list[str]:
+        """
+        The directories containing no_lion images for validation.
+        """
+        return [os.path.join(self.base_data_directory, no_lion)
+                for no_lion in self._validation_no_lion_directories]
+
+    @validation_no_lion_directories.setter
+    def validation_no_lion_directories(self, no_lions: list[str]):
+        """
+        Set the no_lion directories for validation.
+        """
+        self._validation_no_lion_directories = copy.deepcopy(no_lions)
 
     @property
     def model_function_name(self) -> str:

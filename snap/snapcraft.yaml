@@ -19,7 +19,7 @@ description: |
 environment:
   TF_CPP_MIN_LOG_LEVEL: 3 # or any of {'0', '1', '2'}
   # TF_ENABLE_ONEDNN_OPTS: 0
-  PUMAGUARD_MODEL_PATH: $SNAP/models
+  PUMAGUARD_MODEL_PATH: $SNAP_DATA/models
 
 apps:
   pumaguard:
@@ -64,15 +64,12 @@ parts:
       poetry version "${VERSION}"
     override-build: |
       craftctl default
-      cp --recursive models ${CRAFT_PART_INSTALL}/models
-      cp --recursive settings ${CRAFT_PART_INSTALL}/settings
       for script in classify train server; do
         install --mode 0755 pumaguard/completions/pumaguard-${script}-completions.sh ${CRAFT_PART_INSTALL}/bin/${script}-bash-completions.sh
       done
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage-packages:
       - inotify-tools
-      - nvidia-cudnn
 
   ftp:
     plugin: nil

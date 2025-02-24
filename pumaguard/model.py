@@ -14,6 +14,7 @@ from typing import (
 )
 
 import keras  # type: ignore
+import requests
 import tensorflow as tf  # type: ignore
 
 from pumaguard.presets import (
@@ -146,6 +147,25 @@ class Model(ABC):
         logger.info('loaded model version %s', get_md5(filename))
         return model
 
+    def _download_model_weights(self, filename: str):
+        logger.info('downloading model weights %s from '
+                    'https://github.com/PEEC-Nature-Youth-Group'
+                    '/pumaguard-models', filename)
+        commit = 'main'
+
+        # https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/blob/main/model_history_12_pre-trained_tf2.17_512_512.pickle
+
+        url = ('https://github.com/'
+               'PEEC-Nature-Youth-Group/pumaguard-models/blob/'
+               f'{commit}/{os.path.basename(filename)}')
+
+        response = requests.get(url, stream=True, timeout=30)
+        response.raise_for_status()
+        with open(filename, 'wb') as out_file:
+            for chunk in response.iter_content(chunk_size=8192):
+                out_file.write(chunk)
+        logger.info('download complete')
+
     def _compile_model(self,  # pylint: disable=too-many-arguments,too-many-positional-arguments
                        distribution_strategy: tf.distribute.Strategy,
                        load_model_from_file: bool = False,
@@ -163,8 +183,12 @@ class Model(ABC):
                 if model_file_exists:
                     model = self._load_model(model_file)
                 else:
-                    raise FileNotFoundError(
-                        f'could not find model {model_file}')
+                    logger.info('model not found, downloading...')
+                    self._download_model_weights(model_file)
+                    if not os.path.isfile(model_file):
+                        raise FileNotFoundError(
+                            f'could not download {model_file}')
+                    model = self._load_model(model_file)
             else:
                 logger.debug('not loading previous weights')
                 logger.info('creating new %s model',

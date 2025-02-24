@@ -225,7 +225,8 @@ class Preset():
         """
         Get notebook number.
         """
-        return self._notebook_number
+        return self._notebook_number \
+            if hasattr(self, '_notebook_number') else 0
 
     @notebook_number.setter
     def notebook_number(self, notebook: int):

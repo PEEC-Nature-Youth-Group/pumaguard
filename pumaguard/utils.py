@@ -114,18 +114,6 @@ def image_augmentation(image, with_augmentation: bool, augmentation_layers):
     """
     Use augmentation if `with_augmentation` is set to True
     """
-    if with_augmentation:
-        for layer in augmentation_layers:
-            image = layer(image)
-    return image
-
-
-def create_datasets(presets: Preset, training_directory: str,
-                    validation_directory: str,
-                    color_mode: str):
-    """
-    Create the training and validation datasets.
-    """
     # Define augmentation layers which are used in some of the runs
     augmentation_layers = [
         keras.layers.RandomFlip('horizontal'),
@@ -137,6 +125,30 @@ def create_datasets(presets: Preset, training_directory: str,
         # keras.layers.Rescaling(1./255),
     ]
 
+    if with_augmentation:
+        for layer in augmentation_layers:
+            image = layer(image)
+    return image
+
+
+def adjust_brightness(image, brightness_factor=1.0):
+    """
+    Adjust the brightness of the image.
+    :param image: The input image.
+    :param brightness_factor: A factor to adjust the brightness. 1.0 means no change.
+    :return: The brightness-adjusted image.
+    """
+    enhancer = ImageEnhance.Brightness(image)
+    image = enhancer.enhance(brightness_factor)
+    return image
+
+
+def create_datasets(presets: Preset, training_directory: str,
+                    validation_directory: str,
+                    color_mode: str):
+    """
+    Create the training and validation datasets.
+    """
     with_validation_split = len(presets.validation_lion_directories) == 0 and \
         len(presets.validation_no_lion_directories) == 0
 
@@ -169,6 +181,11 @@ def create_datasets(presets: Preset, training_directory: str,
                 image_size=presets.image_dimensions,
                 color_mode=color_mode,
             )
+
+    validation_dataset = validation_dataset.map(
+        lambda img, label: (adjust_brightness(img), label),
+        num_parallel_calls=tf.data.AUTOTUNE,
+    )
 
     training_dataset = training_dataset.map(
         lambda img, label: (image_augmentation(

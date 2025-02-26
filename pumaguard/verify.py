@@ -103,8 +103,8 @@ def get_crossentropy_loss(predictions: list[tuple[str, float, int]]) -> float:
     for _, prediction, label in predictions:
         prediction = max(epsilon, min(1 - epsilon, prediction))
         loss += label * math.log(prediction) + \
-            (1-label) * math.log(1 - prediction)
-    return -loss/len(predictions)
+            (1 - label) * math.log(1 - prediction)
+    return -loss / len(predictions)
 
 
 def get_mean_squared_error(predictions: list[tuple[str, float, int]]) -> float:
@@ -114,7 +114,7 @@ def get_mean_squared_error(predictions: list[tuple[str, float, int]]) -> float:
     error: float = 0
     for _, prediction, label in predictions:
         error += (label - prediction)**2
-    return error/len(predictions)
+    return error / len(predictions)
 
 
 def verify_model(presets: Preset, model: keras.Model):
@@ -135,8 +135,8 @@ def verify_model(presets: Preset, model: keras.Model):
         logger.debug('classifying %s', filename)
         prediction = classify_image(presets, model, filename)
         predictions.append((filename, prediction, 0))
-        logger.info('Predicted %s: %6.2f%% lion: %s',
-                    filename, 100*(1 - prediction),
+        logger.info('Predicted %s: label %.4f, %6.2f%% lion: %s',
+                    filename, prediction, 100*(1 - prediction),
                     'correct' if prediction < 0.5 else 'incorrect')
     for no_lion in no_lions:
         filename = os.path.relpath(
@@ -144,14 +144,17 @@ def verify_model(presets: Preset, model: keras.Model):
         logger.debug('classifying %s', filename)
         prediction = classify_image(presets, model, filename)
         predictions.append((filename, prediction, 1))
-        logger.info('Predicted %s: %6.2f%% lion: %s',
-                    filename, 100*(1 - prediction),
+        logger.info('Predicted %s: label %.4f, %6.2f%% lion: %s',
+                    filename, prediction, 100*(1 - prediction),
                     'correct' if prediction >= 0.5 else 'incorrect')
-    print(f'accuracy           = {100 * get_accuracy(predictions):.2f}%')
-    print(
-        f'binary accuracy    = {100 * get_binary_accuracy(predictions):.2f}%')
-    print(f'crossentropy loss  = {get_crossentropy_loss(predictions):.2f}')
-    print(f'mean squared error = {get_mean_squared_error(predictions):.2f}')
+    print('accuracy           = '
+          f'{100 * get_accuracy(predictions):.2f}%')
+    print('binary accuracy    = '
+          f'{100 * get_binary_accuracy(predictions):.2f}%')
+    print('crossentropy loss  = '
+          f'{get_crossentropy_loss(predictions):.4f}')
+    print('mean squared error = '
+          f'{get_mean_squared_error(predictions):.4f}')
 
 
 def main(presets: Preset):

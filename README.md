@@ -74,18 +74,34 @@ For reproducibility, training new models should be done via the train script
 and all necessary data, i.e. images, and the resulting weights and history
 should be committed to the repository.
 
-1. Get a TPU instance on Colab
+1. Get a TPU instance on Colab or run the script on your local machine.
 2. Open a terminal and run
+
     ```console
-    $ git clone https://github.com/PEEC-Nature-Youth-Group/pumaguard.git
-    $ cd pumaguard
+    git clone https://github.com/PEEC-Nature-Youth-Group/pumaguard.git
+    cd pumaguard
     ```
+
 3. Get help on how to use the script
+
+    On Colab, run
+
     ```console
-    $ ./scripts/pumaguard --help
-    $ ./scripts/pumaguard train --help
+    ./scripts/pumaguard --help
+    ./scripts/pumaguard train --help
     ```
+
+    On your local machine, run
+
+    ```console
+    sudo apt install nvidia-cudnn
+    poetry install
+    poetry run pumaguard --help
+    poetry run pumaguard train --help
+    ```
+
 4. Train the model from scratch
+
     ```console
     ./scripts/pumaguard train --no-load --settings models/model_settings_6_pre-trained_512_512.yaml
     ```

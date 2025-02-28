@@ -25,17 +25,14 @@ class Preset():
     """
 
     _alpha: float = 0
-    _base_data_directory: str = ''
     _base_output_directory: str = ''
     _model_file: str = ''
 
     def __init__(self):
         self.alpha = 1e-5
-        self.base_data_directory = os.path.join(
-            os.path.dirname(__file__), '../data')
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), '../models')
-        self.verification_path = 'stable/stable_test'
+        self.verification_path = 'data/stable/stable_test'
         self.batch_size = 16
         self.color_mode = 'rgb'
         self.epochs = 300
@@ -73,12 +70,10 @@ class Preset():
         self.model_version = settings.get('model-version', 'undefined')
         self.model_function_name = settings.get(
             'model-function', 'undefined')
-        self.base_data_directory = settings.get(
-            'base-data-directory', 'undefined')
         self.base_output_directory = settings.get(
             'base-output-directory', 'undefined')
         self.verification_path = settings.get(
-            'verification-path', 'stable/stable_test')
+            'verification-path', 'data/stable/stable_test')
         lions = settings.get('lion-directories', ['undefined'])
         if not isinstance(lions, list) or \
                 not all(isinstance(p, str) for p in lions):
@@ -128,27 +123,17 @@ class Preset():
         """
         yield from {
             'alpha': self.alpha,
-            'base-data-directory': os.path.relpath(
-                self.base_data_directory,
-                os.path.dirname(__file__)),
             'batch-size': self.batch_size,
             'color-mode': self.color_mode,
             'epochs': self.epochs,
             'image-dimensions': self.image_dimensions,
-            'lion-directories': self._relative_paths(
-                self.base_data_directory,
-                self.lion_directories),
-            'validation-lion-directories': self._relative_paths(
-                self.base_data_directory,
-                self.validation_lion_directories),
+            'lion-directories': self.lion_directories,
+            'validation-lion-directories': self.validation_lion_directories,
             'model-function': self.model_function_name,
             'model-version': self.model_version,
-            'no-lion-directories': self._relative_paths(
-                self.base_data_directory,
-                self.no_lion_directories),
-            'validation-no-lion-directories': self._relative_paths(
-                self.base_data_directory,
-                self.validation_no_lion_directories),
+            'no-lion-directories': self.no_lion_directories,
+            'validation-no-lion-directories':
+            self.validation_no_lion_directories,
             'notebook': self.notebook_number,
             'verification-path': self.verification_path,
             'with-augmentation': self.with_augmentation,
@@ -177,20 +162,6 @@ class Preset():
         if alpha <= 0:
             raise ValueError('the stepsize needs to be positive')
         self._alpha = alpha
-
-    @property
-    def base_data_directory(self) -> str:
-        """
-        Get the base_data_directory.
-        """
-        return self._base_data_directory
-
-    @base_data_directory.setter
-    def base_data_directory(self, path: str):
-        """
-        Set the base_data_directory.
-        """
-        self._base_data_directory = path
 
     @property
     def base_output_directory(self) -> str:
@@ -413,8 +384,7 @@ class Preset():
         """
         The directories containing lion images.
         """
-        return [os.path.join(self.base_data_directory, lion)
-                for lion in self._lion_directories]
+        return self._lion_directories
 
     @lion_directories.setter
     def lion_directories(self, lions: list[str]):
@@ -428,8 +398,7 @@ class Preset():
         """
         The directories containing lion images for validation.
         """
-        return [os.path.join(self.base_data_directory, lion)
-                for lion in self._validation_lion_directories]
+        return self._validation_lion_directories
 
     @validation_lion_directories.setter
     def validation_lion_directories(self, lions: list[str]):
@@ -443,8 +412,7 @@ class Preset():
         """
         The directories containing no_lion images.
         """
-        return [os.path.join(self.base_data_directory, no_lion)
-                for no_lion in self._no_lion_directories]
+        return self._no_lion_directories
 
     @no_lion_directories.setter
     def no_lion_directories(self, no_lions: list[str]):
@@ -458,8 +426,7 @@ class Preset():
         """
         The directories containing no_lion images for validation.
         """
-        return [os.path.join(self.base_data_directory, no_lion)
-                for no_lion in self._validation_no_lion_directories]
+        return self._validation_no_lion_directories
 
     @validation_no_lion_directories.setter
     def validation_no_lion_directories(self, no_lions: list[str]):

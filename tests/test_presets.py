@@ -50,13 +50,12 @@ batch-size: 2
 model-function: xception
 model-version: light-test
 alpha: 1e-3
-base-data-directory: /path/to/data
 base-output-directory: /path/to/output
 verification-path: /path/to/verification
 lion-directories:
-    - lion
+    - /path/to/lion
 no-lion-directories:
-    - no_lion
+    - /path/to/no_lion
 ''')
     def test_load(self, mock_file):  # pylint: disable=unused-argument
         """
@@ -67,13 +66,12 @@ no-lion-directories:
         self.assertEqual(self.base_preset.epochs, 2400)
         self.assertEqual(self.base_preset.image_dimensions, (128, 128))
         self.assertEqual(self.base_preset.model_version, 'light-test')
-        self.assertEqual(self.base_preset.base_data_directory, '/path/to/data')
         self.assertEqual(self.base_preset.verification_path,
                          '/path/to/verification')
         self.assertEqual(
             self.base_preset.base_output_directory, '/path/to/output')
-        self.assertIn('/path/to/data/lion', self.base_preset.lion_directories)
-        self.assertIn('/path/to/data/no_lion',
+        self.assertIn('/path/to/lion', self.base_preset.lion_directories)
+        self.assertIn('/path/to/no_lion',
                       self.base_preset.no_lion_directories)
         self.assertTrue(hasattr(self.base_preset, 'with_augmentation'))
         self.assertEqual(self.base_preset.batch_size, 2)

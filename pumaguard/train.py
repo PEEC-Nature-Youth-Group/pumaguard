@@ -3,6 +3,7 @@ This script trains a model.
 """
 
 import argparse
+import copy
 import datetime
 import logging
 import os
@@ -223,26 +224,24 @@ def _configure_directories(presets: Preset, options: argparse.Namespace):
         presets.no_lion_directories = []
     lion_directories = options.lion if options.lion is not None else []
     if len(lion_directories) > 0:
-        presets.lion_directories = [
-            os.path.relpath(path, presets.base_data_directory)
-            for path in lion_directories
-        ]
+        presets.lion_directories = copy.deepcopy(lion_directories)
 
     no_lion_directories = options.no_lion \
         if options.no_lion is not None else []
     if len(no_lion_directories) > 0:
-        presets.no_lion_directories = [
-            os.path.relpath(path, presets.base_data_directory)
-            for path in no_lion_directories
-        ]
+        presets.no_lion_directories = copy.deepcopy(no_lion_directories)
 
     validation_lion_directories = options.validation_lion \
         if options.validation_lion is not None else []
     if len(validation_lion_directories) > 0:
-        presets.validation_lion_directories = [
-            os.path.relpath(path, presets.base_data_directory)
-            for path in validation_lion_directories
-        ]
+        presets.validation_lion_directories = copy.deepcopy(
+            validation_lion_directories)
+
+    validation_no_lion_directories = options.validation_no_lion \
+        if options.validation_no_lion is not None else []
+    if len(validation_no_lion_directories) > 0:
+        presets.validation_no_lion_directories = copy.deepcopy(
+            validation_no_lion_directories)
 
     logger.debug('getting lion images from    %s',
                  presets.lion_directories)

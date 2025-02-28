@@ -164,33 +164,28 @@ def configure_subparser(parser: argparse.ArgumentParser):
         '--alpha',
         help='Initial learning rate for the Adam optimizer',
         type=float,
-        default=1e-4,
     )
     parser.add_argument(
         '--epochs',
         help='How many epochs to train.',
         type=int,
-        default=100,
     )
     parser.add_argument(
         '--batch-size',
         help='How many images to process at once.',
         type=int,
-        default=16,
     )
     parser.add_argument(
         '--image-dimensions',
         help='The dimensions of the images',
         type=int,
         nargs=2,
-        default=[256, 256],
     )
     parser.add_argument(
         '--model-function',
         help='The model function to use',
         type=str,
         choices=__MODELS__.keys(),
-        default='light-model',
     )
 
 

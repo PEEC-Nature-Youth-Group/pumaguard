@@ -65,6 +65,11 @@ def create_global_parser() -> argparse.ArgumentParser:
         default='',
     )
     global_parser.add_argument(
+        '--notebook',
+        help='The notebook to use',
+        type=int,
+    )
+    global_parser.add_argument(
         '--list-models',
         help='List the available models',
         action='store_true',
@@ -86,6 +91,9 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         for name, model in __MODELS__.items():
             logger.info('  %s: %s', name, model.model_description())
         sys.exit(0)
+
+    if args.notebook is not None:
+        presets.notebook_number = args.notebook
 
     model_path = args.model_path if hasattr(args, 'model_path') \
         and args.model_path \

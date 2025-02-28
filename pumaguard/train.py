@@ -215,26 +215,21 @@ def print_training_stats(full_history: TrainingHistory):
     plot_training_progress('training-progress.png', full_history=full_history)
 
 
-def _configure_data_path(presets: Preset):
-    """
-    Configure the data path.
-    """
+def _configure_directories(presets: Preset, options: argparse.Namespace):
     if any(arg.startswith('--data-path') for arg in sys.argv):
         logger.warning('data path was specified, not using '
                        'lion/no_lion paths from presets')
         presets.lion_directories = []
         presets.no_lion_directories = []
-
-
-def _configure_directories(presets: Preset, options: argparse.Namespace):
-    lion_directories = options.lion if options.lion else []
+    lion_directories = options.lion if options.lion is not None else []
     if len(lion_directories) > 0:
         presets.lion_directories = [
             os.path.relpath(path, presets.base_data_directory)
             for path in lion_directories
         ]
 
-    no_lion_directories = options.no_lion if options.no_lion else []
+    no_lion_directories = options.no_lion \
+        if options.no_lion is not None else []
     if len(no_lion_directories) > 0:
         presets.no_lion_directories = [
             os.path.relpath(path, presets.base_data_directory)
@@ -242,7 +237,7 @@ def _configure_directories(presets: Preset, options: argparse.Namespace):
         ]
 
     validation_lion_directories = options.validation_lion \
-        if options.validation_lion else []
+        if options.validation_lion is not None else []
     if len(validation_lion_directories) > 0:
         presets.validation_lion_directories = [
             os.path.relpath(path, presets.base_data_directory)
@@ -264,16 +259,16 @@ def _configure_directories(presets: Preset, options: argparse.Namespace):
 
 
 def _configure_model(presets: Preset, options: argparse.Namespace):
-    if options.alpha:
+    if options.alpha is not None:
         presets.alpha = options.alpha
 
-    if options.epochs:
+    if options.epochs is not None:
         presets.epochs = options.epochs
 
-    if options.batch_size:
+    if options.batch_size is not None:
         presets.batch_size = options.batch_size
 
-    if options.image_dimensions:
+    if options.image_dimensions is not None:
         presets.image_dimensions = tuple(options.image_dimensions)
 
 
@@ -290,7 +285,7 @@ def _configure_settings(presets: Preset, options: argparse.Namespace):
     logger.info('history file  %s', presets.history_file)
     logger.info('settings file %s', presets.settings_file)
 
-    if options.model_output:
+    if options.model_output is not None:
         logger.debug('setting model output to %s', options.model_output)
         try:
             shutil.copy(presets.model_file, options.model_output)
@@ -305,7 +300,6 @@ def main(options: argparse.Namespace, presets: Preset):
     The main entry point.
     """
 
-    _configure_data_path(presets)
     _configure_directories(presets, options)
     _configure_model(presets, options)
     _configure_settings(presets, options)

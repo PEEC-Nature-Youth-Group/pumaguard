@@ -122,11 +122,9 @@ def verify_model(presets: Preset, model: keras.Model):
     Verify a model by calculating its accuracy across a standard set of images.
     """
     logger.info('verifying model')
-    lion_directory = os.path.join(
-        presets.base_data_directory, presets.verification_path, 'lion')
+    lion_directory = os.path.join(presets.verification_path, 'lion')
     lions = sorted(os.listdir(lion_directory))
-    no_lion_directory = os.path.join(
-        presets.base_data_directory, presets.verification_path, 'no-lion')
+    no_lion_directory = os.path.join(presets.verification_path, 'no-lion')
     no_lions = sorted(os.listdir(no_lion_directory))
     logger.debug('%d lions and %d no lions', len(lions), len(no_lions))
     predictions = []

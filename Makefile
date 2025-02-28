@@ -140,8 +140,8 @@ configure-pi-5:
 
 .PHONY: verify
 verify:
+	pumaguard verify --settings models/model_settings_6_pre-trained_512_512.yaml --verification-path data/verification 2>&1 | tee verify.output
 	TF_VERSION=$(shell grep 'looking for model' verify.output | sed --regexp-extended 's/^.*(tf2[.][0-9]+)_.*$$/\1/')
-	pumaguard verify --data-path data --settings models/model_settings_6_pre-trained_512_512.yaml --verification-path verification 2>&1 | tee verify.output
 	if [ "$${TF_VERSION}" = "tf2.15" ]; then \
 		if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 96.60% ]; then false; fi; \
 	else \

@@ -94,13 +94,6 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         logger.debug('setting model path to %s', model_path)
         presets.base_output_directory = model_path
 
-    data_path = args.data_path if hasattr(args, 'data_path') \
-        and args.data_path \
-        else os.getenv('PUMAGUARD_DATA_PATH', default=None)
-    if data_path is not None:
-        logger.debug('setting data path to %s', data_path)
-        presets.base_data_directory = data_path
-
     presets.verification_path = args.verification_path \
         if hasattr(args, 'verification_path') \
         else 'stable/stable_test'

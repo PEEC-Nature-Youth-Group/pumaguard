@@ -10,6 +10,7 @@ from abc import (
 )
 from typing import (
     Any,
+    Optional,
     Tuple,
 )
 
@@ -34,7 +35,7 @@ class Model(ABC):
     _distribution_strategy: tf.distribute.Strategy = None
     _initialized = False
     _instance: Any = None
-    _model = None
+    _model: Optional[keras.Model] = None
 
     def __new__(cls, presets: Preset):
         """

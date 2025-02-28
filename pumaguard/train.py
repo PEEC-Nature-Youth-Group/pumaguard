@@ -17,6 +17,9 @@ import yaml
 from pumaguard.model_factory import (
     model_factory,
 )
+from pumaguard.models import (
+    __MODELS__,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -142,11 +145,6 @@ def configure_subparser(parser: argparse.ArgumentParser):
               '(this disables the automatic splitting of training data)'),
     )
     parser.add_argument(
-        '--epochs',
-        help='How many epochs to train.',
-        type=int,
-    )
-    parser.add_argument(
         '--model-output',
         help='The output folder for the new model.',
         type=str,
@@ -165,6 +163,33 @@ def configure_subparser(parser: argparse.ArgumentParser):
         '--alpha',
         help='Initial learning rate for the Adam optimizer',
         type=float,
+        default=1e-4,
+    )
+    parser.add_argument(
+        '--epochs',
+        help='How many epochs to train.',
+        type=int,
+        default=100,
+    )
+    parser.add_argument(
+        '--batch-size',
+        help='How many images to process at once.',
+        type=int,
+        default=16,
+    )
+    parser.add_argument(
+        '--image-dimensions',
+        help='The dimensions of the images',
+        type=int,
+        nargs=2,
+        default=[256, 256],
+    )
+    parser.add_argument(
+        '--model-function',
+        help='The model function to use',
+        type=str,
+        choices=__MODELS__.keys(),
+        default='light-model',
     )
 
 
@@ -190,17 +215,18 @@ def print_training_stats(full_history: TrainingHistory):
     plot_training_progress('training-progress.png', full_history=full_history)
 
 
-def main(options: argparse.Namespace, presets: Preset):
+def _configure_data_path(presets: Preset):
     """
-    The main entry point.
+    Configure the data path.
     """
-
     if any(arg.startswith('--data-path') for arg in sys.argv):
         logger.warning('data path was specified, not using '
                        'lion/no_lion paths from presets')
         presets.lion_directories = []
         presets.no_lion_directories = []
 
+
+def _configure_directories(presets: Preset, options: argparse.Namespace):
     lion_directories = options.lion if options.lion else []
     if len(lion_directories) > 0:
         presets.lion_directories = [
@@ -236,9 +262,22 @@ def main(options: argparse.Namespace, presets: Preset):
         logger.debug('getting validation no-lion images from %s',
                      presets.validation_no_lion_directories)
 
+
+def _configure_model(presets: Preset, options: argparse.Namespace):
+    if options.alpha:
+        presets.alpha = options.alpha
+
     if options.epochs:
         presets.epochs = options.epochs
 
+    if options.batch_size:
+        presets.batch_size = options.batch_size
+
+    if options.image_dimensions:
+        presets.image_dimensions = tuple(options.image_dimensions)
+
+
+def _configure_settings(presets: Preset, options: argparse.Namespace):
     if options.no_load_previous_session:
         logger.info('will not load previous weights and history')
         presets.load_history_from_file = False
@@ -260,8 +299,16 @@ def main(options: argparse.Namespace, presets: Preset):
             logger.warning('unable to find previous model; ignoring')
         presets.base_output_directory = options.model_output
 
-    if options.alpha:
-        presets.alpha = options.alpha
+
+def main(options: argparse.Namespace, presets: Preset):
+    """
+    The main entry point.
+    """
+
+    _configure_data_path(presets)
+    _configure_directories(presets, options)
+    _configure_model(presets, options)
+    _configure_settings(presets, options)
 
     if options.dump_settings:
         print('# PumaGuard settings')

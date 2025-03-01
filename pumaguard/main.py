@@ -110,33 +110,15 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         presets.model_file = args.model
 
 
-def main():
+def configure_subparsers(parser: argparse.ArgumentParser,
+                         global_args_parser: argparse.ArgumentParser):
     """
-    Main entry point.
+    Configure the subparsers.
     """
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger('PumaGuard')
-
-    file_handler = logging.FileHandler('pumaguard.log')
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
-    global_args_parser = create_global_parser()
-    parser = argparse.ArgumentParser(
-        description='''The goal of this project is to accurately classify
-                    images based on the presence of mountain lions. This can
-                    have applications in wildlife monitoring, research, and
-                    conservation efforts. The model is trained on a labeled
-                    dataset and validated using a separate set of images.''',
-        parents=[global_args_parser],
-    )
 
     subparsers = parser.add_subparsers(
         dest='command',
-        help='Aavailable sub-commands',
+        help='Available sub-commands',
     )
     train.configure_subparser(subparsers.add_parser(
         'train',
@@ -164,6 +146,33 @@ def main():
         description='Verifies a model using a standard set of images.',
         parents=[global_args_parser],
     ))
+
+
+def main():
+    """
+    Main entry point.
+    """
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger('PumaGuard')
+
+    file_handler = logging.FileHandler('pumaguard.log')
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+
+    global_args_parser = create_global_parser()
+    parser = argparse.ArgumentParser(
+        description='''The goal of this project is to accurately classify
+                    images based on the presence of mountain lions. This can
+                    have applications in wildlife monitoring, research, and
+                    conservation efforts. The model is trained on a labeled
+                    dataset and validated using a separate set of images.''',
+        parents=[global_args_parser],
+    )
+
+    configure_subparsers(parser, global_args_parser)
 
     args = parser.parse_args()
 

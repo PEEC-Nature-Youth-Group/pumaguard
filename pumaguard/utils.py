@@ -65,10 +65,10 @@ def organize_data(presets: Preset, work_directory: str,
     logger.debug('no-lion images in %s', presets.no_lion_directories)
     lion_images = []
     for lion in presets.lion_directories:
-        lion_images += glob.glob(os.path.join(lion, '*JPG'))
+        lion_images += glob.glob(os.path.join(lion, '*'))
     no_lion_images = []
     for no_lion in presets.no_lion_directories:
-        no_lion_images += glob.glob(os.path.join(no_lion, '*JPG'))
+        no_lion_images += glob.glob(os.path.join(no_lion, '*'))
 
     print(f'Found {len(lion_images)} images tagged as `lion`')
     print(f'Found {len(no_lion_images)} images tagged as `no-lion`')
@@ -92,10 +92,10 @@ def organize_data(presets: Preset, work_directory: str,
                  presets.validation_no_lion_directories)
     lion_images = []
     for lion in presets.validation_lion_directories:
-        lion_images += glob.glob(os.path.join(lion, '*JPG'))
+        lion_images += glob.glob(os.path.join(lion, '*'))
     no_lion_images = []
     for no_lion in presets.validation_no_lion_directories:
-        no_lion_images += glob.glob(os.path.join(no_lion, '*JPG'))
+        no_lion_images += glob.glob(os.path.join(no_lion, '*'))
 
     print(f'Found {len(lion_images)} images tagged as `lion`')
     print(f'Found {len(no_lion_images)} images tagged as `no-lion`')

@@ -12,6 +12,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.10" # Needs to work with Tensorflow
+  POETRY_VERSION: "1.8.3"
 
 jobs:
 
@@ -29,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
       - name: Get version
         run: |
@@ -58,7 +59,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
       - name: Lint Python Sources (pylint)
         run: make pylint
@@ -79,13 +80,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
       - name: Lint Bash Sources (bashate)
         run: make bashate
 
   lint-ansible:
     runs-on: ubuntu-24.04
+
     steps:
       - uses: actions/checkout@v4
       - name: Run ansible-lint
@@ -98,13 +100,8 @@ jobs:
 
   test-python:
     runs-on: ubuntu-24.04
-    needs: [lint-python]
-    strategy:
-      matrix:
-        tf-version:
-          - 2.15
-          - 2.17
-          - 2.18
+    needs:
+      - lint-python
 
     steps:
       - uses: actions/checkout@v4
@@ -116,20 +113,20 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
         run: |
+          set -e -u -x
           sudo apt install --yes --no-install-recommends inotify-tools
           python -m pip install --upgrade pip
-          pip install poetry
-          sed --in-place --regexp-extended 's/^python.*=.*/python = ">=3.10,<3.11"/' pyproject.toml
-          poetry add 'tensorflow==${{ matrix.tf-version }}'
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
-          poetry run pip show tensorflow
       - name: Run tests
         run: |
           make test
 
   build-python:
     runs-on: ubuntu-24.04
-    needs: [test-python, lint-python]
+    needs:
+      - test-python
+      - lint-python
 
     steps:
       - uses: actions/checkout@v4
@@ -143,7 +140,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
       - uses: actions/download-artifact@v4
         with:
@@ -164,8 +161,18 @@ jobs:
           path: dist/*
 
   build-snap:
-    runs-on: ubuntu-22.04
-    needs: [test-python, lint-python, lint-bash]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+    needs:
+      - test-python
+      - lint-python
+      - lint-bash
 
     steps:
       - name: Check container free disk space
@@ -179,7 +186,7 @@ jobs:
         run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort
       - name: Check disk allocation
         run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort
-      - name: Remove unnecessary packages
+      - name: Remove unnecessary packages on amd64
         run: |
           sudo apt-get remove --auto-remove --purge \
             azure-cli \
@@ -194,6 +201,7 @@ jobs:
             \*jdk\* \
             \*g++\* \
             \*mysql\*
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
       - name: Get largest installed packages
         run: |
           dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
@@ -234,20 +242,18 @@ jobs:
         id: snap
       - uses: actions/upload-artifact@v4
         with:
-          name: snap-${{ steps.get_snap_version.outputs.snap_version }}
+          name: snap-${{ steps.get_snap_version.outputs.snap_version }}-${{ matrix.arch }}
           path: ${{ steps.snap.outputs.snap }}
 
   release:
     runs-on: ubuntu-24.04
     needs:
-      [
-        build-python,
-        build-snap,
-        lint-notebooks,
-        functional-poetry,
-        functional-snap,
-        lint-ansible,
-      ]
+      - build-python
+      - build-snap
+      - lint-notebooks
+      - functional-poetry
+      - functional-snap
+      - lint-ansible
     permissions: write-all
 
     steps:
@@ -278,13 +284,8 @@ jobs:
 
   functional-poetry:
     runs-on: ubuntu-24.04
-    needs: [build-python]
-    strategy:
-      matrix:
-        tf-version:
-          - 2.15
-          - 2.17
-          - 2.18
+    needs:
+      - build-python
 
     steps:
       - uses: actions/checkout@v4
@@ -297,16 +298,21 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install poetry
-          sed --in-place --regexp-extended 's/^python.*=.*/python = ">=3.10,<3.11"/' pyproject.toml
-          poetry add 'tensorflow==${{ matrix.tf-version }}'
+          pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
-          poetry run pip show tensorflow
       - run: make functional-poetry
 
   functional-snap:
-    runs-on: ubuntu-24.04
-    needs: [build-snap]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+    needs:
+      - build-snap
 
     steps:
       - uses: actions/checkout@v4
@@ -314,12 +320,20 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*snap
+        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
       - run: make functional-snap
 
   verify-snap:
-    runs-on: ubuntu-24.04
-    needs: [build-snap]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+    needs:
+      - build-snap
 
     steps:
       - uses: actions/checkout@v4
@@ -327,12 +341,20 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*snap
+        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
       - run: make verify
 
   train-snap:
-    runs-on: ubuntu-24.04
-    needs: [build-snap]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            arch: amd64
+          - os: ubuntu-22.04-arm
+            arch: arm64
+    needs:
+      - build-snap
 
     steps:
       - uses: actions/checkout@v4
@@ -340,5 +362,5 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*snap
+        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
       - run: make train

@@ -164,7 +164,10 @@ jobs:
           path: dist/*
 
   build-snap:
-    runs-on: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm]
     needs: [test-python, lint-python, lint-bash]
 
     steps:
@@ -194,6 +197,7 @@ jobs:
             \*jdk\* \
             \*g++\* \
             \*mysql\*
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
       - name: Get largest installed packages
         run: |
           dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
@@ -234,7 +238,7 @@ jobs:
         id: snap
       - uses: actions/upload-artifact@v4
         with:
-          name: snap-${{ steps.get_snap_version.outputs.snap_version }}
+          name: snap-${{ steps.get_snap_version.outputs.snap_version }}-${{ runner.os }}
           path: ${{ steps.snap.outputs.snap }}
 
   release:

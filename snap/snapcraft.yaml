@@ -62,6 +62,12 @@ parts:
       craftctl set version="v${VERSION}"
       pip install poetry
       poetry version "${VERSION}"
+
+      if [[ ${CRAFT_ARCH_BUILD_FOR} == amd64 ]]; then
+        poetry install --extras and-cuda
+      else
+        poetry install
+      fi
     override-build: |
       craftctl default
       cp --recursive models ${CRAFT_PART_INSTALL}/models

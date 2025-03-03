@@ -13,7 +13,7 @@ packaging = "^24.2"
 pillow = "~=11.1"
 python = ">=3.10,<4.0"
 pyyaml = "~=6.0"
-tensorflow = {extras = ["and-cuda"], version = "^2.18.0"}
+tensorflow = "^2.18.0"
 
 [tool.poetry.group.dev.dependencies]
 ansible-lint = { version = "~=25.1", markers = 'platform_system != "Windows"' }
@@ -25,6 +25,9 @@ pylint = "~=3.3"
 pynblint = "~=0.1"
 pytest = "~=8.3"
 pytest-cov = "~=6.0"
+
+[tool.poetry.extras]
+and-cuda = ["tensorflow-and-cuda"]
 
 [tool.poetry.scripts]
 pick-files = 'scripts.pick_files:main'

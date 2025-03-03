@@ -128,23 +128,33 @@ def verify_model(presets: Preset, model: keras.Model):
     no_lions = sorted(os.listdir(no_lion_directory))
     logger.debug('%d lions and %d no lions', len(lions), len(no_lions))
     predictions = []
+    number_false_positives = 0
+    number_false_negatives = 0
     for lion in lions:
         filename = os.path.relpath(os.path.join(lion_directory, lion), '.')
         logger.debug('classifying %s', filename)
         prediction = classify_image(presets, model, filename)
         predictions.append((filename, prediction, 0))
+        is_correct = prediction < 0.5
+        if not is_correct:
+            number_false_negatives += 1
         logger.info('Predicted %s: label %.4f, %6.2f%% lion: %s',
                     filename, prediction, 100*(1 - prediction),
-                    'correct' if prediction < 0.5 else 'incorrect')
+                    'correct' if is_correct else 'incorrect')
     for no_lion in no_lions:
         filename = os.path.relpath(
             os.path.join(no_lion_directory, no_lion), '.')
         logger.debug('classifying %s', filename)
         prediction = classify_image(presets, model, filename)
         predictions.append((filename, prediction, 1))
+        is_correct = prediction >= 0.5
+        if not is_correct:
+            number_false_positives += 1
         logger.info('Predicted %s: label %.4f, %6.2f%% lion: %s',
                     filename, prediction, 100*(1 - prediction),
-                    'correct' if prediction >= 0.5 else 'incorrect')
+                    'correct' if is_correct else 'incorrect')
+    print(f'number false positives = {number_false_positives}')
+    print(f'number false negatives = {number_false_negatives}')
     print('accuracy           = '
           f'{100 * get_accuracy(predictions):.2f}%')
     print('binary accuracy    = '

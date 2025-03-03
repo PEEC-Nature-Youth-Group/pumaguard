@@ -155,6 +155,7 @@ def verify_model(presets: Preset, model: keras.Model):
                     'correct' if is_correct else 'incorrect')
     print(f'number false positives = {number_false_positives}')
     print(f'number false negatives = {number_false_negatives}')
+    print(f'out of {len(lions)} lion and {len(no_lion)} no-lion images')
     print('accuracy           = '
           f'{100 * get_accuracy(predictions):.2f}%')
     print('binary accuracy    = '

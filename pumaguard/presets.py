@@ -34,6 +34,7 @@ class Preset():
             os.path.dirname(__file__), '../models')
         self.verification_path = 'data/stable/stable_test'
         self.batch_size = 16
+        self.notebook_number = 1
         self.color_mode = 'rgb'
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)

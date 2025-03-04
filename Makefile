@@ -75,27 +75,13 @@ run-functional:
 
 .PHONY: check-functional
 check-functional:
-	TF_VERSION=$(shell grep 'looking for model' functional-test.output | sed --regexp-extended 's/^.*(tf2[.][0-9]+)_.*$$/\1/'); \
-	if [ "$${TF_VERSION}" = "tf2.15" ]; then \
-		echo "Tensorflow 2.15"; \
-		if [ "$$(sed --quiet --regexp-extended '/^Predicted.*2061/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '66.17%' ]; then \
-			cat functional-test.output; \
-			false; \
-		fi; \
-		if [ "$$(sed --quiet --regexp-extended '/^Predicted.*270.JPG/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '32.22%' ]; then \
-			cat functional-test.output; \
-			false; \
-		fi; \
-	else \
-		echo "Tensorflow 2.17+"; \
-		if [ "$$(sed --quiet --regexp-extended '/^Predicted.*2061/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '28.80%' ]; then \
-			cat functional-test.output; \
-			false; \
-		fi; \
-		if [ "$$(sed --quiet --regexp-extended '/^Predicted.*270.JPG/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '64.72%' ]; then \
-			cat functional-test.output; \
-			false; \
-		fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*2061/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '28.80%' ]; then \
+		cat functional-test.output; \
+		false; \
+	fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*270.JPG/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '64.72%' ]; then \
+		cat functional-test.output; \
+		false; \
 	fi
 	@echo "Success"
 
@@ -133,11 +119,7 @@ configure-pi-5:
 verify:
 	pumaguard verify --settings models/model_settings_6_pre-trained_512_512.yaml --verification-path data/verification 2>&1 | tee verify.output
 	TF_VERSION=$(shell grep 'looking for model' verify.output | sed --regexp-extended 's/^.*(tf2[.][0-9]+)_.*$$/\1/')
-	if [ "$${TF_VERSION}" = "tf2.15" ]; then \
-		if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 96.60% ]; then false; fi; \
-	else \
-		if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 92.75% ]; then false; fi; \
-	fi
+	if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 92.75% ]; then false; fi
 
 .PHONY: train
 train:

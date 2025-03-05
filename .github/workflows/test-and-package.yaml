@@ -254,6 +254,8 @@ jobs:
       - functional-poetry
       - functional-snap
       - lint-ansible
+      - verify-poetry
+      - verify-snap
     permissions: write-all
 
     steps:
@@ -341,7 +343,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
-      - run: make verify
+      - run: make verify-poetry
 
   verify-snap:
     runs-on: ${{ matrix.os }}
@@ -362,7 +364,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
-      - run: make verify
+      - run: make verify-snap
 
   train-snap:
     runs-on: ${{ matrix.os }}

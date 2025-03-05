@@ -115,10 +115,17 @@ configure-pi-zero:
 configure-pi-5:
 	ansible-playbook --inventory pi-5, --ask-become-pass scripts/configure-pi.yaml
 
+.PHONY: verify-poetry
+verify-poetry:
+	$(MAKE) EXE="poetry run pumaguard" verify
+
+.PHONY: verify-snap
+verify-snap:
+	$(MAKE) EXE="pumaguard" verify
+
 .PHONY: verify
 verify:
-	pumaguard verify --settings models/model_settings_6_pre-trained_512_512.yaml --verification-path data/verification 2>&1 | tee verify.output
-	TF_VERSION=$(shell grep 'looking for model' verify.output | sed --regexp-extended 's/^.*(tf2[.][0-9]+)_.*$$/\1/')
+	$(EXE) verify --settings models/model_settings_6_pre-trained_512_512.yaml --verification-path data/verification 2>&1 | tee verify.output
 	if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 92.75% ]; then false; fi
 
 .PHONY: train

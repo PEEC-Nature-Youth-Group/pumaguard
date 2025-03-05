@@ -14,6 +14,7 @@ import numpy as np
 import tensorflow as tf  # type: ignore
 from PIL import (
     Image,
+    UnidentifiedImageError,
 )
 
 from pumaguard.presets import (
@@ -246,6 +247,8 @@ def classify_image(presets: Preset, model: keras.Model,
     except FileNotFoundError as e:
         logger.error('file not found: %s', e)
         raise
+    except UnidentifiedImageError as e:
+        logger.warning('unidentified image: %s', e)
 
     logger.debug('image loaded, classifying now...')
 

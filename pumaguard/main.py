@@ -9,6 +9,7 @@ import sys
 
 from pumaguard import (
     __VERSION__,
+    analyze,
     classify,
     server,
     train,
@@ -146,6 +147,12 @@ def configure_subparsers(parser: argparse.ArgumentParser,
         description='Verifies a model using a standard set of images.',
         parents=[global_args_parser],
     ))
+    analyze.configure_subparser(subparsers.add_parser(
+        'analyze',
+        help='Analyze a model',
+        description='Analyze a model.',
+        parents=[global_args_parser],
+    ))
 
 
 def main():
@@ -199,5 +206,7 @@ def main():
         classify.main(args, presets)
     elif args.command == 'verify':
         verify.main(presets)
+    elif args.command == 'analyze':
+        analyze.main(presets)
     else:
         parser.print_help()

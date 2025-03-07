@@ -165,9 +165,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             arch: amd64
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             arch: arm64
     needs:
       - test-python
@@ -309,9 +309,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             arch: amd64
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             arch: arm64
     needs:
       - build-snap
@@ -322,7 +322,10 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+        run: |
+          sudo snap install pumaguard-tensorflow
+          sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+          sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make functional-snap
 
   verify-poetry:
@@ -350,9 +353,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             arch: amd64
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             arch: arm64
     needs:
       - build-snap
@@ -363,7 +366,10 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+        run: |
+          sudo snap install pumaguard-tensorflow
+          sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+          sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make verify-snap
 
   train-snap:
@@ -371,9 +377,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             arch: amd64
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             arch: arm64
     needs:
       - build-snap
@@ -384,5 +390,8 @@ jobs:
           submodules: true
       - uses: actions/download-artifact@v4
       - name: Install snap
-        run: sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+        run: |
+          sudo snap install pumaguard-tensorflow
+          sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
+          sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make train

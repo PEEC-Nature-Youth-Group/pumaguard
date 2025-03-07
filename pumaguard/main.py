@@ -103,9 +103,12 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         logger.debug('setting model path to %s', model_path)
         presets.base_output_directory = model_path
 
-    presets.verification_path = args.verification_path \
+    verification_path = args.verification_path \
         if hasattr(args, 'verification_path') \
-        else 'stable/stable_test'
+        else None
+    if verification_path is not None:
+        logger.debug('setting verification path to %s', verification_path)
+        presets.verification_path = verification_path
 
     if args.model != '':
         presets.model_file = args.model

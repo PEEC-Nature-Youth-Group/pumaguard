@@ -29,18 +29,8 @@ def configure_subparser(parser: argparse.ArgumentParser):
     Parse the commandline
     """
     parser.add_argument(
-        '--data-path',
-        help=('Where the image data for training and classification are '
-              'stored (default = %(default)s)'),
-        type=str,
-        default=os.getenv(
-            'PUMAGUARD_DATA_PATH',
-            default=os.path.join(os.path.dirname(__file__), '../data')),
-    )
-    parser.add_argument(
         '--verification-path',
         help='Path to verification data set (default = %(default)s)',
-        default='stable/stable_test',
     )
     parser.add_argument(
         'image',

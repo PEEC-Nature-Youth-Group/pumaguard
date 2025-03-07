@@ -6,7 +6,6 @@ import argparse
 import copy
 import datetime
 import logging
-import os
 import shutil
 import sys
 import tempfile
@@ -94,15 +93,6 @@ def configure_subparser(parser: argparse.ArgumentParser):
     Return Parser the command line.
     """
     parser.add_argument(
-        '--data-path',
-        help=('Where the image data for training and classification are '
-              'stored (default = %(default)s)'),
-        type=str,
-        default=os.getenv(
-            'PUMAGUARD_DATA_PATH',
-            default=os.path.join(os.path.dirname(__file__), '../data')),
-    )
-    parser.add_argument(
         '--lion',
         help='Directory with lion images',
         nargs='+',
@@ -167,11 +157,6 @@ def configure_subparser(parser: argparse.ArgumentParser):
 
 
 def _configure_directories(presets: Preset, options: argparse.Namespace):
-    if any(arg.startswith('--data-path') for arg in sys.argv):
-        logger.warning('data path was specified, not using '
-                       'lion/no_lion paths from presets')
-        presets.lion_directories = []
-        presets.no_lion_directories = []
     lion_directories = options.lion if options.lion is not None else []
     if len(lion_directories) > 0:
         presets.lion_directories = copy.deepcopy(lion_directories)

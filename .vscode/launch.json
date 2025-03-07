@@ -8,14 +8,14 @@
             "name": "Python Debugger: Current File with Arguments",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/scripts/pumaguard",
             "console": "integratedTerminal",
             "stopOnEntry": true,
             "justMyCode": false,
             "args": [
                 "${command:pickArgs}",
-                "--model-path", "/tmp",
-                "--settings", "models/model_settings_6_pre-trained_512_512.yaml"
+                "--settings",
+                "models/model_settings_9_pre-trained_512_512.yaml"
             ]
         }
     ]

@@ -27,6 +27,7 @@ environment:
   # TF_ENABLE_ONEDNN_OPTS: 0
   PUMAGUARD_MODEL_PATH: $SNAP/models
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
+  LD_LIBRARY_PATH: "$SNAP/pumaguard-tensorflow/usr/lib/x86_64-linux-gnu"
 
 apps:
   pumaguard:

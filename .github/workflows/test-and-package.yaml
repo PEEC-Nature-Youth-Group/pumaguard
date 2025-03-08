@@ -323,6 +323,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: |
+          set -e -u -x
           sudo systemctl restart snapd.service
           sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
@@ -368,6 +369,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: |
+          set -e -u -x
           sudo systemctl restart snapd.service
           sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
@@ -393,6 +395,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Install snap
         run: |
+          set -e -u -x
           sudo systemctl restart snapd.service
           sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap

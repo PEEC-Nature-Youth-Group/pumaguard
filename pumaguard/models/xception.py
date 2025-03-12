@@ -73,5 +73,6 @@ class XceptionModel(Model):
         return keras.Sequential([
             base_model,
             keras.layers.GlobalAveragePooling2D(),
+            keras.layers.Dense(128, activation='relu'),
             keras.layers.Dense(1, activation='sigmoid'),
         ])

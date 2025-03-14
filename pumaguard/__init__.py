@@ -4,7 +4,13 @@ PumaGuard
 
 import importlib.metadata
 
-import setuptools
+try:
+    import setuptools
+except ModuleNotFoundError:
+    import sys
+    print('Unable to load setuptools')
+    print(sys.path)
+    raise
 
 try:
     __VERSION__ = importlib.metadata.version('pumaguard')

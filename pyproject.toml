@@ -25,6 +25,9 @@ pylint = "~=3.3"
 pynblint = "~=0.1"
 pytest = "~=8.3"
 pytest-cov = "~=6.0"
+plotly = "^6.0.0"
+opencv-python = "^4.11.0.86"
+scipy = "^1.15.2"
 
 [tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]

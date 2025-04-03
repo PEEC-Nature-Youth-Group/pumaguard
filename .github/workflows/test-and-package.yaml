@@ -324,7 +324,6 @@ jobs:
       - name: Install snap
         run: |
           set -e -u -x
-          sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make functional-snap
@@ -370,7 +369,6 @@ jobs:
       - name: Install snap
         run: |
           set -e -u -x
-          sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make verify-snap
@@ -397,7 +395,6 @@ jobs:
       - name: Install snap
         run: |
           set -e -u -x
-          sudo snap install pumaguard-tensorflow
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make train

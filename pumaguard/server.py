@@ -10,6 +10,10 @@ import subprocess
 import threading
 import time
 
+from playsound3 import (
+    playsound,
+)
+
 from pumaguard.model_factory import (
     model_factory,
 )
@@ -122,6 +126,9 @@ class FolderObserver:
         prediction = classify_image(self.presets, self.model, filepath)
         logger.info('Chance of puma in %s: %.2f%%',
                     filepath, (1 - prediction) * 100)
+        if prediction < 0.5:
+            logger.info('Puma detected in %s', filepath)
+            playsound('/home/peec/pumaguard/dark-engine-logo-141942.mp3')
 
 
 class FolderManager:

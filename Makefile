@@ -21,13 +21,17 @@ docs: venv
 	. venv/bin/activate && sphinx-build --builder html --fail-on-warning docs/source docs/build
 	. venv/bin/activate && sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
-.PHONY: test
-test:
-	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing
-
 .PHONY: install
 install:
 	poetry install
+
+.PHONY: install-dev
+install-dev:
+	poetry install --only dev
+
+.PHONY: test
+test: install
+	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
 build:
@@ -41,7 +45,7 @@ pylint: install
 	poetry run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
-isort:
+isort: install-dev
 	poetry run isort pumaguard tests scripts
 
 .PHONY: mypy
@@ -49,16 +53,16 @@ mypy: install
 	poetry run mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
-bashate: install
+bashate: install-dev
 	poetry run bashate -v scripts/*sh pumaguard/completions/*sh
 
 .PHONY: lint-notebooks
-lint-notebooks: install
+lint-notebooks: install-dev
 	poetry run pynblint notebooks
 
 .PHONY: ansible-lint
-ansible-lint: install
-	poetry run ansible-lint -v scripts
+ansible-lint: install-dev
+	poetry run ansible-lint -vv scripts
 
 .PHONY: snap
 snap:
@@ -116,7 +120,7 @@ configure-pi-5: install
 	poetry run ansible-playbook --inventory pi-5, --ask-become-pass scripts/configure-pi.yaml
 
 .PHONY: verify-poetry
-verify-poetry:
+verify-poetry: install
 	$(MAKE) EXE="poetry run pumaguard" verify
 
 .PHONY: verify-snap

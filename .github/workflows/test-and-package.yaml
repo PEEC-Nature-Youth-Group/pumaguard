@@ -11,7 +11,7 @@ on:
   merge_group:
 
 env:
-  PYTHON_VERSION: "3.10" # Needs to work with Tensorflow
+  PYTHON_VERSION: "3.12" # Needs to work with Tensorflow
   POETRY_VERSION: "1.8.3"
 
 jobs:

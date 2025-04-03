@@ -8,26 +8,27 @@ homepage = "http://pumaguard.rtfd.io/"
 repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<4.0"
+python = ">=3.11,<4.0"
 matplotlib = "~=3.10"
 packaging = "^24.2"
 pillow = "~=11.1"
 pyyaml = "~=6.0"
-tensorflow = "^2.18.0"
+tensorflow = "^2.19"
 
 [tool.poetry.group.dev.dependencies]
-ansible-lint = { version = "~=25.1", markers = 'platform_system != "Windows"' }
+ansible = "~=11.4"
+ansible-lint = { version = "~=25.2", markers = 'platform_system != "Windows"' }
 bashate = "~=2.1"
 ipykernel = "~=6.29"
-isort = "~=5.13"
-mypy = "~=1.14"
+isort = "~=6.0"
+mypy = "~=1.15"
+opencv-python = "^4.11.0.86"
+plotly = "^6.0.0"
 pylint = "~=3.3"
 pynblint = "~=0.1"
 pytest = "~=8.3"
-pytest-cov = "~=6.0"
-plotly = "^6.0.0"
-opencv-python = "^4.11.0.86"
-scipy = "^1.15.2"
+pytest-cov = "~=6.1"
+scipy = "^1.15"
 
 [tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]

@@ -30,6 +30,9 @@ pytest = "~=8.3"
 pytest-cov = "~=6.1"
 scipy = "^1.15"
 
+[tool.poetry.group.ansible.dependencies]
+ansible = "~=11.4"
+
 [tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]
 

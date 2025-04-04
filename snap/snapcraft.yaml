@@ -70,7 +70,7 @@ parts:
       craftctl set version="v${VERSION}"
       poetry version "${VERSION}"
 
-      if [[ ${CRAFT_ARCH_BUILD_FOR} == amd64 ]]; then
+      if [[ ${CRAFT_ARCH_BUILD_FOR} == xamd64 ]]; then
         poetry install --extras and-cuda
       else
         poetry install

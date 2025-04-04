@@ -148,24 +148,7 @@
         post_reboot_delay: 30
       when: reboot_required.rc == 0
 
-    - name: Clone PumaGuard repository
-      ansible.builtin.git:
-        repo: 'https://github.com/PEEC-Nature-Youth-Group/pumaguard.git'
-        dest: /home/peec/pumaguard
-        clone: true
-        update: true
-        version: main
-      register: git_clone_result
-      become: true
-      become_user: peec
-      ignore_errors: true
-      failed_when: git_clone_result.rc != 0
-
-    - name: Set up poetry
-      ansible.builtin.command:
-        cmd: poetry install
-        chdir: pumaguard
-      become: true
-      become_user: peec
-      register: poetry_install
-      changed_when: poetry_install.rc == 0
+    - name: Install pumaguard snap
+      community.general.snap:
+        name: pumaguard
+        state: present

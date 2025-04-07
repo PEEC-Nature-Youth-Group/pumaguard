@@ -28,12 +28,14 @@ environment:
   PUMAGUARD_MODEL_PATH: $SNAP/models
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
   LD_LIBRARY_PATH: "$SNAP/pumaguard-tensorflow/usr/lib/x86_64-linux-gnu"
+  MPLCONFIGDIR: $SNAP_DATA/matplotlib
 
 apps:
   pumaguard:
     command: bin/snapcraft-preload $SNAP/bin/python3 $SNAP/bin/pumaguard
     completer: bin/bash-completions.sh
     plugs:
+      - audio-playback
       - home
       - network
       - opengl

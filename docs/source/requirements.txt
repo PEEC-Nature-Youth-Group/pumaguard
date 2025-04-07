@@ -1,6 +1,7 @@
 cloud-sptheme
 matplotlib
 pillow
+playsound3
 sphinx_new_tab_link
 sphinxcontrib-mermaid
 tensorflow

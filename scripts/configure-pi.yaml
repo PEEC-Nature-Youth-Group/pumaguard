@@ -123,16 +123,6 @@
           - python3-pip
           - vim
 
-    - name: Install poetry
-      ansible.builtin.pip:
-        break_system_packages: true
-        name: poetry
-
-    - name: Add bash completions for poetry
-      ansible.builtin.lineinfile:
-        path: .bashrc
-        line: source <(poetry completions bash)
-
     - name: Check if a reboot is required
       ansible.builtin.command: /usr/bin/test -f /var/run/reboot-required
       register: reboot_required

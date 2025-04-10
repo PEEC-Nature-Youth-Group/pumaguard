@@ -104,3 +104,8 @@ parts:
       install --mode 0644 vsftpd.conf ${CRAFT_PART_INSTALL}/etc/vsftpd.conf
     stage-packages:
       - vsftpd
+
+  aplay:
+    plugin: nil
+    stage-packages:
+      - alsa-utils

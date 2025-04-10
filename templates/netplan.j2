@@ -1,0 +1,13 @@
+network:
+  version: 2
+  renderer: networkd
+  wifis:
+    wlan0:
+      dhcp4: true
+      access-points:
+        {% for network in wireless_networks %}
+        "{{ network.ssid }}":
+          {% if network.password %}
+          password: "{{ network.password }}"
+          {% endif %}
+        {% endfor %}

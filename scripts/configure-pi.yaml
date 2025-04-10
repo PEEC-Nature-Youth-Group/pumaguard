@@ -2,6 +2,8 @@
 - name: Configure Raspberry Pi Zero
   hosts: all
   become: true
+  vars_files:
+    - wireless_credentials.yaml
   vars:
     swap_size: "{{ 6 * 1024 }}"
 
@@ -152,3 +154,13 @@
       community.general.snap:
         name: pumaguard
         state: present
+
+    - name: Configure netplan for wireless networks
+      ansible.builtin.template:
+        src: netplan.j2
+        dest: /etc/netplan/90-wireless-networks.yaml
+
+    - name: Apply netplan configuration
+      ansible.builtin.command: netplan apply
+      register: netplan_apply
+      changed_when: netplan_apply.rc == 0

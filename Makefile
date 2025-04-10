@@ -66,7 +66,7 @@ lint-notebooks: install-dev
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	poetry run ansible-lint -vv scripts
+	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-pi.yaml
 
 .PHONY: snap
 snap:
@@ -117,11 +117,11 @@ release:
 
 .PHONY: configure-pi-zero
 configure-pi-zero: install-dev
-	poetry run ansible-playbook --inventory pi-zero, --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
+	poetry run ansible-playbook --inventory pi-zero, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: configure-pi-5
 configure-pi-5: install-dev
-	poetry run ansible-playbook --inventory pi-5, --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
+	poetry run ansible-playbook --inventory pi-5, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: verify-poetry
 verify-poetry: install

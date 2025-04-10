@@ -67,8 +67,8 @@
         path: /var/swap
         owner: root
         group: root
-        mode: '0600'
-      when: swap_file.stat.mode != '0600'
+        mode: "0600"
+      when: swap_file.stat.mode != "0600"
 
     - name: Set up the swap file
       ansible.builtin.command: mkswap /var/swap
@@ -85,7 +85,7 @@
     - name: Ensure swap file is enabled on boot
       ansible.builtin.lineinfile:
         path: /etc/fstab
-        line: '/var/swap none swap sw 0 0'
+        line: "/var/swap none swap sw 0 0"
         create: true
         mode: "0644"
 
@@ -157,8 +157,11 @@
 
     - name: Configure netplan for wireless networks
       ansible.builtin.template:
-        src: netplan.j2
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/netplan.j2
         dest: /etc/netplan/90-wireless-networks.yaml
+        mode: "0600"
 
     - name: Apply netplan configuration
       ansible.builtin.command: netplan apply

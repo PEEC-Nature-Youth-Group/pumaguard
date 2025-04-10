@@ -415,13 +415,8 @@ jobs:
       id-token: write
     needs:
       - build-python
-      - build-snap
-      - lint-notebooks
       - functional-poetry
-      - functional-snap
-      - lint-ansible
       - verify-poetry
-      - verify-snap
     if: github.ref == 'refs/heads/main'
 
     steps:

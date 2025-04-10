@@ -405,3 +405,51 @@ jobs:
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
       - run: make train
+
+  publish-to-pypi:
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pumaguard
+    permissions:
+      id-token: write
+    needs:
+      - build-python
+      - build-snap
+      - lint-notebooks
+      - functional-poetry
+      - functional-snap
+      - lint-ansible
+      - verify-poetry
+      - verify-snap
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==${{ env.POETRY_VERSION }}
+          poetry install
+      - uses: actions/download-artifact@v4
+        with:
+          name: version
+      - name: Get Python package version
+        id: get_python_package_version
+        run: |
+          VERSION=$(cat version)
+          echo "python_package_version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "Setting version: ${VERSION}"
+      - name: Update package version
+        run: poetry version "${{ steps.get_python_package_version.outputs.python_package_version }}"
+      - name: Build package
+        run: make build
+    	- name: Publish package distributions to PyPI
+      	uses: pypa/gh-action-pypi-publish@release/v1

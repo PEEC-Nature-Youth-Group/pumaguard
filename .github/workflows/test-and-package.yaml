@@ -96,7 +96,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry==${{ env.POETRY_VERSION }}
       - name: Run ansible-lint
-        run: make ansible-lint
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        run: |
+          poetry install --only dev
+          echo "${ANSIBLE_VAULT_PASSWORD}" > .vault_pass
+          ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass poetry run ansible-lint -v scripts/configure-pi.yaml
+          rm -f .vault_pass
 
   test-python:
     runs-on: ubuntu-24.04
@@ -326,6 +332,7 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+          ls -lh /snap/pumaguard-tensorflow/current/lib/python3.12/site-packages/
       - run: make functional-snap
 
   verify-poetry:

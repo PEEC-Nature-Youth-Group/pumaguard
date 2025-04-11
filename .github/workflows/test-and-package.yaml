@@ -333,7 +333,7 @@ jobs:
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
           ls -lh /snap/pumaguard-tensorflow/current/lib/python3.12/site-packages/
-          ls -lh /snap/pumaguard/current/pumaguard-tensorflow/
+          echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard
       - run: make functional-snap
 
   verify-poetry:

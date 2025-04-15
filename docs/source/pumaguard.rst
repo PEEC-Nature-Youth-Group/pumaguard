@@ -68,6 +68,14 @@ pumaguard.server module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.sound module
+----------------------
+
+.. automodule:: pumaguard.sound
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.stats module
 ----------------------
 

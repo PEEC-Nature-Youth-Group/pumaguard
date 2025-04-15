@@ -10,15 +10,14 @@ import subprocess
 import threading
 import time
 
-from playsound3 import (
-    playsound,
-)
-
 from pumaguard.model_factory import (
     model_factory,
 )
 from pumaguard.presets import (
     Preset,
+)
+from pumaguard.sound import (
+    playsound,
 )
 from pumaguard.utils import (
     classify_image,

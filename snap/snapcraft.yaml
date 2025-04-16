@@ -36,10 +36,13 @@ apps:
     command: bin/snapcraft-preload $SNAP/bin/python3 $SNAP/bin/pumaguard
     completer: bin/bash-completions.sh
     plugs:
+      - alsa
       - audio-playback
       - home
       - network
       - opengl
+      - pipewire
+      - pulseaudio
   vsftpd:
     command: usr/sbin/vsftpd $SNAP/etc/vsftpd.conf
     daemon: simple

@@ -111,3 +111,6 @@ parts:
     plugin: nil
     stage-packages:
       - mpg123
+    override-build: |
+      craftctl default
+      ln --symbolic mpg123.bin ${CRAFT_PART_INSTALL}/usr/bin/mpg123

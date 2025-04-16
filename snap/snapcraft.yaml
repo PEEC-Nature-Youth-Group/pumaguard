@@ -29,7 +29,7 @@ environment:
   PUMAGUARD_SOUND_PATH: $SNAP/sounds
   MPLCONFIGDIR: $SNAP_DATA/matplotlib
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
-  LD_LIBRARY_PATH: "$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/pumaguard-tensorflow/usr/lib/x86_64-linux-gnu:$SNAP_LIBRARY_PATH"
+  LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/pumaguard-tensorflow/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP_LIBRARY_PATH"
 
 apps:
   pumaguard:

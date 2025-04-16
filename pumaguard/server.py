@@ -129,7 +129,7 @@ class FolderObserver:
             logger.info('Puma detected in %s', filepath)
             script_dir = os.path.dirname(os.path.abspath(__file__))
             sound_file_path = os.path.join(
-                script_dir, '../sounds/forest-ambience-296528.mp3')
+                script_dir, '../sounds/lion_cry.wav')
             playsound(sound_file_path)
 
 

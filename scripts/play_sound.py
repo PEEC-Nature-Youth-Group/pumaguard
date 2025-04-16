@@ -4,7 +4,7 @@ Test script to play a sound file using the USB speaker.
 
 import os
 
-from playsound3 import (
+from pumaguard.sound import (
     playsound,
 )
 

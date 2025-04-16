@@ -15,7 +15,6 @@ packaging = "^24.2"
 pillow = "~=11.1"
 pyyaml = "~=6.0"
 tensorflow = "^2.19"
-playsound3 = "^3.2.2"
 
 [tool.poetry.group.dev.dependencies]
 ansible = "~=11.4"
@@ -41,6 +40,7 @@ and-cuda = ["tensorflow-and-cuda"]
 [tool.poetry.scripts]
 pick-files = 'scripts.pick_files:main'
 pumaguard = 'pumaguard.main:main'
+playsound = 'pumaguard.sound:main'
 
 [build-system]
 requires = ["poetry-core"]

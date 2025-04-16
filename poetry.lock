@@ -2311,20 +2311,6 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=8.3.4)", "pytest-
 type = ["mypy (>=1.14.1)"]
 
 [[package]]
-name = "playsound3"
-version = "3.2.2"
-description = "Cross-platform library to play audio files"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "playsound3-3.2.2-py3-none-any.whl", hash = "sha256:9d5adad38d36e1e94f22cf4341249d1f624b5496bd0115fbd6a669ee71f07414"},
-    {file = "playsound3-3.2.2.tar.gz", hash = "sha256:f5f1522a1f51dd1b550315aa26b4a9148c86372a0f89a0c05f9b7e69e901b17e"},
-]
-
-[package.dependencies]
-pywin32 = {version = "*", markers = "sys_platform == \"win32\""}
-
-[[package]]
 name = "plotly"
 version = "6.0.1"
 description = "An open-source interactive data visualization library for Python"
@@ -3818,4 +3804,4 @@ and-cuda = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.11,<4.0"
-content-hash = "9bcfe1fd79bed8d2206da6d8dd9958459d3aba8f36cf4c1b0dd4802bd513c37c"
+content-hash = "1bace660aabce246a1b09e89a8aabf20a838c80dcb881e6d9aadbf3805c74d3a"

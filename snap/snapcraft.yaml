@@ -105,7 +105,7 @@ parts:
     stage-packages:
       - vsftpd
 
-  aplay:
+  sound:
     plugin: nil
     stage-packages:
-      - alsa-utils
+      - mpg123

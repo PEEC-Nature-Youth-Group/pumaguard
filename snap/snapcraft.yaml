@@ -43,7 +43,7 @@ apps:
       - opengl
       - pipewire
       - pulseaudio
-      - removable-devices
+      - removable-media
       - x11
   vsftpd:
     command: usr/sbin/vsftpd $SNAP/etc/vsftpd.conf

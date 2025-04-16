@@ -36,6 +36,14 @@ def configure_subparser(parser: argparse.ArgumentParser):
         nargs='*',
     )
     parser.add_argument(
+        '--sound-path',
+        help='Where the sound files are stored (default = %(default)s)',
+        type=str,
+        default=os.getenv(
+            'PUMAGUARD_SOUND_PATH',
+            default=os.path.join(os.path.dirname(__file__), '../sounds')),
+    )
+    parser.add_argument(
         '--watch-method',
         help='''What implementation (method) to use for watching
         the folder. Linux on baremetal supports both methods. Linux
@@ -127,9 +135,8 @@ class FolderObserver:
                     filepath, (1 - prediction) * 100)
         if prediction < 0.5:
             logger.info('Puma detected in %s', filepath)
-            script_dir = os.path.dirname(os.path.abspath(__file__))
             sound_file_path = os.path.join(
-                script_dir, '../sounds/lion_cry.wav')
+                self.presets.sound_path, 'lion-roar-6011.mp3')
             playsound(sound_file_path)
 
 
@@ -174,6 +181,13 @@ def main(options: argparse.Namespace, presets: Preset):
     """
     Main entry point.
     """
+
+    sound_path = options.sound_path if hasattr(options, 'sound_path') \
+        and options.sound_path \
+        else os.getenv('PUMAGUARD_SOUND_PATH', default=None)
+    if sound_path is not None:
+        logger.debug('setting sound path to %s', sound_path)
+        presets.sound_path = sound_path
 
     manager = FolderManager(presets)
     for folder in options.FOLDER:

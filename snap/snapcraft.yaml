@@ -26,6 +26,7 @@ environment:
   TF_CPP_MIN_LOG_LEVEL: 3 # or any of {'0', '1', '2'}
   # TF_ENABLE_ONEDNN_OPTS: 0
   PUMAGUARD_MODEL_PATH: $SNAP/models
+  PUMAGUARD_SOUND_PATH: $SNAP/sounds
   MPLCONFIGDIR: $SNAP_DATA/matplotlib
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
   LD_LIBRARY_PATH: "$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/pumaguard-tensorflow/usr/lib/x86_64-linux-gnu:$SNAP_LIBRARY_PATH"

@@ -32,6 +32,8 @@ class Preset():
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), '../models')
+        self.sound_path = os.path.join(
+            os.path.dirname(__file__), '../sounds')
         self.verification_path = 'data/stable/stable_test'
         self.batch_size = 16
         self.notebook_number = 1
@@ -223,6 +225,20 @@ class Preset():
         Set the model version name.
         """
         self._model_version = model_version
+
+    @property
+    def sound_path(self):
+        """
+        Get the sound path.
+        """
+        return self._sound_path
+
+    @sound_path.setter
+    def sound_path(self, sound_path: str):
+        """
+        Set the sound path.
+        """
+        self._sound_path = sound_path
 
     @property
     def model_file(self):

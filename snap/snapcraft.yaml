@@ -41,7 +41,6 @@ apps:
       - home
       - network
       - opengl
-      - pipewire
       - pulseaudio
       - removable-media
       - x11

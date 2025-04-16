@@ -80,11 +80,13 @@ parts:
     override-build: |
       craftctl default
       cp --recursive models ${CRAFT_PART_INSTALL}/models
+      cp --recursive sounds ${CRAFT_PART_INSTALL}/sounds
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage:
       - lib/python3.12/site-packages/pumaguard*
       - bin
       - models
+      - sounds
 
   inotify:
     plugin: nil

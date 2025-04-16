@@ -1,5 +1,8 @@
 [tool.poetry]
-include = [{ path = "models", format = ["sdist", "wheel"] }]
+include = [
+  { path = "models", format = ["sdist", "wheel"] },
+  { path = "sounds", format = ["sdist", "wheel"] },
+]
 name = "pumaguard"
 version = "0.0.0"
 description = ""

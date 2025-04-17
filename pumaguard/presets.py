@@ -31,9 +31,9 @@ class Preset():
     def __init__(self):
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
-            os.path.dirname(__file__), '../models')
+            os.path.dirname(__file__), '../pumaguard-models')
         self.sound_path = os.path.join(
-            os.path.dirname(__file__), '../sounds')
+            os.path.dirname(__file__), '../pumaguard-sounds')
         self.verification_path = 'data/stable/stable_test'
         self.batch_size = 16
         self.notebook_number = 1

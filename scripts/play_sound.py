@@ -21,5 +21,5 @@ def play_sound(file_path):
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sound_file_path = os.path.join(
-    script_dir, '../sounds/forest-ambience-296528.mp3')
+    script_dir, '../pumaguard-sounds/forest-ambience-296528.mp3')
 play_sound(sound_file_path)

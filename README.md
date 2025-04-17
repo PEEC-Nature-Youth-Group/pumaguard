@@ -103,5 +103,5 @@ should be committed to the repository.
 4. Train the model from scratch
 
     ```console
-    ./scripts/pumaguard train --no-load --settings models/model_settings_6_pre-trained_512_512.yaml
+    ./scripts/pumaguard train --no-load --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml
     ```

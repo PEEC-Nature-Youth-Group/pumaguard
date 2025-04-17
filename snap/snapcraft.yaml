@@ -25,8 +25,8 @@ plugs:
 environment:
   TF_CPP_MIN_LOG_LEVEL: 3 # or any of {'0', '1', '2'}
   # TF_ENABLE_ONEDNN_OPTS: 0
-  PUMAGUARD_MODEL_PATH: $SNAP/pumaguard-models
-  PUMAGUARD_SOUND_PATH: $SNAP/pumaguard-sounds
+  PUMAGUARD_MODEL_PATH: $SNAP/lib/python3.12/site-packages/pumaguard-models
+  PUMAGUARD_SOUND_PATH: $SNAP/lib/python3.12/site-packages/pumaguard-sounds
   MPLCONFIGDIR: $SNAP_DATA/matplotlib
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
   LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/pumaguard-tensorflow/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP_LIBRARY_PATH"
@@ -105,14 +105,10 @@ parts:
       fi
     override-build: |
       craftctl default
-      cp --recursive pumaguard-models ${CRAFT_PART_INSTALL}/pumaguard-models
-      cp --recursive pumaguard-sounds ${CRAFT_PART_INSTALL}/pumaguard-sounds
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage:
       - lib/python3.12/site-packages/pumaguard*
       - bin
-      - pumaguard-models
-      - pumaguard-sounds
 
   inotify:
     plugin: nil

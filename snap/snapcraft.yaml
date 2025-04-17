@@ -49,6 +49,18 @@ apps:
     daemon: simple
     plugs:
       - network-bind
+  mpg123:
+    command: usr/bin/mpg123
+    plugs:
+      - alsa
+      - audio-playback
+      - pulseaudio
+  playsound:
+    command: bin/playsound
+    plugs:
+      - alsa
+      - audio-playback
+      - pulseaudio
 
 parts:
   snapcraft-preload:

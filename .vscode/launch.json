@@ -15,7 +15,7 @@
             "args": [
                 "${command:pickArgs}",
                 "--settings",
-                "models/model_settings_9_pre-trained_512_512.yaml"
+                "pumaguard-models/model_settings_9_pre-trained_512_512.yaml"
             ]
         }
     ]

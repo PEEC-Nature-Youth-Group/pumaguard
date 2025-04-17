@@ -1,6 +1,6 @@
-[submodule "models"]
-	path = models
+[submodule "pumaguard-models"]
+	path = pumaguard-models
 	url = https://github.com/PEEC-Nature-Youth-Group/pumaguard-models.git
-[submodule "data"]
-	path = data
+[submodule "training-data"]
+	path = training-data
 	url = https://github.com/PEEC-Nature-Youth-Group/training-data.git

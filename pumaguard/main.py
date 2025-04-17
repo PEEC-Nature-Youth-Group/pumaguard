@@ -57,7 +57,8 @@ def create_global_parser() -> argparse.ArgumentParser:
         type=str,
         default=os.getenv(
             'PUMAGUARD_MODEL_PATH',
-            default=os.path.join(os.path.dirname(__file__), '../models')),
+            default=os.path.join(os.path.dirname(__file__),
+                                 '../pumaguard-models')),
     )
     global_parser.add_argument(
         '--model',

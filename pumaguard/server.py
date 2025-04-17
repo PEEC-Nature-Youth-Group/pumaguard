@@ -41,7 +41,8 @@ def configure_subparser(parser: argparse.ArgumentParser):
         type=str,
         default=os.getenv(
             'PUMAGUARD_SOUND_PATH',
-            default=os.path.join(os.path.dirname(__file__), '../sounds')),
+            default=os.path.join(os.path.dirname(__file__),
+                                 '../pumaguard-sounds')),
     )
     parser.add_argument(
         '--watch-method',

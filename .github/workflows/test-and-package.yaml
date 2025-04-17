@@ -333,8 +333,17 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-          ls -lh /snap/pumaguard-tensorflow/current/lib/python3.12/site-packages/
-          echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard
+          ls /snap/pumaguard-tensorflow/current/lib/python3.12/site-packages/
+          for (( i = 0; i < 5; i++ )); do
+            if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
+              exit 0
+            fi
+            sudo snap disconnect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+            sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+          done
+          exit 1
       - run: make functional-snap
 
   verify-poetry:
@@ -380,6 +389,16 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+          for (( i = 0; i < 5; i++ )); do
+            if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
+              exit 0
+            fi
+            sudo snap disconnect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+            sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+          done
+          exit 1
       - run: make verify-snap
 
   train-snap:
@@ -406,6 +425,16 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+          for (( i = 0; i < 5; i++ )); do
+            if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
+              exit 0
+            fi
+            sudo snap disconnect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+            sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
+            sleep 10
+          done
+          exit 1
       - run: make train
 
   publish-to-pypi:

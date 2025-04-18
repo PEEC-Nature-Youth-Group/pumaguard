@@ -237,6 +237,7 @@ def main(options: argparse.Namespace, presets: Preset):
         logger.debug('setting sound path to %s', sound_path)
         presets.sound_path = sound_path
 
+    logger.debug('getting folder manager')
     manager = FolderManager(presets)
     for folder in options.FOLDER:
         manager.register_folder(folder, options.watch_method)

@@ -186,7 +186,7 @@ class FolderObserver:
         if prediction < 0.5:
             logger.info('Puma detected in %s', filepath)
             sound_file_path = os.path.join(
-                self.presets.sound_path, 'lion-roar-6011.mp3')
+                self.presets.sound_path, 'pumaguard-warning.mp3')
             playsound(sound_file_path)
 
 

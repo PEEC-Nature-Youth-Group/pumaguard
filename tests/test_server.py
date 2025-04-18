@@ -41,9 +41,13 @@ class TestFolderObserver(unittest.TestCase):
         MockPopen.return_value.__enter__.return_value = mock_process
 
         with patch.object(self.observer, '_handle_new_file') \
-                as mock_handle_new_file:
+                as mock_handle_new_file, \
+                patch.object(self.observer, '_wait_for_file_stability') \
+                as mock_wait:
             self.observer._observe()  # pylint: disable=protected-access
             mock_handle_new_file.assert_called_once_with(
+                'test_folder/new_file.jpg')
+            mock_wait.assert_called_once_with(
                 'test_folder/new_file.jpg')
 
     @patch('pumaguard.server.threading.Thread')

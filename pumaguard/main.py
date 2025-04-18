@@ -85,8 +85,12 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
     """
     logger = logging.getLogger('PumaGuard')
 
-    if args.settings is not None:
-        presets.load(args.settings)
+    if args.settings is None:
+        logger.info('Loading default settings')
+        settings = os.path.join(presets.base_output_directory, 'settings.yaml')
+    else:
+        settings = args.settings
+    presets.load(settings)
 
     if args.list_models:
         logger.info('available models:')

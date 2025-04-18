@@ -32,6 +32,10 @@ environment:
   LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/pumaguard-tensorflow/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP_LIBRARY_PATH"
   MPG123_MODDIR: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/mpg123"
 
+layout:
+  /usr/share/alsa:
+    symlink: $SNAP/usr/share/alsa
+
 apps:
   pumaguard:
     command: bin/snapcraft-preload $SNAP/bin/python3 $SNAP/bin/pumaguard
@@ -51,7 +55,7 @@ apps:
     plugs:
       - network-bind
   mpg123:
-    command: usr/bin/mpg123
+    command: usr/bin/mpg123.bin
     plugs:
       - alsa
       - audio-playback

@@ -141,6 +141,7 @@ class FolderObserver:
                         break
                     filepath = line.strip()
                     logger.info('New file detected: %s', filepath)
+                    time.sleep(2)
                     if self._wait_for_file_stability(filepath):
                         threading.Thread(
                             target=self._handle_new_file,
@@ -157,6 +158,7 @@ class FolderObserver:
                 for new_file in new_files:
                     filepath = os.path.join(self.folder, new_file)
                     logger.info('New file detected: %s', filepath)
+                    time.sleep(2)
                     if self._wait_for_file_stability(filepath):
                         threading.Thread(
                             target=self._handle_new_file,

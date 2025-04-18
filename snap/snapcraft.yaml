@@ -119,6 +119,11 @@ parts:
     stage-packages:
       - inotify-tools
 
+  lsof:
+    plugin: nil
+    stage-packages:
+      - lsof
+
   ftp:
     plugin: nil
     override-build: |

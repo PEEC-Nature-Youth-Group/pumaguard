@@ -79,7 +79,7 @@ FUNCTIONAL_FILES = \
 .PHONY: run-functional
 run-functional:
 	@echo "running functional test"
-	$(EXE) classify --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml $(FUNCTIONAL_FILES) 2>&1 | tee functional-test.output
+	$(EXE) classify --debug --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml $(FUNCTIONAL_FILES) 2>&1 | tee functional-test.output
 
 .PHONY: check-functional
 check-functional:
@@ -133,12 +133,12 @@ verify-snap:
 
 .PHONY: verify
 verify:
-	$(EXE) verify --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml --verification-path training-data/verification 2>&1 | tee verify.output
+	$(EXE) verify --debug --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml --verification-path training-data/verification 2>&1 | tee verify.output
 	if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 92.75% ]; then false; fi
 
 .PHONY: train
 train:
-	pumaguard train --epochs 1 --model-output . --lion training-data/Stables/lion --no-lion training-data/Stables/no-lion/ --no-load-previous-session
+	pumaguard train --debug --epochs 1 --model-output . --lion training-data/Stables/lion --no-lion training-data/Stables/no-lion/ --no-load-previous-session
 
 .PHONY: pre-commit
 pre-commit: lint docs

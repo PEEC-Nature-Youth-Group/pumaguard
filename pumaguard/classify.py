@@ -38,6 +38,7 @@ def main(options: argparse.Namespace, presets: Preset):
     Main entry point
     """
 
+    logger.debug('starting classify')
     logger.debug('loading model from %s', presets.model_file)
     model = model_factory(presets).model
 

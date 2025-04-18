@@ -85,12 +85,22 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
     """
     logger = logging.getLogger('PumaGuard')
 
+    model_path = args.model_path if hasattr(args, 'model_path') \
+        and args.model_path \
+        else os.getenv('PUMAGUARD_MODEL_PATH', default=None)
+
     if args.settings is None:
-        logger.info('Loading default settings')
-        settings = os.path.join(presets.base_output_directory, 'settings.yaml')
+        logger.info('loading default settings')
+        settings = os.path.join(model_path, 'settings.yaml')
     else:
         settings = args.settings
     presets.load(settings)
+
+    logger.debug('model path is %s', presets.base_output_directory)
+
+    if model_path is not None:
+        logger.debug('setting model path to %s', model_path)
+        presets.base_output_directory = model_path
 
     if args.list_models:
         logger.info('available models:')
@@ -100,13 +110,6 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
 
     if args.notebook is not None:
         presets.notebook_number = args.notebook
-
-    model_path = args.model_path if hasattr(args, 'model_path') \
-        and args.model_path \
-        else os.getenv('PUMAGUARD_MODEL_PATH', default=None)
-    if model_path is not None:
-        logger.debug('setting model path to %s', model_path)
-        presets.base_output_directory = model_path
 
     verification_path = args.verification_path \
         if hasattr(args, 'verification_path') \
@@ -204,7 +207,7 @@ def main():
 
     configure_presets(args, presets)
 
-    logger.debug('presets: %s', str(presets))
+    logger.debug('presets: %s', str(presets).rstrip())
 
     if args.command == 'train':
         train.main(args, presets)

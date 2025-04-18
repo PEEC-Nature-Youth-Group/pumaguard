@@ -81,10 +81,48 @@ class FolderObserver:
         """
         self._stop_event.set()
 
+    def _wait_for_file_stability(self, filepath: str, timeout: int = 10,
+                                 interval: float = 0.2):
+        """
+        Wait until the file is no longer open by any process.
+
+        Arguments:
+            filepath -- The path of the file to check.
+            timeout -- Maximum time to wait for stability (in seconds).
+            interval -- Time interval between checks (in seconds).
+        """
+        logger.info('Making sure %s is closed', filepath)
+        if timeout < 1:
+            raise ValueError('timeout needs to be greater than 0')
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                result = subprocess.run(
+                    ['lsof', '-F', 'p', '--', filepath],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=min(1, timeout),
+                    text=True,
+                    check=False,
+                )
+                # lsof returns non-zero if the file is not open
+                if result.returncode != 0:
+                    return True
+                pid = result.stdout.strip()
+                logger.debug('%s is still open by PID %s', filepath, pid)
+                time.sleep(interval)
+            except FileNotFoundError:
+                # File might not exist yet, retry
+                time.sleep(interval)
+        logger.warning('File %s is still open after %d seconds',
+                       filepath, timeout)
+        return False
+
     def _observe(self):
         """
         Observe whether a new file is created in the folder.
         """
+        logger.info('Starting new observer, method = %s', self.method)
         if self.method == 'inotify':
             with subprocess.Popen(
                 ['inotifywait', '--monitor', '--event',
@@ -101,23 +139,32 @@ class FolderObserver:
                     if self._stop_event.is_set():
                         process.terminate()
                         break
-                    logger.info('New file detected: %s', line.strip())
-                    threading.Thread(
-                        target=self._handle_new_file,
-                        args=(line.strip(),),
-                    ).start()
+                    filepath = line.strip()
+                    logger.info('New file detected: %s', filepath)
+                    if self._wait_for_file_stability(filepath):
+                        threading.Thread(
+                            target=self._handle_new_file,
+                            args=(filepath,),
+                        ).start()
+                    else:
+                        logger.warning(
+                            'File %s not closed, ignoring', filepath)
         elif self.method == 'os':
             known_files = set(os.listdir(self.folder))
             while not self._stop_event.is_set():
                 current_files = set(os.listdir(self.folder))
                 new_files = current_files - known_files
                 for new_file in new_files:
-                    full_path = os.path.join(self.folder, new_file)
-                    logger.info('New file detected: %s', full_path)
-                    threading.Thread(
-                        target=self._handle_new_file,
-                        args=(full_path,),
-                    ).start()
+                    filepath = os.path.join(self.folder, new_file)
+                    logger.info('New file detected: %s', filepath)
+                    if self._wait_for_file_stability(filepath):
+                        threading.Thread(
+                            target=self._handle_new_file,
+                            args=(filepath,),
+                        ).start()
+                    else:
+                        logger.warning(
+                            'File %s not closed, ignoring', filepath)
                 known_files = current_files
                 time.sleep(1)
         else:

@@ -89,6 +89,8 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         and args.model_path \
         else os.getenv('PUMAGUARD_MODEL_PATH', default=None)
 
+    logger.debug('model path is %s', presets.base_output_directory)
+
     if args.settings is None:
         logger.info('loading default settings')
         settings = os.path.join(model_path, 'settings.yaml')

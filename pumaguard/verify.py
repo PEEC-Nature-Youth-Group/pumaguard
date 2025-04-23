@@ -9,11 +9,6 @@ import logging
 import math
 import os
 
-import keras  # type: ignore
-
-from pumaguard.model_factory import (
-    model_factory,
-)
 from pumaguard.presets import (
     Preset,
 )
@@ -107,7 +102,7 @@ def get_mean_squared_error(predictions: list[tuple[str, float, int]]) -> float:
     return error / len(predictions)
 
 
-def verify_model(presets: Preset, model: keras.Model):
+def verify_model(presets: Preset):
     """
     Verify a model by calculating its accuracy across a standard set of images.
     """
@@ -123,7 +118,7 @@ def verify_model(presets: Preset, model: keras.Model):
     for lion in lions:
         filename = os.path.relpath(os.path.join(lion_directory, lion), '.')
         logger.debug('classifying %s', filename)
-        prediction = classify_image(presets, model, filename)
+        prediction = classify_image(presets, filename)
         predictions.append((filename, prediction, 0))
         is_correct = prediction < 0.5
         if not is_correct:
@@ -135,7 +130,7 @@ def verify_model(presets: Preset, model: keras.Model):
         filename = os.path.relpath(
             os.path.join(no_lion_directory, no_lion), '.')
         logger.debug('classifying %s', filename)
-        prediction = classify_image(presets, model, filename)
+        prediction = classify_image(presets, filename)
         predictions.append((filename, prediction, 1))
         is_correct = prediction >= 0.5
         if not is_correct:
@@ -161,7 +156,4 @@ def main(presets: Preset):
     Main entry point
     """
 
-    logger.debug('loading model from %s', presets.model_file)
-    model = model_factory(presets).model
-
-    verify_model(presets, model)
+    verify_model(presets)

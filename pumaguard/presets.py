@@ -42,8 +42,8 @@ class Preset():
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
         self.validation_lion_directories: list[str] = []
-        self.load_history_from_file = True
-        self.load_model_from_file = True
+        self.load_history_from_file = False
+        self.load_model_from_file = False
         self.model_function_name = 'xception'
         self.model_version = 'undefined'
         self.no_lion_directories: list[str] = []

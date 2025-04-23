@@ -8,14 +8,13 @@ import hashlib
 import logging
 import os
 import shutil
+from typing import (
+    Tuple,
+)
 
 import keras  # type: ignore
 import numpy as np
 import tensorflow as tf  # type: ignore
-from PIL import (
-    Image,
-    UnidentifiedImageError,
-)
 
 from pumaguard.presets import (
     Preset,
@@ -213,8 +212,7 @@ def get_sha256(filepath: str) -> str:
     return hasher.hexdigest()
 
 
-def classify_image(presets: Preset, model: keras.Model,
-                   image_path: str) -> float:
+def classify_image(presets: Preset, image_path: str) -> float:
     """
     Classify the image and print out the result.
 
@@ -235,41 +233,36 @@ def classify_image(presets: Preset, model: keras.Model,
         taken for classification.
     """
     logger.debug('using color_mode "%s"', presets.color_mode)
-    logger.debug('classifying image %s', image_path)
+    logger.debug('classifying image %s using external model', image_path)
+
+    classifier_model = keras.models.load_model(
+        os.path.join(presets.base_output_directory, 'model.h5'))
+    feature_extractor = keras.applications.Xception(
+        weights='imagenet', include_top=True)
 
     try:
-        if presets.color_mode == 'rgb':
-            img = Image.open(image_path).convert('RGB')
-        elif presets.color_mode == 'grayscale':
-            img = Image.open(image_path).convert('L')
-        else:
-            raise ValueError(f'unknown color mode {presets.color_mode}')
-    except FileNotFoundError as e:
-        logger.error('file not found: %s', e)
+        img_array = prepare_image(image_path, presets.image_dimensions)
+    except Exception as e:
+        logger.error("Failed to load or preprocess image: %s", e)
         raise
-    except UnidentifiedImageError as e:
-        logger.warning('unidentified image: %s', e)
-
-    logger.debug('image loaded, classifying now...')
 
     start_time = datetime.datetime.now()
 
-    img = img.resize(presets.image_dimensions)
-    img_array = np.array(img)
-    # img_array = img_array / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+    # Extract features using Xception
+    features = feature_extractor.predict(img_array)
 
-    if presets.color_mode == 'grayscale':
-        img_array = np.expand_dims(img_array, axis=-1)
-
-    prediction = model.predict(img_array)
+    # Predict with the trained classifier
+    prediction = classifier_model.predict(features)
 
     end_time = datetime.datetime.now()
-
     logger.debug('Classification took %.2f seconds',
                  get_duration(start_time, end_time))
-    logger.debug('predicted label %.2f', prediction[0][0])
-    return prediction[0][0]
+
+    # Adjusted: Assuming index 0 is 'lion'
+    lion_probability = float(prediction[0][0])
+    logger.debug('predicted lion probability %.2f', lion_probability)
+
+    return lion_probability
 
 
 def print_bash_completion(command: str, shell: str):
@@ -289,3 +282,15 @@ def print_bash_completion(command: str, shell: str):
         f'pumaguard-{command_string}completions.{shell_suffix}')
     with open(completions_file, encoding='utf-8') as fd:
         print(fd.read())
+
+
+def prepare_image(img_path: str, image_dimensions: Tuple[int, int]):
+    """
+    Prepare the image.
+    """
+    img = keras.preprocessing.image.load_img(
+        img_path, target_size=image_dimensions)
+    img_array = keras.preprocessing.image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array = keras.applications.xception.preprocess_input(img_array)
+    return img_array

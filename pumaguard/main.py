@@ -98,6 +98,9 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         settings = args.settings
     presets.load(settings)
 
+    presets.image_dimensions = (299, 299)
+    logger.warning('hardcoding image dimension: %s', presets.image_dimensions)
+
     logger.debug('model path is %s', presets.base_output_directory)
 
     if model_path is not None:

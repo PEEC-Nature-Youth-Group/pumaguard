@@ -180,7 +180,7 @@ class FolderObserver:
             filepath -- The path of the new file.
         """
         logger.debug('Classifying: %s', filepath)
-        prediction = classify_image(self.presets, self.model, filepath)
+        prediction = classify_image(self.presets, filepath)
         logger.info('Chance of puma in %s: %.2f%%',
                     filepath, (1 - prediction) * 100)
         if prediction < 0.5:

@@ -89,6 +89,27 @@
         create: true
         mode: "0644"
 
+    - name: Find the device for /
+      ansible.builtin.set_fact:
+        root_device: "{{ item.device }}"
+      when: item.mount == "/"
+      loop: "{{ ansible_mounts }}"
+
+    - name: Check current filesystem parameters
+      ansible.builtin.command: tune2fs -l "{{ root_device }}"
+      register: filesystem_params
+      changed_when: true
+
+    - name: Extract current mount count
+      ansible.builtin.set_fact:
+        current_mount_count: >-
+          {{ filesystem_params.stdout | regex_search('Maximum mount count:\s+([0-9-]+)', '\1') }}
+
+    - name: Set filesystem parameters
+      ansible.builtin.command: tune2fs -c 4 "{{ root_device }}"
+      register: tune2fs_result
+      changed_when: true
+
     - name: Reset firewall
       community.general.ufw:
         state: reset

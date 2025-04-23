@@ -121,9 +121,41 @@
           - htop
           - inotify-tools
           - libatomic1 # For VSCode
+          - lm-sensors
           - make
           - python3-pip
           - vim
+
+    - name: Install timer for lm-sensors
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Run lm-sensors.service
+
+          [Timer]
+          OnCalendar=*:0/5
+          Persistent=true
+
+          [Install]
+          WantedBy=timers.target
+        dest: /etc/systemd/system/lm-sensors.timer
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Reload systemd daemon to pick up new units
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable the systemd timer
+      ansible.builtin.systemd_service:
+        name: lm-sensors.timer
+        enabled: true
+
+    - name: Start the systemd timer
+      ansible.builtin.systemd_service:
+        name: lm-sensors.timer
+        state: started
 
     - name: Install poetry
       ansible.builtin.pip:

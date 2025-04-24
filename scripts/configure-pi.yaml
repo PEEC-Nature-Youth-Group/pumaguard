@@ -164,6 +164,14 @@
         group: root
         mode: '0644'
 
+    - name: Ensure lm-sensors.service.d directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/lm-sensors.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
     - name: Install drop-in for lm-sensors.service
       ansible.builtin.copy:
         content: |

@@ -172,6 +172,8 @@ jobs:
           mkdir -p watchfolder
           poetry run pumaguard server watchfolder &
           SERVER_PID=$!
+          sleep 1
+          ls -l
           server_started=0
           for i in {1..60}; do
             if [[ $(tail -n 1 pumaguard.log) =~ "Starting new observer" ]]; then

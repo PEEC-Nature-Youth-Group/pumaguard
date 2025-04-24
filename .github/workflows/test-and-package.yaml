@@ -15,7 +15,6 @@ env:
   POETRY_VERSION: "1.8.3"
 
 jobs:
-
   lint-notebooks:
     runs-on: ubuntu-24.04
 
@@ -143,6 +142,68 @@ jobs:
       - name: Run tests
         run: |
           make test
+
+  test-server:
+    runs-on: ubuntu-24.04
+    needs:
+      - build-python
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-models
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-data
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry==${{ env.POETRY_VERSION }}
+          poetry install
+      - name: Start server and test
+        run: |
+          set -e -u -x
+          mkdir -p watchfolder
+          poetry run pumaguard server watchfolder &
+          SERVER_PID=$!
+          while true; do
+            if [[ -f pumaguard.log ]]; then
+              break
+            fi
+            sleep 1
+          done
+          server_started=0
+          for i in {1..60}; do
+            if [[ $(tail -n 1 pumaguard.log) =~ "Starting new observer" ]]; then
+              server_started=1
+              break
+            fi
+            sleep 1
+          done
+          if (( server_started != 1 )); then
+            exit 1
+          fi
+          cp training-data/verification/lion/IMG_9177.JPG watchfolder/
+          image_found=0
+          for i in {1..60}; do
+            if [[ $(tail -n 10 pumaguard.log) =~ "Chance of puma in watchfolder/IMG_9177.JPG" ]]; then
+              image_found=1
+              break
+            fi
+            sleep 1
+          done
+          if (( image_found != 1 )); then
+            exit 1
+          fi
+          kill ${SERVER_PID}
+      - name: Verify server output
+        run: |
+          grep "Probability of puma:" server.log  # Check server log for classification output
 
   build-python:
     runs-on: ubuntu-24.04

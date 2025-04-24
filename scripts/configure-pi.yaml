@@ -143,6 +143,16 @@
         group: root
         mode: '0644'
 
+    - name: Install drop-in for lm-sensors.service
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          RemainAfterExit=no
+        dest: /etc/systemd/system/lm-sensors.service.d/override.conf
+        owner: root
+        group: root
+        mode: '0644'
+
     - name: Reload systemd daemon to pick up new units
       ansible.builtin.systemd:
         daemon_reload: true

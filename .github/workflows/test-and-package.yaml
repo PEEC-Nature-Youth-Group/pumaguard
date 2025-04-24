@@ -153,9 +153,17 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
+      - name: Unpack models
+        run: |
+          set -e -u -x
+          tar -C pumaguard-models -xf pumaguard-models.tar.gz
       - uses: actions/download-artifact@v4
         with:
           name: submodule-data
+      - name: Unpack training data
+        run: |
+          set -e -u -x
+          tar -C training-data -xf training-data.tar.gz
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -165,6 +173,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install poetry==${{ env.POETRY_VERSION }}
           poetry install
+      - name: Install additional packages
+        run: |
+          sudo apt-get install --yes --no-install-recommends \
+            mpg123 \
+            pipewire
       - name: Start server and test
         run: |
           set -e -u -x
@@ -179,7 +192,7 @@ jobs:
           done
           server_started=0
           for i in {1..60}; do
-            if [[ $(tail -n 1 pumaguard.log) =~ "Starting new observer" ]]; then
+            if grep "Starting new observer" pumaguard.log; then
               server_started=1
               break
             fi
@@ -191,7 +204,7 @@ jobs:
           cp training-data/verification/lion/IMG_9177.JPG watchfolder/
           image_found=0
           for i in {1..60}; do
-            if [[ $(tail -n 10 pumaguard.log) =~ "Chance of puma in watchfolder/IMG_9177.JPG" ]]; then
+            if grep "Chance of puma in watchfolder/IMG_9177.JPG" pumaguard.log; then
               image_found=1
               break
             fi
@@ -203,7 +216,7 @@ jobs:
           kill ${SERVER_PID}
       - name: Verify server output
         run: |
-          grep "Probability of puma:" server.log  # Check server log for classification output
+          grep "Chance of puma" pumaguard.log
 
   build-python:
     runs-on: ubuntu-24.04

@@ -6,7 +6,9 @@ that the new images show pumas.
 import argparse
 import logging
 import os
+import signal
 import subprocess
+import sys
 import threading
 import time
 
@@ -245,6 +247,14 @@ def main(options: argparse.Namespace, presets: Preset):
         manager.register_folder(folder, options.watch_method)
 
     manager.start_all()
+
+    def handle_termination(signum, frame):  # pylint: disable=unused-argument
+        logger.info('Received termination signal. Stopping...')
+        manager.stop_all()
+        logger.info('Stopped watching folders.')
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, handle_termination)
 
     try:
         while True:

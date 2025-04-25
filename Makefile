@@ -29,10 +29,6 @@ install:
 install-dev:
 	poetry install --only dev
 
-.PHONY: install-ansible
-install-ansible:
-	poetry install --only ansible
-
 .PHONY: test
 test: install
 	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing

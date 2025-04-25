@@ -15,7 +15,7 @@ homepage = "http://pumaguard.rtfd.io/"
 repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
 
 [tool.poetry.dependencies]
-python = ">=3.11,<4.0"
+python = ">=3.10,<4.0"
 matplotlib = "~=3.10"
 packaging = "^24.2"
 pillow = "~=11.1"
@@ -23,7 +23,7 @@ pyyaml = "~=6.0"
 tensorflow = "^2.19"
 
 [tool.poetry.group.dev.dependencies]
-ansible = "~=11.4"
+ansible = "~=10.7"
 ansible-lint = { version = "~=25.2", markers = 'platform_system != "Windows"' }
 bashate = "~=2.1"
 ipykernel = "~=6.29"
@@ -36,9 +36,6 @@ pynblint = "~=0.1"
 pytest = "~=8.3"
 pytest-cov = "~=6.1"
 scipy = "^1.15"
-
-[tool.poetry.group.ansible.dependencies]
-ansible = "~=11.4"
 
 [tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]

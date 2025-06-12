@@ -1,5 +1,6 @@
 __pycache__
 .coverage
+.python-version
 *.snap
 docs/build/*
 prime/*

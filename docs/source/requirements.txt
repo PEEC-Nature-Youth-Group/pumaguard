@@ -3,5 +3,7 @@ matplotlib
 pillow
 playsound3
 sphinx_new_tab_link
+sphinx-book-theme
+sphinx-copybutton
 sphinxcontrib-mermaid
 tensorflow

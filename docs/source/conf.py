@@ -36,6 +36,7 @@ numfig = True
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'sphinx_copybutton',
     'sphinx_new_tab_link',
     'sphinx.ext.autodoc',
     'sphinx.ext.coverage',
@@ -60,9 +61,17 @@ exclude_patterns: list[str] = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 # html_theme = 'alabaster'
-html_theme = 'cloud'
+# html_theme = 'cloud'
+html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
 html_css_files = ['_static/custom.css']
+
+html_theme_options = {
+    "repository_url": "https://github.com/PEEC-Nature-Youth-Group/pumaguard",
+    "use_repository_button": True,
+    "use_issues_button": True,
+    "home_page_in_toc": True,
+}
 
 # -- Options for todo extension ----------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/todo.html#configuration

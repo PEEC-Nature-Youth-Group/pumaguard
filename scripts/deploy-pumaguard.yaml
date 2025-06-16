@@ -34,7 +34,7 @@
     - name: Add PATH to ~/.bashrc
       ansible.builtin.lineinfile:
         path: "{{ lookup('env','HOME') }}/.bashrc"
-        line: 'export PATH="${HOME}/venv/bin:${PATH}"'
+        line: 'source venv/bin/activate'
         create: yes
 
   handlers:

@@ -19,6 +19,9 @@ echo
 echo "#######################"
 echo
 
+echo "IP Address: $(ip addr show eth0 | grep -oP '(?<= inet\s)\d+(\.\d+){3}')"
+
+echo
 echo "Please set a username and a password for the FTP user in"
 echo
 echo "laptop_config.yaml"

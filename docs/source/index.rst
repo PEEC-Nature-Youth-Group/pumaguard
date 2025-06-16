@@ -127,6 +127,7 @@ Further Reading
    Cameralocation
    WeatherProofing
    modules
+   Deployment
 
 Indices and Tables
 ------------------

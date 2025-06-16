@@ -1,3 +1,5 @@
+LAPTOP ?= laptop
+
 .PHONY: venv
 venv:
 	python3 -m venv venv
@@ -116,6 +118,10 @@ configure-pi-zero: install-dev
 .PHONY: configure-pi-5
 configure-pi-5: install-dev
 	poetry run ansible-playbook --inventory pi-5, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
+
+.PHONY: configure-laptop
+configure-laptop: install-dev
+	poetry run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
 verify-poetry: install

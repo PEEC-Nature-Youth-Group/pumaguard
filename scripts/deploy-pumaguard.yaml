@@ -1,0 +1,44 @@
+---
+- name: Deploy Pumaguard
+  hosts: localhost
+  connection: local
+  become: true
+  vars_files:
+    - laptop_config.yaml
+
+  tasks:
+    - name: Install FTP server
+      ansible.builtin.package:
+        name: vsftpd
+        state: present
+        update_cache: true
+
+    - name: Ensure vsftpd is running and enabled
+      ansible.builtin.systemd:
+        name: vsftpd
+        state: started
+        enabled: true
+
+    - name: Configure vsftpd
+      ansible.builtin.template:
+        src: vsftpd.conf.j2
+        dest: /etc/vsftpd.conf
+      notify: Restart vsftpd
+
+    - name: Create FTP user
+      ansible.builtin.user:
+        name: ftpuser
+        password: "{{ ftpuser_password | password_hash('sha512') }}"
+        shell: /bin/bash
+
+    - name: Add PATH to ~/.bashrc
+      ansible.builtin.lineinfile:
+        path: "{{ lookup('env','HOME') }}/.bashrc"
+        line: 'export PATH="${HOME}/venv/bin:${PATH}"'
+        create: yes
+
+  handlers:
+    - name: Restart vsftpd
+      ansible.builtin.systemd:
+        name: vsftpd
+        state: restarted

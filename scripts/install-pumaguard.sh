@@ -7,7 +7,7 @@ sudo apt-get install --yes --no-install-recommends python3-pip python3-venv
 
 python3 -m venv venv
 ./venv/bin/pip install --upgrade pip
-./venv/bin/pip install ansible passlib
+./venv/bin/pip install ansible passlib pumaguard
 
 curl --output deploy-pumaguard.yaml https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/deploy-pumaguard.yaml
 curl --output vsftpd.conf.j2 https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/vsftpd.conf.j2

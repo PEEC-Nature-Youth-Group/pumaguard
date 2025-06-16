@@ -34,7 +34,7 @@ Automated Installation
 3. Run installer script
     .. code-block:: bash
 
-        curl --output install-pumaguard.sh https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/install-pumaguard.sh && bash ./install-pumaguard.sh
+        curl --output install-pumaguard.sh --silent https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/install-pumaguard.sh && bash ./install-pumaguard.sh
 
 Manual Installation
 -------------------

@@ -27,7 +27,7 @@
 
     - name: Create FTP user
       ansible.builtin.user:
-        name: ftpuser
+        name: "{{ ftpuser_username }}"
         password: "{{ ftpuser_password | password_hash('sha512') }}"
         shell: /bin/bash
 

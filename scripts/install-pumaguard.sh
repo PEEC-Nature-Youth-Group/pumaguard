@@ -19,5 +19,10 @@ echo
 echo "#######################"
 echo
 
-echo "Please set a password for the ftpuser in laptop_config.yaml and run the following command to deploy Pumaguard:"
+echo "Please set a username and a password for the FTP user in"
+echo
+echo "laptop_config.yaml"
+echo
+echo "and run the following command to deploy Pumaguard:"
+echo
 echo "${HOME}/venv/bin/ansible-playbook --connection local deploy-pumaguard.yaml"

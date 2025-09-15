@@ -14,11 +14,30 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 
 def get_git_version():
+    """
+    Get current version.
+
+    Returns: version string
+    """
     git = subprocess.Popen(
         ['git', 'describe', '--tags'], stdout=subprocess.PIPE)
     result = git.stdout.readlines()
     if len(result) > 0:
-        return str(result[0])
+        return result[0].decode().strip()
+    else:
+        return 'undefined'
+
+def get_git_release():
+    """
+    Get current release.
+
+    Returns: release string (latest tag)
+    """
+    git = subprocess.Popen(
+        ['git', 'describe', '--tags', '--abbrev=0'], stdout=subprocess.PIPE)
+    result = git.stdout.readlines()
+    if len(result) > 0:
+        return result[0].decode().strip()
     else:
         return 'undefined'
 
@@ -27,7 +46,7 @@ project = 'PumaGuard'
 copyright = '2025, Pajarito Environmental Education Center Nature Youth Group'
 author = 'Pajarito Environmental Education Center Nature Youth Group'
 version = get_git_version()
-release = '2025'
+release = get_git_release()
 
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-numfig
 numfig = True
@@ -48,7 +67,7 @@ extensions = [
     'sphinxcontrib.mermaid',
 ]
 
-mermaid_version = "11.2.1"
+mermaid_version = "11.11.0"
 
 napoleon_google_docstring = False
 napoleon_use_param = True

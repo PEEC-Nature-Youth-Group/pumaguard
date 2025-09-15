@@ -12,6 +12,8 @@ not. The core of this project is a Jupyter notebook, `Mountain_Lions.ipynb
 that outlines the process of training a model for this binary classification
 task.
 
+Version: |version|
+
 Project Overview
 ----------------
 

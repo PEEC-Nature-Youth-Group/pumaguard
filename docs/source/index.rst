@@ -14,6 +14,10 @@ task.
 
 Version: |version|
 
+.. image:: https://img.shields.io/pypi/v/pumaguard
+   :alt: PyPI - Version
+   :target: https://pypi.org/project/pumaguard/
+
 Project Overview
 ----------------
 

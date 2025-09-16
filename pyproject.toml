@@ -35,7 +35,7 @@ plotly = "^6.0.0"
 pylint = "~=3.3"
 pynblint = "~=0.1"
 pytest = "~=8.3"
-pytest-cov = "~=6.1"
+pytest-cov = "~=6.3"
 scipy = "^1.15"
 passlib = "^1.7.4"
 

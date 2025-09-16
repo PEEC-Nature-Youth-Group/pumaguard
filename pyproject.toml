@@ -31,13 +31,13 @@ ipykernel = "~=6.29"
 isort = "~=6.0"
 mypy = "~=1.15"
 opencv-python = "^4.11.0.86"
+passlib = "^1.7.4"
 plotly = "^6.0.0"
 pylint = "~=3.3"
 pynblint = "~=0.1"
 pytest = "~=8.3"
 pytest-cov = "~=6.1"
 scipy = "^1.15"
-passlib = "^1.7.4"
 
 [tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]

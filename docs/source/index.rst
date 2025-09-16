@@ -37,8 +37,18 @@ and validated using a separate set of images.
 The proposed targeted mitigation workflow is shown in
 :numref:`figure-workflow`.
 
-Getting Started
----------------
+Installing PumaGuard
+--------------------
+
+The most recent version of PumaGuard is available on PyPi. In order to install PumaGuard,
+
+.. code:: bash
+
+   sudo apt install --no-install-recommends pipx
+   pipx install pumaguard
+
+Getting Started (Developer Version)
+-----------------------------------
 
 The easiest place to start is to run the project in `Google Colab
 <https://colab.research.google.com>`__.

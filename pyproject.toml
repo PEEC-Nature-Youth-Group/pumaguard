@@ -17,7 +17,7 @@ repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 matplotlib = "~=3.10"
-packaging = "^24.2"
+packaging = "^25.0"
 pillow = "~=11.1"
 pyyaml = "~=6.0"
 tensorflow = "^2.19"

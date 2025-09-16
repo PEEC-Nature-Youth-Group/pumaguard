@@ -18,7 +18,7 @@ repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
 python = ">=3.10,<4.0"
 matplotlib = "~=3.10"
 packaging = "^24.2"
-pillow = "~=11.1"
+pillow = "~=11.3"
 pyyaml = "~=6.0"
 tensorflow = "^2.19"
 

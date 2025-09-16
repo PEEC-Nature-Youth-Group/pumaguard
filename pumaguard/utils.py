@@ -232,11 +232,13 @@ def classify_image(presets: Preset, image_path: str) -> float:
         The color mode being used, the image being classified, and the time
         taken for classification.
     """
+    model_file = 'model-ringtails.h5'
     logger.debug('using color_mode "%s"', presets.color_mode)
     logger.debug('classifying image %s using external model', image_path)
+    logger.debug('loading model %s', model_file)
 
     classifier_model = keras.models.load_model(
-        os.path.join(presets.base_output_directory, 'model.h5'))
+        os.path.join(presets.base_output_directory, model_file))
     feature_extractor = keras.applications.Xception(
         weights='imagenet', include_top=True)
 

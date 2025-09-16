@@ -12,6 +12,10 @@
 
 Please visit <http://pumaguard.rtfd.io/> for more information.
 
+## Get PumaGuard
+
+[![PyPI - Version](https://img.shields.io/pypi/v/pumaguard)](https://pypi.org/project/pumaguard/)
+
 ## GitHub Codespaces
 
 If you do not want to install any new software on your computer you can use

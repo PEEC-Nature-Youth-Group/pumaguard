@@ -27,7 +27,7 @@ environment:
   # TF_ENABLE_ONEDNN_OPTS: 0
   PUMAGUARD_MODEL_PATH: $SNAP/lib/python3.12/site-packages/pumaguard-models
   PUMAGUARD_SOUND_PATH: $SNAP/lib/python3.12/site-packages/pumaguard-sounds
-  MPLCONFIGDIR: $SNAP_DATA/matplotlib
+  MPLCONFIGDIR: $SNAP_USER_DATA/matplotlib
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
   LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/pumaguard-tensorflow/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP_LIBRARY_PATH"
   MPG123_MODDIR: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/mpg123"

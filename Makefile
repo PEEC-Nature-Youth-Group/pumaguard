@@ -58,10 +58,6 @@ mypy: install
 bashate: install-dev
 	poetry run bashate -v scripts/*sh pumaguard/completions/*sh
 
-.PHONY: lint-notebooks
-lint-notebooks: install-dev
-	poetry run pynblint notebooks
-
 .PHONY: ansible-lint
 ansible-lint: install-dev
 	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-pi.yaml

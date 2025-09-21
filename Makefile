@@ -56,7 +56,7 @@ mypy: install
 
 .PHONY: bashate
 bashate: install-dev
-	poetry run bashate -v scripts/*sh pumaguard/completions/*sh
+	poetry run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev

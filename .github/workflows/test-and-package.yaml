@@ -15,26 +15,6 @@ env:
   POETRY_VERSION: "2.2.0"
 
 jobs:
-  lint-notebooks:
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry==${{ env.POETRY_VERSION }}
-      - name: Get version
-        run: |
-      - name: Lint Python Notebooks
-        run: make lint-notebooks
-
   lint-python:
     runs-on: ubuntu-24.04
 
@@ -353,7 +333,6 @@ jobs:
     needs:
       - build-python
       - build-snap
-      - lint-notebooks
       - functional-poetry
       - functional-snap
       - lint-ansible

@@ -2,9 +2,11 @@
 include = [
   { path = "pumaguard-models/model_*6*tf2.17*", format = ["sdist", "wheel"] },
   { path = "pumaguard-models/model_settings_6_pre-trained_512_512.yaml", format = ["sdist", "wheel"] },
-  { path = "pumaguard-models/settings.yaml", format = ["sdist", "wheel"] },
-  { path = "pumaguard-models/model.h5", format = ["sdist", "wheel"] },
   { path = "pumaguard-models/model-ringtails.h5", format = ["sdist", "wheel"] },
+  { path = "pumaguard-models/model.h5", format = ["sdist", "wheel"] },
+  { path = "pumaguard-models/puma_cls_efficientnetv2s.h5", format = ["sdist", "wheel"] },
+  { path = "pumaguard-models/settings.yaml", format = ["sdist", "wheel"] },
+  { path = "pumaguard-models/yolov8s.pt", format = ["sdist", "wheel"] },
   { path = "pumaguard-sounds", format = ["sdist", "wheel"] },
 ]
 name = "pumaguard"

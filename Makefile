@@ -29,12 +29,19 @@ assemble:
 		$(MAKE) -C pumaguard-models; \
 	fi
 
+# This version should match the base of the snap.
+# core24 uses poetry-1.8. Later versions of poetry use a different lockfile format
+# which is incompatible with older versions, leading to build failures in snapcraft.
+.PHONY: poetry
+poetry:
+	pip install poetry~=1.8
+
 .PHONY: install
-install: assemble
+install: assemble poetry
 	poetry install
 
 .PHONY: install-dev
-install-dev:
+install-dev: poetry
 	poetry install --only dev
 
 .PHONY: test
@@ -42,7 +49,7 @@ test: install
 	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
-build: assemble
+build: assemble poetry
 	poetry build
 
 .PHONY: lint
@@ -53,19 +60,19 @@ pylint: install
 	poetry run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
-isort: install-dev
+isort: install-dev poetry
 	poetry run isort pumaguard tests scripts
 
 .PHONY: mypy
-mypy: install
+mypy: install poetry
 	poetry run mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
-bashate: install-dev
+bashate: install-dev poetry
 	poetry run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
-ansible-lint: install-dev
+ansible-lint: install-dev poetry
 	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-pi.yaml
 
 .PHONY: snap
@@ -114,19 +121,19 @@ release:
 	  git tag -a -m "Release v$${NEW_RELEASE}" v$${NEW_RELEASE}
 
 .PHONY: configure-pi-zero
-configure-pi-zero: install-dev
+configure-pi-zero: install-dev poetry
 	poetry run ansible-playbook --inventory pi-zero, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: configure-pi-5
-configure-pi-5: install-dev
+configure-pi-5: install-dev poetry
 	poetry run ansible-playbook --inventory pi-5, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: configure-laptop
-configure-laptop: install-dev
+configure-laptop: install-dev poetry
 	poetry run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
-verify-poetry: install
+verify-poetry: install poetry
 	$(MAKE) EXE="poetry run pumaguard" verify
 
 .PHONY: verify-snap
@@ -143,7 +150,7 @@ train:
 	pumaguard train --debug --epochs 1 --model-output . --lion training-data/Stables/lion --no-lion training-data/Stables/no-lion/ --no-load-previous-session
 
 .PHONY: pre-commit
-pre-commit: lint docs
+pre-commit: lint docs poetry
 	sed --in-place --regexp-extended 's/^python.*=.*/python = ">=3.10,<3.11"/' pyproject.toml
 	poetry add 'tensorflow==2.15'
 	poetry install

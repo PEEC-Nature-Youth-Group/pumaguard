@@ -94,6 +94,8 @@ parts:
       - python3-pip
     override-pull: |
       set -e -u -x
+      poetry --version
+      pip list --verbose
       craftctl default
       VERSION=$(git describe --tags 2> /dev/null | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//') || VERSION='undefined'
       if [[ ${VERSION} == undefined ]] && [[ -f version ]]; then
@@ -101,7 +103,6 @@ parts:
       fi
       craftctl set version="v${VERSION}"
       poetry version "${VERSION}"
-
       if [[ ${CRAFT_ARCH_BUILD_FOR} == xamd64 ]]; then
         poetry install --extras and-cuda
       else

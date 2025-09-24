@@ -23,8 +23,14 @@ docs: venv
 	. venv/bin/activate && sphinx-build --builder html --fail-on-warning docs/source docs/build
 	. venv/bin/activate && sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
+.PHONY: assemble
+assemble:
+	if [ -f pumaguard-models/Makefile ]; then \
+		$(MAKE) -C pumaguard-models; \
+	fi
+
 .PHONY: install
-install:
+install: assemble
 	poetry install
 
 .PHONY: install-dev
@@ -36,7 +42,7 @@ test: install
 	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
-build:
+build: assemble
 	poetry build
 
 .PHONY: lint

@@ -12,7 +12,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.12" # Needs to work with Tensorflow
-  POETRY_VERSION: "2.2.0"
+  POETRY_VERSION: "1.8.5"
 
 jobs:
   lint-python:
@@ -83,10 +83,8 @@ jobs:
           ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass poetry run ansible-lint -v scripts/configure-pi.yaml
           rm -f .vault_pass
 
-  test-python:
+  compress-submodules:
     runs-on: ubuntu-24.04
-    needs:
-      - lint-python
 
     steps:
       - uses: actions/checkout@v4
@@ -109,6 +107,31 @@ jobs:
         with:
           name: submodule-data
           path: training-data.tar.gz
+
+  test-python:
+    runs-on: ubuntu-24.04
+    needs:
+      - lint-python
+      - compress-submodules
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-models
+      - name: Unpack models
+        run: |
+          set -e -u -x
+          tar -C pumaguard-models -xf pumaguard-models.tar.gz
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-data
+      - name: Unpack training data
+        run: |
+          set -e -u -x
+          tar -C training-data -xf training-data.tar.gz
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -266,9 +289,9 @@ jobs:
             sort --human-numeric-sort --key 2 --reverse | \
             head --lines 20
       - name: Check disk allocation
-        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort
-      - name: Check disk allocation
-        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort
+        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse
+      - name: Check disk allocation (/usr/local)
+        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse
       - name: Remove unnecessary packages on amd64
         run: |
           sudo apt-get remove --auto-remove --purge \
@@ -284,7 +307,12 @@ jobs:
             \*jdk\* \
             \*g++\* \
             \*mysql\*
-        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        if: ${{ matrix.os == 'ubuntu-24.04' }}
+      - name: Clean up /usr/local
+        run: |
+          sudo rm -rf /usr/local/{julia*,aws*}
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/share/{chromium,powershell}
       - name: Get largest installed packages
         run: |
           dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
@@ -298,15 +326,20 @@ jobs:
         run: du --human-readable --max-depth 1 /usr 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
       - name: Check disk allocation (/usr/local)
         run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+      - name: Check disk allocation (/usr/local/{lib,share,bin})
+        run: du --human-readable --max-depth 1 /usr/local/{lib,share,bin} 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
       - name: Check disk allocation (/opt)
         run: du --human-readable --max-depth 1 /opt 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
       - name: Check container free disk space
         run: df --human-readable /
       - uses: actions/checkout@v4
-      - name: Update models
+      - uses: actions/download-artifact@v4
+        with:
+          name: submodule-models
+      - name: Unpack models
         run: |
-          git submodule set-url pumaguard-models https://github.com/PEEC-Nature-Youth-Group/pumaguard-models.git
-          git submodule update --init --depth 1 pumaguard-models
+          set -e -u -x
+          tar -C pumaguard-models -xf pumaguard-models.tar.gz
       - name: Check container free disk space
         run: df --human-readable /
       - uses: actions/download-artifact@v4
@@ -318,9 +351,6 @@ jobs:
           VERSION=$(cat version)
           echo "snap_version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "Setting version: ${VERSION}"
-      - name: Get module weights
-        run: |
-          git submodule update --init --depth 1 pumaguard-models
       - uses: snapcore/action-build@v1
         id: snap
       - uses: actions/upload-artifact@v4

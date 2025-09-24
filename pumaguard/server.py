@@ -22,7 +22,7 @@ from pumaguard.sound import (
     playsound,
 )
 from pumaguard.utils import (
-    classify_image,
+    classify_image_two_stage,
 )
 
 logger = logging.getLogger('PumaGuard')
@@ -182,10 +182,10 @@ class FolderObserver:
             filepath -- The path of the new file.
         """
         logger.debug('Classifying: %s', filepath)
-        prediction = classify_image(self.presets, filepath)
+        prediction = classify_image_two_stage(self.presets, filepath)
         logger.info('Chance of puma in %s: %.2f%%',
-                    filepath, (1 - prediction) * 100)
-        if prediction < 0.5:
+                    filepath, prediction * 100)
+        if prediction > 0.5:
             logger.info('Puma detected in %s', filepath)
             sound_file_path = os.path.join(
                 self.presets.sound_path, 'cougar_call.mp3')

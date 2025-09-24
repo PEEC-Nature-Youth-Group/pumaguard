@@ -1,27 +1,21 @@
 LAPTOP ?= laptop
 
-.PHONY: venv
-venv:
-	python3 -m venv venv
-	./venv/bin/pip install --upgrade pip
-	@echo "venv is initialized"
-
 .PHONY: apidoc
-apidoc: venv
-	. venv/bin/activate && pip install --requirement docs/source/requirements.txt
-	. venv/bin/activate && cd docs && sphinx-apidoc -o source --force ../pumaguard
+apidoc: poetry
+	poetry run pip install --requirement docs/source/requirements.txt
+	cd docs && poetry run sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
-docs: venv
+docs: poetry
 	@echo "building documentation webpage"
-	. venv/bin/activate && pip install --requirement docs/source/requirements.txt
-	. venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
+	poetry run pip install --requirement docs/source/requirements.txt
+	cd docs && poetry run sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
 	git diff
 	git diff --shortstat | wc -l | grep "^0" --quiet
-	. venv/bin/activate && sphinx-build --builder html --fail-on-warning docs/source docs/build
-	. venv/bin/activate && sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
+	poetry run sphinx-build --builder html --fail-on-warning docs/source docs/build
+	poetry run sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
 .PHONY: assemble
 assemble:
@@ -34,6 +28,7 @@ assemble:
 # which is incompatible with older versions, leading to build failures in snapcraft.
 .PHONY: poetry
 poetry:
+	pip install --upgrade pip
 	pip install poetry~=1.8
 
 .PHONY: install

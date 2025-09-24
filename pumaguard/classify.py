@@ -11,7 +11,7 @@ from pumaguard.presets import (
     Preset,
 )
 from pumaguard.utils import (
-    classify_image,
+    classify_image_two_stage,
 )
 
 logger = logging.getLogger('PumaGuard')
@@ -38,10 +38,10 @@ def main(options: argparse.Namespace, presets: Preset):
     logger.debug('starting classify')
 
     for image in options.image:
-        prediction = classify_image(presets, image)
+        prediction = classify_image_two_stage(presets, image)
         if prediction >= 0:
             print(
-                f'Predicted {image}: {100*(1 - prediction):6.2f}% lion '
-                f'({"lion" if prediction < 0.5 else "no lion"})')
+                f'Predicted {image}: {100*prediction:6.2f}% lion '
+                f'({"lion" if prediction > 0.5 else "no lion"})')
         else:
             logger.warning('predicted label < 0!')

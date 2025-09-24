@@ -1,9 +1,11 @@
 cloud-sptheme
-matplotlib
-pillow
+matplotlib~=3.10
+pandas~=2.3
+pillow~=11.1
 playsound3
 sphinx_new_tab_link
 sphinx-book-theme
 sphinx-copybutton
 sphinxcontrib-mermaid
-tensorflow
+tensorflow~=2.19
+ultralytics~=8.3

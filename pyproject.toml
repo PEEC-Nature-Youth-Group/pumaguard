@@ -1,10 +1,9 @@
 [tool.poetry]
 include = [
-  { path = "pumaguard-models/model-ringtails.h5", format = ["sdist", "wheel"] },
-  { path = "pumaguard-models/puma_cls_efficientnetv2s.h5", format = ["sdist", "wheel"] },
-  { path = "pumaguard-models/settings.yaml", format = ["sdist", "wheel"] },
-  { path = "pumaguard-models/yolov8s.pt", format = ["sdist", "wheel"] },
-  { path = "pumaguard-sounds", format = ["sdist", "wheel"] },
+  { path = "pumaguard-sounds/cougar_call.mp3", format = [
+    "sdist",
+    "wheel",
+  ] },
 ]
 name = "pumaguard"
 version = "0.0.0"
@@ -23,6 +22,7 @@ pillow = "~=11.1"
 pyyaml = "~=6.0"
 tensorflow = "~=2.20"
 ultralytics = "~=8.3"
+requests = "~=2.32"
 
 [tool.poetry.group.dev.dependencies]
 ansible = "~=10.7"
@@ -46,6 +46,7 @@ and-cuda = ["tensorflow-and-cuda"]
 pick-files = 'scripts.pick_files:main'
 pumaguard = 'pumaguard.main:main'
 playsound = 'pumaguard.sound:main'
+pumaguard-models = 'pumaguard.model_cli:main'
 
 [build-system]
 requires = ["poetry-core"]

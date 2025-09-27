@@ -44,6 +44,22 @@ pumaguard.model module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.model\_cli module
+---------------------------
+
+.. automodule:: pumaguard.model_cli
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pumaguard.model\_downloader module
+----------------------------------
+
+.. automodule:: pumaguard.model_downloader
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.model\_factory module
 -------------------------------
 

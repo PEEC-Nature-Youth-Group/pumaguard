@@ -8,13 +8,20 @@ import hashlib
 import logging
 import os
 import shutil
+from pathlib import (
+    Path,
+)
 from typing import (
     Tuple,
 )
 
 import keras  # type: ignore
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas
+import PIL
 import tensorflow as tf  # type: ignore
+import ultralytics
 
 from pumaguard.presets import (
     Preset,
@@ -296,3 +303,150 @@ def prepare_image(img_path: str, image_dimensions: Tuple[int, int]):
     img_array = np.expand_dims(img_array, axis=0)
     img_array = keras.applications.xception.preprocess_input(img_array)
     return img_array
+
+
+def classify_image_two_stage(presets: Preset, image_path: str) -> float:
+    """
+    Classify the image using two-stage approach: YOLO detection + EfficientNet
+    classification.
+
+    Args:
+        presets (Preset): An instance of the Preset class containing settings.
+        image_path (str): The file path to the image to be classified.
+
+    Returns:
+        float: Maximum puma probability from all detections (0.0 if no
+        detections)
+    """
+
+    def expand_box(xyxy, crop_expand, width, height):
+        x1, y1, x2, y2 = xyxy
+        w, h = x2 - x1, y2 - y1
+        dx, dy = w * crop_expand, h * crop_expand
+        return [max(0, int(x1 - dx)), max(0, int(y1 - dy)),
+                min(width - 1, int(x2 + dx)), min(height - 1, int(y2 + dy))]
+
+    def prob_puma_from_crop(pil_img):
+        arr = keras.utils.img_to_array(
+            pil_img.resize((image_size, image_size)))
+        arr = np.expand_dims(arr, 0)
+        arr = keras.applications.efficientnet_v2.preprocess_input(arr)
+        p = float(classifier.predict(arr, verbose=0).ravel()[0])
+        return p
+
+    logger.debug('classifying image %s using two-stage approach', image_path)
+
+    assert presets is not None
+
+    model_weights = Path("pumaguard-models/puma_cls_efficientnetv2s.h5")
+    yolo_weights = Path("pumaguard-models/yolov8s.pt")
+
+    image_size = 384        # must match training
+    conf_thresh = 0.25       # YOLO confidence threshold
+    iou_thresh = 0.45       # YOLO NMS IoU
+    max_dets = 12         # max detections per image
+    crop_expand = 0.15       # padding around detected box for crop
+
+    classifier = keras.models.load_model(model_weights)
+    detector = ultralytics.YOLO(str(yolo_weights))
+    best_t = 0.5
+
+    all_rows = []
+    image_summary = []
+
+    image_file = Path(image_path)
+    image = PIL.Image.open(image_path).convert('RGB')
+    width, height = image.size
+
+    res = detector.predict(str(image_path), imgsz=640, conf=conf_thresh,
+                           iou=iou_thresh, max_det=max_dets, verbose=False)
+    boxes = (res[0].boxes.xyxy.cpu().numpy()
+             if res and res[0].boxes is not None
+             and res[0].boxes.xyxy is not None
+             else [])
+    logger.debug("boxes:\n%s", boxes)
+
+    det_probs, crops_xyxy, crops_imgs = [], [], []
+    for j, (x1, y1, x2, y2) in enumerate(boxes):
+        x1e, y1e, x2e, y2e = expand_box(
+            [x1, y1, x2, y2], crop_expand, width, height)
+        crop = image.crop((x1e, y1e, x2e, y2e))
+        p = prob_puma_from_crop(crop)
+        det_probs.append(p)
+        crops_xyxy.append((x1e, y1e, x2e, y2e))
+        crops_imgs.append(crop)
+        all_rows.append({
+            "file": image_path,
+            "det_id": j,
+            "x1": x1e, "y1": y1e, "x2": x2e, "y2": y2e,
+            "prob_puma": p,
+            "pred_label": "Puma" if p >= best_t else "Not-puma"
+        })
+    rows = 1 + ((len(crops_imgs) + 3) // 4)
+
+    fig = plt.figure(figsize=(max(8, min(16, 4 * 4)), max(5, 3 * rows)))
+
+    # Original with boxes
+    ax = fig.add_subplot(rows, 1, 1)
+    ax.imshow(image)
+    ax.axis("off")
+    for p, (x1e, y1e, x2e, y2e) in zip(det_probs, crops_xyxy):
+        rect = plt.Rectangle((x1e, y1e), x2e - x1e, y2e -
+                             y1e, fill=False, color='lime', linewidth=2)
+        ax.add_patch(rect)
+        ax.text(x1e, max(0, y1e - 5), f"{p:.2f}", color='black',
+                bbox={'facecolor': 'lime', 'alpha': 0.7, 'pad': 2})
+    title_probs = (", ".join(f"{i}:{p:.2f}" for i, p in enumerate(
+        det_probs)) if det_probs else "no detections")
+    ax.set_title(f"{image_path} — det_probs: {title_probs}")
+
+    idx = 0
+    for r in range(1, rows):
+        for c in range(1, 5):
+            if idx >= len(crops_imgs):
+                break
+            axc = fig.add_subplot(rows, 4, r * 4 + c)
+            axc.imshow(crops_imgs[idx])
+            axc.axis("off")
+            lbl = "Puma" if det_probs[idx] >= best_t else "Not-puma"
+            axc.set_title(f"det {idx} — {det_probs[idx]:.3f} → {lbl}")
+            idx += 1
+
+    out_png = f"{image_file.stem}_viz.png"
+    plt.tight_layout()
+    plt.savefig(out_png, dpi=160)
+    plt.close()
+
+    # Image-level summary
+    if det_probs:
+        image_summary.append({
+            "file": image_path,
+            "num_dets": len(det_probs),
+            "mean_prob": float(np.mean(det_probs)),
+            "max_prob": float(np.max(det_probs)),
+            "agg_label_mean": "Puma"
+            if np.mean(det_probs) >= best_t else "Not-puma",
+            "agg_label_max":  "Puma"
+            if np.max(det_probs) >= best_t else "Not-puma",
+            "viz_path": str(out_png)
+        })
+    else:
+        image_summary.append({
+            "file": image_path,
+            "num_dets": 0,
+            "mean_prob": 0.0,
+            "max_prob": 0.0,
+            "agg_label_mean": "Not-puma",
+            "agg_label_max":  "Not-puma",
+            "viz_path": str(out_png)
+        })
+
+    # Write CSV outputs
+    det_csv = "test_detections_predictions.csv"
+    img_csv = "test_image_summary.csv"
+    pandas.DataFrame(all_rows).to_csv(det_csv, index=False)
+    pandas.DataFrame(image_summary).to_csv(img_csv, index=False)
+
+    logger.debug("probabilities: %s", det_probs)
+
+    return max(det_probs)

@@ -5,6 +5,7 @@ Test server.
 import unittest
 from unittest.mock import (
     MagicMock,
+    call,
     patch,
 )
 
@@ -68,11 +69,13 @@ class TestFolderObserver(unittest.TestCase):
         self.observer._stop_event = MagicMock()
         self.observer.stop()
         self.observer._stop_event.set.assert_called_once()
-        # pylint: enable=protected-access
 
-    @patch('pumaguard.server.classify_image', return_value=0.7)
+    # pylint: enable=protected-access
+    @patch('pumaguard.server.classify_image_two_stage', return_value=0.7)
     @patch('pumaguard.server.logger')
-    def test_handle_new_file_prediction(self, mock_logger, mock_classify): \
+    @patch('pumaguard.server.playsound')
+    def test_handle_new_file_prediction(self, mock_playsound, mock_logger,
+                                        mock_classify): \
             # pylint: disable=unused-argument
         """
         Test that _handle_new_file logs the correct chance of puma
@@ -81,13 +84,15 @@ class TestFolderObserver(unittest.TestCase):
         self.observer._handle_new_file(  # pylint: disable=protected-access
             'fake_image.jpg')
 
+        mock_playsound.assert_called_once()
         mock_classify.assert_called_once()
-        mock_logger.info.assert_called_once()
-        msg, path, prediction = mock_logger.info.call_args_list[0][0]
+        mock_logger.info.assert_called()
+        _, path, prediction = mock_logger.info.call_args_list[0][0]
 
-        self.assertEqual(msg, 'Chance of puma in %s: %.2f%%')
+        self.assertEqual(mock_logger.info.call_count, 2)
+        mock_logger.info.call_arg_list([call('Chance of puma in %s: %.2f%%'),])
         self.assertEqual(path, 'fake_image.jpg')
-        self.assertAlmostEqual(prediction, 30, places=2)
+        self.assertAlmostEqual(prediction, 70, places=2)
 
 
 class TestFolderManager(unittest.TestCase):

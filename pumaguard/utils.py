@@ -23,6 +23,9 @@ import PIL
 import tensorflow as tf  # type: ignore
 import ultralytics
 
+from pumaguard.model_downloader import (
+    ensure_model_available,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -338,8 +341,9 @@ def classify_image_two_stage(presets: Preset, image_path: str) -> float:
 
     assert presets is not None
 
-    model_weights = Path("pumaguard-models/puma_cls_efficientnetv2s.h5")
-    yolo_weights = Path("pumaguard-models/yolov8s.pt")
+    classifier_model_path = ensure_model_available(
+        'puma_cls_efficientnetv2s.h5')
+    yolo_model_path = ensure_model_available('yolov8s.pt')
 
     image_size = 384        # must match training
     conf_thresh = 0.25       # YOLO confidence threshold
@@ -347,8 +351,8 @@ def classify_image_two_stage(presets: Preset, image_path: str) -> float:
     max_dets = 12         # max detections per image
     crop_expand = 0.15       # padding around detected box for crop
 
-    classifier = keras.models.load_model(model_weights)
-    detector = ultralytics.YOLO(str(yolo_weights))
+    classifier = keras.models.load_model(classifier_model_path)
+    detector = ultralytics.YOLO(str(yolo_model_path))
     best_t = 0.5
 
     all_rows = []

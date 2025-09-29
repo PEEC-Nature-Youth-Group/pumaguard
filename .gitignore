@@ -1,7 +1,8 @@
-__pycache__
 .coverage
-.python-version
-*.snap
+dist/*
 docs/build/*
 prime/*
+__pycache__
+.python-version
+*.snap
 venv/*

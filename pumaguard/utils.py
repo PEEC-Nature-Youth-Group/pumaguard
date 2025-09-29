@@ -452,5 +452,6 @@ def classify_image_two_stage(presets: Preset, image_path: str) -> float:
     pandas.DataFrame(image_summary).to_csv(img_csv, index=False)
 
     logger.debug("probabilities: %s", det_probs)
-
-    return max(det_probs)
+    if len(det_probs) == 0:
+        logger.debug("no detections")
+    return max(det_probs) if len(det_probs) > 0 else 0

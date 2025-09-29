@@ -15,45 +15,47 @@ from packaging import (
     version,
 )
 
-logger = logging.getLogger('PumaGuard')
+logger = logging.getLogger("PumaGuard")
 
 
 # pylint: disable=too-many-public-methods
-class Preset():
+class Preset:
     """
     Base class for Presets
     """
 
     _alpha: float = 0
-    _base_output_directory: str = ''
-    _model_file: str = ''
+    _base_output_directory: str = ""
+    _model_file: str = ""
 
     def __init__(self):
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
-            os.path.dirname(__file__), '../pumaguard-models')
+            os.path.dirname(__file__), "../pumaguard-models"
+        )
         self.sound_path = os.path.join(
-            os.path.dirname(__file__), '../pumaguard-sounds')
-        self.verification_path = 'data/stable/stable_test'
+            os.path.dirname(__file__), "../pumaguard-sounds"
+        )
+        self.verification_path = "data/stable/stable_test"
         self.batch_size = 16
         self.notebook_number = 1
-        self.color_mode = 'rgb'
+        self.color_mode = "rgb"
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
         self.validation_lion_directories: list[str] = []
         self.load_history_from_file = False
         self.load_model_from_file = False
-        self.model_function_name = 'xception'
-        self.model_version = 'undefined'
+        self.model_function_name = "xception"
+        self.model_version = "undefined"
         self.play_sound = True
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
-        if version.parse(tf.__version__) < version.parse('2.17'):
-            self.tf_compat = '2.15'
+        if version.parse(tf.__version__) < version.parse("2.17"):
+            self.tf_compat = "2.15"
         else:
-            self.tf_compat = '2.17'
+            self.tf_compat = "2.17"
 
     def load(self, filename: str):
         """
@@ -64,54 +66,68 @@ class Preset():
             with open(filename, encoding="utf-8") as fd:
                 settings = yaml.safe_load(fd)
         except FileNotFoundError:
-            logger.error("Could not open settings (%s), using defaults",
-                        filename)
+            logger.error(
+                "Could not open settings (%s), using defaults", filename
+            )
             return
 
-        self.notebook_number = settings.get('notebook', 1)
-        self.epochs = settings.get('epochs', 1)
-        dimensions = settings.get('image-dimensions', [0, 0])
-        if not isinstance(dimensions, list) or \
-            len(dimensions) != 2 or \
-                not all(isinstance(d, int) for d in dimensions):
+        self.notebook_number = settings.get("notebook", 1)
+        self.epochs = settings.get("epochs", 1)
+        dimensions = settings.get("image-dimensions", [0, 0])
+        if (
+            not isinstance(dimensions, list)
+            or len(dimensions) != 2
+            or not all(isinstance(d, int) for d in dimensions)
+        ):
             raise ValueError(
-                'expected image-dimensions to be a list of two integers')
+                "expected image-dimensions to be a list of two integers"
+            )
         self.image_dimensions = tuple(dimensions)
-        self.model_version = settings.get('model-version', 'undefined')
-        self.model_function_name = settings.get(
-            'model-function', 'undefined')
+        self.model_version = settings.get("model-version", "undefined")
+        self.model_function_name = settings.get("model-function", "undefined")
         self.base_output_directory = settings.get(
-            'base-output-directory', 'undefined')
+            "base-output-directory", "undefined"
+        )
         self.verification_path = settings.get(
-            'verification-path', 'data/stable/stable_test')
-        lions = settings.get('lion-directories', ['undefined'])
-        if not isinstance(lions, list) or \
-                not all(isinstance(p, str) for p in lions):
-            raise ValueError('expected lion-directories to be a list of paths')
+            "verification-path", "data/stable/stable_test"
+        )
+        lions = settings.get("lion-directories", ["undefined"])
+        if not isinstance(lions, list) or not all(
+            isinstance(p, str) for p in lions
+        ):
+            raise ValueError("expected lion-directories to be a list of paths")
         self.lion_directories = lions
-        no_lions = settings.get('no-lion-directories', ['undefined'])
-        if not isinstance(no_lions, list) or \
-                not all(isinstance(p, str) for p in no_lions):
+        no_lions = settings.get("no-lion-directories", ["undefined"])
+        if not isinstance(no_lions, list) or not all(
+            isinstance(p, str) for p in no_lions
+        ):
             raise ValueError(
-                'expected no-lion-directories to be a list of paths')
+                "expected no-lion-directories to be a list of paths"
+            )
         self.no_lion_directories = no_lions
-        validation_lions = settings.get('validation-lion-directories', [])
-        if not isinstance(validation_lions, list) or \
-                not all(isinstance(p, str) for p in validation_lions):
+        validation_lions = settings.get("validation-lion-directories", [])
+        if not isinstance(validation_lions, list) or not all(
+            isinstance(p, str) for p in validation_lions
+        ):
             raise ValueError(
-                'expected validation-lion-directories to be a list of paths')
+                "expected validation-lion-directories to be a list of paths"
+            )
         self.validation_lion_directories = validation_lions
         validation_no_lions = settings.get(
-            'validation-no-lion-directories', [])
-        if not isinstance(validation_no_lions, list) or \
-                not all(isinstance(p, str) for p in validation_no_lions):
-            raise ValueError('expected validation-no-lion-directories '
-                             'to be a list of paths')
+            "validation-no-lion-directories", []
+        )
+        if not isinstance(validation_no_lions, list) or not all(
+            isinstance(p, str) for p in validation_no_lions
+        ):
+            raise ValueError(
+                "expected validation-no-lion-directories "
+                "to be a list of paths"
+            )
         self.validation_no_lion_directories = validation_no_lions
-        self.with_augmentation = settings.get('with-augmentation', False)
-        self.batch_size = settings.get('batch-size', 1)
-        self.alpha = float(settings.get('alpha', 1e-5))
-        self.color_mode = settings.get('color-mode', 'rgb')
+        self.with_augmentation = settings.get("with-augmentation", False)
+        self.batch_size = settings.get("batch-size", 1)
+        self.alpha = float(settings.get("alpha", 1e-5))
+        self.color_mode = settings.get("color-mode", "rgb")
         self.play_sound = settings.get("play-sound", True)
 
     def save(self):
@@ -124,30 +140,28 @@ class Preset():
         """
         The directories relative to a base path.
         """
-        return [
-            os.path.relpath(path, start=base)for path in paths
-        ]
+        return [os.path.relpath(path, start=base) for path in paths]
 
     def __iter__(self):
         """
         Serialize this class.
         """
+        # pylint: disable=line-too-long
         yield from {
-            'alpha': self.alpha,
-            'batch-size': self.batch_size,
-            'color-mode': self.color_mode,
-            'epochs': self.epochs,
-            'image-dimensions': self.image_dimensions,
-            'lion-directories': self.lion_directories,
-            'validation-lion-directories': self.validation_lion_directories,
-            'model-function': self.model_function_name,
-            'model-version': self.model_version,
-            'no-lion-directories': self.no_lion_directories,
-            'validation-no-lion-directories':
-            self.validation_no_lion_directories,
-            'notebook': self.notebook_number,
-            'verification-path': self.verification_path,
-            'with-augmentation': self.with_augmentation,
+            "alpha": self.alpha,
+            "batch-size": self.batch_size,
+            "color-mode": self.color_mode,
+            "epochs": self.epochs,
+            "image-dimensions": self.image_dimensions,
+            "lion-directories": self.lion_directories,
+            "validation-lion-directories": self.validation_lion_directories,
+            "model-function": self.model_function_name,
+            "model-version": self.model_version,
+            "no-lion-directories": self.no_lion_directories,
+            "validation-no-lion-directories": self.validation_no_lion_directories,
+            "notebook": self.notebook_number,
+            "verification-path": self.verification_path,
+            "with-augmentation": self.with_augmentation,
         }.items()
 
     def __str__(self):
@@ -169,9 +183,9 @@ class Preset():
         Set the stepsize alpha.
         """
         if not isinstance(alpha, float):
-            raise TypeError('alpha needs to be a floating point number')
+            raise TypeError("alpha needs to be a floating point number")
         if alpha <= 0:
-            raise ValueError('the stepsize needs to be positive')
+            raise ValueError("the stepsize needs to be positive")
         self._alpha = alpha
 
     @property
@@ -207,8 +221,9 @@ class Preset():
         """
         Get notebook number.
         """
-        return self._notebook_number \
-            if hasattr(self, '_notebook_number') else 0
+        return (
+            self._notebook_number if hasattr(self, "_notebook_number") else 0
+        )
 
     @notebook_number.setter
     def notebook_number(self, notebook: int):
@@ -216,8 +231,9 @@ class Preset():
         Set the notebook number.
         """
         if notebook < 1:
-            raise ValueError('notebook can not be zero '
-                             f'or negative ({notebook})')
+            raise ValueError(
+                "notebook can not be zero " f"or negative ({notebook})"
+            )
         self._notebook_number = notebook
 
     @property
@@ -253,16 +269,17 @@ class Preset():
         """
         Get the location of the model file.
         """
-        if self._model_file != '':
+        if self._model_file != "":
             return self._model_file
         return os.path.realpath(
-            f'{self.base_output_directory}/'
-            f'model_weights_{self.notebook_number}'
-            f'_{self.model_version}'
-            f'_tf{self.tf_compat}'
-            f'_{self.image_dimensions[0]}'
-            f'_{self.image_dimensions[1]}'
-            '.keras')
+            f"{self.base_output_directory}/"
+            f"model_weights_{self.notebook_number}"
+            f"_{self.model_version}"
+            f"_tf{self.tf_compat}"
+            f"_{self.image_dimensions[0]}"
+            f"_{self.image_dimensions[1]}"
+            ".keras"
+        )
 
     @model_file.setter
     def model_file(self, filename: str):
@@ -277,13 +294,14 @@ class Preset():
         Get the history file.
         """
         return os.path.realpath(
-            f'{self.base_output_directory}/'
-            f'model_history_{self.notebook_number}'
-            f'_{self.model_version}'
-            f'_tf{self.tf_compat}'
-            f'_{self.image_dimensions[0]}'
-            f'_{self.image_dimensions[1]}'
-            '.pickle')
+            f"{self.base_output_directory}/"
+            f"model_history_{self.notebook_number}"
+            f"_{self.model_version}"
+            f"_tf{self.tf_compat}"
+            f"_{self.image_dimensions[0]}"
+            f"_{self.image_dimensions[1]}"
+            ".pickle"
+        )
 
     @property
     def settings_file(self):
@@ -291,9 +309,10 @@ class Preset():
         Get the settings file.
         """
         return os.path.realpath(
-            f'{self.base_output_directory}/'
-            f'model_settings_{self.notebook_number}_{self.model_version}'
-            f'_{self.image_dimensions[0]}_{self.image_dimensions[1]}.yaml')
+            f"{self.base_output_directory}/"
+            f"model_settings_{self.notebook_number}_{self.model_version}"
+            f"_{self.image_dimensions[0]}_{self.image_dimensions[1]}.yaml"
+        )
 
     @property
     def color_mode(self) -> str:
@@ -308,13 +327,13 @@ class Preset():
         Set the color_mode.
         """
         if not isinstance(mode, str):
-            raise TypeError('mode must be a string')
-        if mode not in ['rgb', 'grayscale']:
+            raise TypeError("mode must be a string")
+        if mode not in ["rgb", "grayscale"]:
             raise ValueError("color_mode must be either 'rgb' or 'grayscale'")
         self._color_mode = mode
-        if mode == 'grayscale':
+        if mode == "grayscale":
             self._number_color_channels = 1
-        elif mode == 'rgb':
+        elif mode == "rgb":
             self._number_color_channels = 3
 
     @property
@@ -330,13 +349,14 @@ class Preset():
         Set the number of color channels.
         """
         if channels not in [1, 3]:
-            raise ValueError('illegal number of color '
-                             f'channels ({channels})')
+            raise ValueError(
+                "illegal number of color " f"channels ({channels})"
+            )
         self._number_color_channels = channels
         if channels == 1:
-            self._color_mode = 'grayscale'
+            self._color_mode = "grayscale"
         elif channels == 3:
-            self._color_mode = 'rgb'
+            self._color_mode = "rgb"
 
     @property
     def image_dimensions(self) -> Tuple[int, int]:
@@ -350,12 +370,14 @@ class Preset():
         """
         Set the image dimensions.
         """
-        if not (isinstance(dimensions, tuple) and
-                len(dimensions) == 2 and
-                all(isinstance(dim, int) for dim in dimensions)):
-            raise TypeError('image dimensions needs to be a tuple')
+        if not (
+            isinstance(dimensions, tuple)
+            and len(dimensions) == 2
+            and all(isinstance(dim, int) for dim in dimensions)
+        ):
+            raise TypeError("image dimensions needs to be a tuple")
         if not all(x > 0 for x in dimensions):
-            raise ValueError('image dimensions need to be positive')
+            raise ValueError("image dimensions need to be positive")
         self._image_dimensions = copy.deepcopy(dimensions)
 
     @property
@@ -399,9 +421,9 @@ class Preset():
         Set the number of epochs.
         """
         if not isinstance(epochs, int):
-            raise TypeError('epochs must be int')
+            raise TypeError("epochs must be int")
         if epochs < 1:
-            raise ValueError('epochs needs to be a positive integer')
+            raise ValueError("epochs needs to be a positive integer")
         self._epochs = epochs
 
     @property
@@ -501,9 +523,9 @@ class Preset():
         Set the batch size.
         """
         if not isinstance(batch_size, int):
-            raise TypeError('batch_size must be int')
+            raise TypeError("batch_size must be int")
         if batch_size <= 0:
-            raise ValueError('the batch-size needs to be a positive number')
+            raise ValueError("the batch-size needs to be a positive number")
         self._batch_size = batch_size
 
     @property
@@ -526,7 +548,7 @@ class Preset():
         This is either '2.15' or '2.17'.
         """
         if not isinstance(compat, str):
-            raise TypeError('tf compat needs to be a string')
-        if compat not in ['2.15', '2.17']:
-            raise ValueError('tf compat needs to be in [2.15, 2.17]')
+            raise TypeError("tf compat needs to be a string")
+        if compat not in ["2.15", "2.17"]:
+            raise ValueError("tf compat needs to be in [2.15, 2.17]")
         self._tf_compat = compat

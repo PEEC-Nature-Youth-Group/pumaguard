@@ -24,40 +24,40 @@ class MobileNetV3Model(Model):
         """
         Get the model name.
         """
-        return 'mobilenetv3'
+        return "mobilenetv3"
 
     @staticmethod
     def model_description() -> str:
         """
         Get a description of the model.
         """
-        return 'A pre-trained model based on MobileNetV3Small.'
+        return "A pre-trained model based on MobileNetV3Small."
 
     @property
     def model_type(self) -> str:
         """
         Get the model type.
         """
-        return 'pre-trained'
+        return "pre-trained"
 
-    def raw_model(self,
-                  image_dimensions: Tuple[int, int],
-                  number_color_channels: int) -> keras.Model:
+    def raw_model(
+        self, image_dimensions: Tuple[int, int], number_color_channels: int
+    ) -> keras.Model:
         """
         The pre-trained model (MobileNetV3Small).
         """
 
-        inputs = keras.Input(
-            shape=(*image_dimensions, number_color_channels))
+        inputs = keras.Input(shape=(*image_dimensions, number_color_channels))
 
         if number_color_channels == 1:
-            converted_inputs = keras.layers.Lambda(
-                tf.image.grayscale_to_rgb)(inputs)
+            converted_inputs = keras.layers.Lambda(tf.image.grayscale_to_rgb)(
+                inputs
+            )
         else:
             converted_inputs = inputs
 
         base_model = keras.applications.MobileNetV3Small(
-            weights='imagenet',
+            weights="imagenet",
             include_top=False,
             input_tensor=converted_inputs,
         )
@@ -70,8 +70,10 @@ class MobileNetV3Model(Model):
         # brings it into one output. The sigmoid layer makes sure that one
         # output is between 0-1. We will train all parameters in these last
         # two layers
-        return keras.Sequential([
-            base_model,
-            keras.layers.GlobalAveragePooling2D(),
-            keras.layers.Dense(1, activation='sigmoid'),
-        ])
+        return keras.Sequential(
+            [
+                base_model,
+                keras.layers.GlobalAveragePooling2D(),
+                keras.layers.Dense(1, activation="sigmoid"),
+            ]
+        )

@@ -23,26 +23,28 @@ class LightModel1(Model):
         """
         Get the model name.
         """
-        return 'light-model'
+        return "light-model"
 
     @staticmethod
     def model_description() -> str:
         """
         Get a description of the model.
         """
-        return ('A "light model" which is loosely based on the '
-                'Xception model and constructs a CNN.')
+        return (
+            'A "light model" which is loosely based on the '
+            "Xception model and constructs a CNN."
+        )
 
     @property
     def model_type(self) -> str:
         """
         Get the model type.
         """
-        return 'light'
+        return "light"
 
-    def raw_model(self,
-                  image_dimensions: Tuple[int, int],
-                  number_color_channels: int) -> keras.Model:
+    def raw_model(
+        self, image_dimensions: Tuple[int, int], number_color_channels: int
+    ) -> keras.Model:
         """
         Define the "light model" which is loosely based on the Xception model
         and constructs a CNN.
@@ -51,8 +53,7 @@ class LightModel1(Model):
         function results in `nan` after only one epoch. It does work on GPU
         runtimes though.
         """
-        inputs = keras.Input(
-            shape=(*image_dimensions, number_color_channels))
+        inputs = keras.Input(shape=(*image_dimensions, number_color_channels))
 
         # Entry block
         x = keras.layers.Rescaling(1.0 / 255)(inputs)

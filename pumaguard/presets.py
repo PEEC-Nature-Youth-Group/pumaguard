@@ -58,9 +58,15 @@ class Preset():
         """
         Load settings from YAML file.
         """
-        logger.info('loading settings from %s', filename)
-        with open(filename, encoding='utf-8') as fd:
-            settings = yaml.safe_load(fd)
+        logger.info("loading settings from %s", filename)
+        try:
+            with open(filename, encoding="utf-8") as fd:
+                settings = yaml.safe_load(fd)
+        except FileNotFoundError:
+            logger.error("Could not open settings (%s), using defaults",
+                        filename)
+            return
+
         self.notebook_number = settings.get('notebook', 1)
         self.epochs = settings.get('epochs', 1)
         dimensions = settings.get('image-dimensions', [0, 0])

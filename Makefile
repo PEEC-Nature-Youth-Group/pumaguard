@@ -50,6 +50,10 @@ build: assemble poetry
 .PHONY: lint
 lint: install pylint isort mypy bashate ansible-lint
 
+.PHONY: black
+black: install-dev
+	poetry run black --check pumaguard
+
 .PHONY: pylint
 pylint: install
 	poetry run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts

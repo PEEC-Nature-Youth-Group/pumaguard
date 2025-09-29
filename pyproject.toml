@@ -28,6 +28,7 @@ requests = "~=2.32"
 ansible = "~=10.7"
 ansible-lint = { version = "~=25.2", markers = 'platform_system != "Windows"' }
 bashate = "~=2.1"
+black = "~=25.9"
 ipykernel = "~=6.29"
 isort = "~=6.0"
 mypy = "~=1.18"
@@ -59,3 +60,6 @@ include_trailing_comma = true
 multi_line_output = "VERTICAL_HANGING_INDENT"
 py_version = 310
 split_on_trailing_comma = true
+
+[tool.black]
+line-length = 79

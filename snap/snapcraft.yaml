@@ -93,7 +93,7 @@ parts:
       - git
       - python3-pip
     stage-packages:
-      - libgl1
+      - libgl-dev
     override-pull: |
       set -e -u -x
       poetry --version

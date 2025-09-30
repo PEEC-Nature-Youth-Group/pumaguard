@@ -47,7 +47,13 @@ def configure_subparser(parser: argparse.ArgumentParser):
                                  '../pumaguard-sounds')),
     )
     parser.add_argument(
-        '--watch-method',
+        "--no-play-sound",
+        default=False,
+        action="store_true",
+        help="Do not play a sound when detecting a Puma",
+    )
+    parser.add_argument(
+        "--watch-method",
         help='''What implementation (method) to use for watching
         the folder. Linux on baremetal supports both methods. Linux
         in WSL supports inotify on folders using ext4 but only os
@@ -186,10 +192,12 @@ class FolderObserver:
         logger.info('Chance of puma in %s: %.2f%%',
                     filepath, prediction * 100)
         if prediction > 0.5:
-            logger.info('Puma detected in %s', filepath)
-            sound_file_path = os.path.join(
-                self.presets.sound_path, 'cougar_call.mp3')
-            playsound(sound_file_path)
+            logger.info("Puma detected in %s", filepath)
+            if self.presets.play_sound:
+                sound_file_path = os.path.join(
+                    self.presets.sound_path, "cougar_call.mp3"
+                )
+                playsound(sound_file_path)
 
 
 class FolderManager:
@@ -241,7 +249,11 @@ def main(options: argparse.Namespace, presets: Preset):
         logger.debug('setting sound path to %s', sound_path)
         presets.sound_path = sound_path
 
-    logger.debug('getting folder manager')
+    if options.no_play_sound:
+        logger.debug("Will not play sounds")
+        presets.play_sound = False
+
+    logger.debug("getting folder manager")
     manager = FolderManager(presets)
     for folder in options.FOLDER:
         manager.register_folder(folder, options.watch_method)

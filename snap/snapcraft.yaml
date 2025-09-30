@@ -132,10 +132,39 @@ parts:
     override-build: |
       craftctl default
       cat <<EOF > vsftpd.conf
-      chroot_local_user=YES
+      # Basic options
       listen=YES
-      listen_ipv6=NO
-      chroot_local_user=YES
+      anonymous_enable=NO           # Disable anonymous login
+      local_enable=YES              # Allow local users to log in
+      write_enable=YES              # Allow write commands (for uploads)
+      local_umask=022               # Set default file permissions for uploaded files (owner rw, group r, others r)
+      dirmessage_enable=YES         # Enable displaying a message when entering a directory
+      use_localtime=YES             # Use the server's local time
+      xferlog_enable=YES            # Enable logging of file transfers
+      connect_from_port_20_only=YES # Use port 20 for data connections (more secure)
+
+      # Security options
+      pasv_enable=YES          # Enable passive mode (often needed for clients behind NAT)
+      pasv_min_port=10000      # Set a range of ports for passive connections
+      pasv_max_port=10100
+      port_enable=NO           # Disable active mode (less secure for clients behind NAT)
+      allow_writeable_chroot=YES # Required for allowing writes in the chroot directory (use with caution)
+
+      # User restrictions
+      chroot_local_user=YES    # Jail local users to their home directory (more secure)
+      # If you want to allow a specific user to write outside their home directory,
+      # you can uncomment the following line and add the username:
+      # chroot_list_enable=YES
+      # chroot_list_file=/etc/vsftpd.chroot_list
+
+      # TLS/SSL settings (highly recommended for secure transfers)
+      ssl_enable=YES
+      ssl_tlsv1_2=YES          # Only allow TLS v1.2 and above
+      ssl_sslv2=NO
+      ssl_sslv3=NO
+      require_ssl_cert=NO      # Don't require client certificates (usually not needed for this use case)
+      rsa_cert_file=/etc/ssl/certs/vsftpd.pem # Path to your SSL certificate
+      rsa_private_key_file=/etc/ssl/private/vsftpd.key # Path to your private key
       EOF
       install --mode 0644 vsftpd.conf ${CRAFT_PART_INSTALL}/etc/vsftpd.conf
     stage-packages:

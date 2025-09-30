@@ -12,10 +12,10 @@ from pumaguard.models import (
 )
 
 __MODELS__ = {
-    'xception': xception.XceptionModel,
-    'light-model': light_1.LightModel1,
-    'light-2-model': light_2.LightModel2,
-    'light-3-model': light_3.LightModel3,
-    'mobilenetv3': mobilenetv3.MobileNetV3Model,
-    'conv2d-model': light_4.LightModel4,
+    "xception": xception.XceptionModel,
+    "light-model": light_1.LightModel1,
+    "light-2-model": light_2.LightModel2,
+    "light-3-model": light_3.LightModel3,
+    "mobilenetv3": mobilenetv3.MobileNetV3Model,
+    "conv2d-model": light_4.LightModel4,
 }

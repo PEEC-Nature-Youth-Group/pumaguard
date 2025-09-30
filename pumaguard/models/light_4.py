@@ -39,15 +39,17 @@ class LightModel4(Model):
         """
         return "pre-trained"
 
-    def raw_model(self,
-                  image_dimensions: Tuple[int, int],
-                  number_color_channels: int) -> keras.Model:
+    def raw_model(
+        self, image_dimensions: Tuple[int, int], number_color_channels: int
+    ) -> keras.Model:
         """
         The simple model using a single Conv2D layer.
         """
-        return keras.Sequential([
-            keras.Input(shape=(*image_dimensions, number_color_channels)),
-            keras.layers.Conv2D(1, (3, 3), activation="relu"),
-            keras.layers.Flatten(),
-            keras.layers.Dense(1, activation="sigmoid")
-        ])
+        return keras.Sequential(
+            [
+                keras.Input(shape=(*image_dimensions, number_color_channels)),
+                keras.layers.Conv2D(1, (3, 3), activation="relu"),
+                keras.layers.Flatten(),
+                keras.layers.Dense(1, activation="sigmoid"),
+            ]
+        )

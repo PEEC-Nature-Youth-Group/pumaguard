@@ -24,7 +24,7 @@ from pumaguard.utils import (
     get_md5,
 )
 
-logger = logging.getLogger('PumaGuard')
+logger = logging.getLogger("PumaGuard")
 
 
 class Model(ABC):
@@ -56,7 +56,7 @@ class Model(ABC):
         Initialize the model.
         """
         self._distribution_strategy = self._initialize_tensorflow()
-        logger.debug('initializing new model')
+        logger.debug("initializing new model")
         self._model = self._compile_model(
             distribution_strategy=self._distribution_strategy,
             load_model_from_file=self._presets.load_model_from_file,
@@ -67,9 +67,9 @@ class Model(ABC):
         )
 
     @abstractmethod
-    def raw_model(self,
-                  image_dimensions: Tuple[int, int],
-                  number_color_channels: int) -> keras.Model:
+    def raw_model(
+        self, image_dimensions: Tuple[int, int], number_color_channels: int
+    ) -> keras.Model:
         """
         The uncompiled Keras model.
         """
@@ -116,24 +116,29 @@ class Model(ABC):
             initialization.
         """
         logger.info("Tensorflow version %s", tf.__version__)
-        logger.info('Trying to connect to a TPU')
+        logger.info("Trying to connect to a TPU")
         try:
             tpu = tf.distribute.cluster_resolver.TPUClusterResolver()
             tf.config.experimental_connect_to_cluster(tpu)
             tf.tpu.experimental.initialize_tpu_system(tpu)
             logger.info(
-                'Running on a TPU with %d cores',
-                tpu.num_accelerators()["TPU"])
+                "Running on a TPU with %d cores", tpu.num_accelerators()["TPU"]
+            )
             return tf.distribute.TPUStrategy(tpu)
         except ValueError:
             logger.warning(
-                "WARNING: Not connected to a TPU runtime; Will try GPU")
-            if tf.config.list_physical_devices('GPU'):
-                logger.info('Running on %d GPUs', len(
-                    tf.config.list_physical_devices("GPU")))
+                "WARNING: Not connected to a TPU runtime; Will try GPU"
+            )
+            if tf.config.list_physical_devices("GPU"):
+                logger.info(
+                    "Running on %d GPUs",
+                    len(tf.config.list_physical_devices("GPU")),
+                )
                 return tf.distribute.MirroredStrategy()
-            logger.warning('WARNING: Not connected to TPU or GPU runtime; '
-                           'Will use CPU context')
+            logger.warning(
+                "WARNING: Not connected to TPU or GPU runtime; "
+                "Will use CPU context"
+            )
             return tf.distribute.get_strategy()
 
     def _load_model(self, filename: str) -> keras.Model:
@@ -141,46 +146,50 @@ class Model(ABC):
         Load a model from file.
         """
         os.stat(filename)
-        logger.debug('loading model from file %s', filename)
+        logger.debug("loading model from file %s", filename)
         model = keras.models.load_model(filename)
-        logger.debug('loaded model from file')
-        logger.info('loaded model version %s', get_md5(filename))
+        logger.debug("loaded model from file")
+        logger.info("loaded model version %s", get_md5(filename))
         return model
 
-    def _compile_model(self,  # pylint: disable=too-many-arguments,too-many-positional-arguments
-                       distribution_strategy: tf.distribute.Strategy,
-                       load_model_from_file: bool = False,
-                       model_file: str = '',
-                       image_dimensions: Tuple[int, int] = (128, 128),
-                       number_color_channels: int = 3,
-                       alpha: float = 1e-5) -> keras.Model:
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def _compile_model(
+        self,
+        distribution_strategy: tf.distribute.Strategy,
+        load_model_from_file: bool = False,
+        model_file: str = "",
+        image_dimensions: Tuple[int, int] = (128, 128),
+        number_color_channels: int = 3,
+        alpha: float = 1e-5,
+    ) -> keras.Model:
         """
         Create the model.
         """
         with distribution_strategy.scope():
             if load_model_from_file:
-                logger.info('looking for model at %s', model_file)
+                logger.info("looking for model at %s", model_file)
                 model_file_exists = os.path.isfile(model_file)
                 if model_file_exists:
                     model = self._load_model(model_file)
                 else:
                     raise FileNotFoundError(
-                        f'could not find model {model_file}')
+                        f"could not find model {model_file}"
+                    )
             else:
-                logger.debug('not loading previous weights')
-                logger.info('creating new %s model',
-                            self.model_name)
+                logger.debug("not loading previous weights")
+                logger.info("creating new %s model", self.model_name)
                 model = self.raw_model(
                     image_dimensions=image_dimensions,
-                    number_color_channels=number_color_channels)
+                    number_color_channels=number_color_channels,
+                )
 
-            logger.debug('Compiling model')
+            logger.debug("Compiling model")
             model.compile(
                 optimizer=keras.optimizers.Adam(learning_rate=alpha),
-                loss='binary_crossentropy',
-                metrics=['accuracy'],
+                loss="binary_crossentropy",
+                metrics=["accuracy"],
             )
-            logger.info('Number of layers in the model: %d', len(model.layers))
+            logger.info("Number of layers in the model: %d", len(model.layers))
             model.summary()
 
         return model

@@ -48,7 +48,7 @@ build: assemble poetry
 	poetry build
 
 .PHONY: lint
-lint: install pylint isort mypy bashate ansible-lint
+lint: black pylint isort mypy bashate ansible-lint
 
 .PHONY: black
 black: install-dev
@@ -59,19 +59,19 @@ pylint: install
 	poetry run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
-isort: install-dev poetry
+isort: install-dev
 	poetry run isort pumaguard tests scripts
 
 .PHONY: mypy
-mypy: install poetry
+mypy: install-dev
 	poetry run mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
-bashate: install-dev poetry
+bashate: install-dev
 	poetry run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
-ansible-lint: install-dev poetry
+ansible-lint: install-dev
 	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-pi.yaml
 
 .PHONY: snap
@@ -120,19 +120,19 @@ release:
 	  git tag -a -m "Release v$${NEW_RELEASE}" v$${NEW_RELEASE}
 
 .PHONY: configure-pi-zero
-configure-pi-zero: install-dev poetry
+configure-pi-zero: install-dev
 	poetry run ansible-playbook --inventory pi-zero, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: configure-pi-5
-configure-pi-5: install-dev poetry
+configure-pi-5: install-dev
 	poetry run ansible-playbook --inventory pi-5, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
 
 .PHONY: configure-laptop
-configure-laptop: install-dev poetry
+configure-laptop: install-dev
 	poetry run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
-verify-poetry: install poetry
+verify-poetry: install
 	$(MAKE) EXE="poetry run pumaguard" verify
 
 .PHONY: verify-snap

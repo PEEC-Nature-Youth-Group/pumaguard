@@ -46,6 +46,7 @@ class Preset():
         self.load_model_from_file = False
         self.model_function_name = 'xception'
         self.model_version = 'undefined'
+        self.play_sound = True
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
@@ -111,6 +112,7 @@ class Preset():
         self.batch_size = settings.get('batch-size', 1)
         self.alpha = float(settings.get('alpha', 1e-5))
         self.color_mode = settings.get('color-mode', 'rgb')
+        self.play_sound = settings.get("play-sound", True)
 
     def save(self):
         """

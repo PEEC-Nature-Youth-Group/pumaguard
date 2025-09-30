@@ -92,6 +92,8 @@ parts:
     build-packages:
       - git
       - python3-pip
+    stage-packages:
+      - libgl1
     override-pull: |
       set -e -u -x
       poetry --version

@@ -93,7 +93,7 @@ parts:
       - git
       - python3-pip
     stage-packages:
-      - libgl-dev
+      - libgl1
     override-pull: |
       set -e -u -x
       poetry --version
@@ -114,8 +114,9 @@ parts:
       craftctl default
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage:
-      - lib/python3.12/site-packages/pumaguard*
       - bin
+      - lib/python3.12/site-packages/pumaguard*
+      - usr/lib/x86_64-linux-gnu
 
   inotify:
     plugin: nil

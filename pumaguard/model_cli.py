@@ -5,6 +5,10 @@ CLI commands for managing models.
 import argparse
 import logging
 
+from pumaguard.model_downloader import (
+    clear_model_cache,
+    list_available_models,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -16,12 +20,26 @@ def configure_subparser(parser: argparse.ArgumentParser):
     """
     Parses command line arguments.
     """
-    logger.debug("parser = %s", parser.usage)
+    subparsers = parser.add_subparsers(dest="model_action")
+    subparsers.add_parser(
+        "list",
+        help="List available models",
+    )
+    subparsers.add_parser(
+        "clear",
+        help="Clear model cache",
+    )
 
 
-def main(options: argparse.Namespace, presets: Preset):
+def main(
+    args: argparse.Namespace, presets: Preset
+):  # pylint: disable=unused-argument
     """
     Main entry point.
     """
-    logger.debug("options: %s", options)
-    logger.debug("presets: %s", presets)
+    if args.model_action == "list":
+        logger.info(list_available_models())
+    elif args.model_action == "clear":
+        clear_model_cache()
+    else:
+        logger.error("What do you want to do with the models?")

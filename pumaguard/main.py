@@ -252,8 +252,10 @@ def main():
     elif args.command == "classify":
         classify.main(args, presets)
     elif args.command == "verify":
-        verify.main(presets)
+        verify.main(args, presets)
     elif args.command == "analyze":
-        analyze.main(presets)
+        analyze.main(args, presets)
+    elif args.command == "models":
+        model_cli.main(args, presets)
     else:
         parser.print_help()

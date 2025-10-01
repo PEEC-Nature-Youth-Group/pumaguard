@@ -22,6 +22,7 @@ from pumaguard.sound import (
     playsound,
 )
 from pumaguard.utils import (
+    cache_model_two_stage,
     classify_image_two_stage,
 )
 
@@ -135,6 +136,7 @@ class FolderObserver:
         Observe whether a new file is created in the folder.
         """
         logger.info("Starting new observer, method = %s", self.method)
+        cache_model_two_stage()
         if self.method == "inotify":
             with subprocess.Popen(
                 [

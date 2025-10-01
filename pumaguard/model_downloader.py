@@ -22,7 +22,7 @@ import requests
 
 logger = logging.getLogger("PumaGuard")
 
-MODEL_TAG = "2458f53dfb64d42415073279e68a6015c00f3920"
+MODEL_TAG = "94502c899db1189ad31ff61cbcf2df96305f14cd"
 MODEL_BASE_URI = (
     "https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/raw"
 )
@@ -48,7 +48,83 @@ MODEL_REGISTRY: Dict[str, Dict[str, Union[str, Dict[str, Dict[str, str]]]]] = {
         # pylint: disable=line-too-long
         "sha256": "de1d9ee617796b7aa9f9eba4b2527f94cb4e41c9a5ca1482cb2923f796aec8a2",
     },
+    "puma_cls_efficientnetv2s_balanced.h5": {
+        "fragments": {
+            "puma_cls_efficientnetv2s_balanced.h5_aa": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "6a83f123438b9bfce408c8ffa5512326209ffd40559b54443b57265fb255b031",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ab": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "48ccda0b7423b91abbcfadd21c79986e5a08a0a7ed1efc37c3a62c022e6c1095",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ac": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "f57a02a2197cf4ec77a2980e030ba752903210d2b4755eab9b6e52a4fa18aaef",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ad": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "c851f784a44e787ffa8af76b156281a59dfdc4869ab2ee01dc674641fa30ef9b",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ae": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "9201635ca69a685d40d3363ae337a66db2f8e5a5784e21001796e058cb8ac456",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_af": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "ceca5eb868e07323cbf6de05fdfd2d65cced9cd5beb2bb4a3e229eee3bd2b095",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ag": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "fb6ac1542d1cfd1f9afe831bde458e3ac046072d656fe5a1238fb58fbcc2c9c3",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ah": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "95971f4c85a7f8dc3828c1debbe930ecef8ad1fc3e877421fa1d2fb557d6ca87",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ai": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "caab8db040ac0d6d0e8c63fc26622ab9d3c8bfd574ed4a209f1accde79f32fe4",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_aj": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "826fafb20fd38e5c94e363b9896b1618f38fd5c56c36d42c852f4d594cc05cc7",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_ak": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "1558f805d4c16449b67533e36e7aff42568c859b6e87e374572e40e5460fe773",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_al": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "d4aa525c255579a701fbf9e85b8fe3dac42abacb7f8b8d57e58c79bd4e5a240c",
+            },
+            "puma_cls_efficientnetv2s_balanced.h5_am": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "938a3d929e4732ba799901cc37d65f80162018c3dfd4236e2d3a22f29a3e18e7",
+            },
+        },
+        # pylint: disable=line-too-long
+        "sha256": "c43e6505f9d987b9f624b2a5129a6baa3dd165f5c51989911fcc5e36002b1839",
+    },
     "yolov8s.pt": {
+        "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+        # pylint: disable=line-too-long
+        "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a",
+    },
+    "yolov8s_balanced.pt": {
         "url": MODEL_BASE_URI + "/" + MODEL_TAG,
         # pylint: disable=line-too-long
         "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a",

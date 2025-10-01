@@ -376,9 +376,9 @@ def classify_image_two_stage(presets: Preset, image_path: str) -> float:
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "puma_cls_efficientnetv2s.h5"
+        "puma_cls_efficientnetv2s_balanced.h5"
     )
-    yolo_model_path = ensure_model_available("yolov8s.pt")
+    yolo_model_path = ensure_model_available("yolov8s_balanced.pt")
 
     image_size = 384  # must match training
     conf_thresh = 0.25  # YOLO confidence threshold

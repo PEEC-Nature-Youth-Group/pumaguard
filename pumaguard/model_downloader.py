@@ -2,7 +2,9 @@
 Model downloader utility for PumaGuard.
 """
 
+import datetime
 import hashlib
+import json
 import logging
 import os
 import shutil
@@ -54,6 +56,31 @@ MODEL_REGISTRY: Dict[str, Dict[str, Union[str, Dict[str, Dict[str, str]]]]] = {
 }
 
 
+def create_registry(models_dir: Path):
+    """
+    Create a new registry file in the cache directory.
+
+    This file stores the checksums of the models cached.
+    """
+    registry_file = models_dir / "model-resgistry.json"
+    if not registry_file.exists():
+        logger.debug("Creating new registry at %s", registry_file)
+        with open(registry_file, "w", encoding="utf-8") as fd:
+            json.dump(
+                {
+                    "version": "1.0",
+                    "created": datetime.datetime.now().isoformat(),
+                    "last-updated": datetime.datetime.now().isoformat(),
+                    "models": MODEL_REGISTRY,
+                    "cached-models": {},
+                },
+                fd,
+                indent=2,
+                ensure_ascii=False,
+            )
+        logger.info("Created model registry at %s", registry_file)
+
+
 def get_models_directory() -> Path:
     """
     Get the directory where models should be stored.
@@ -66,6 +93,9 @@ def get_models_directory() -> Path:
         models_dir = Path.home() / ".local" / "share" / "pumaguard" / "models"
 
     models_dir.mkdir(parents=True, exist_ok=True)
+
+    create_registry(models_dir)
+
     return models_dir
 
 
@@ -370,3 +400,9 @@ def clear_model_cache():
     if models_dir.exists():
         shutil.rmtree(models_dir)
         logger.info("Cleared model cache: %s", models_dir)
+
+
+def cache_model():
+    """
+    Update a model to cache.
+    """

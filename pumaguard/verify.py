@@ -163,7 +163,9 @@ def verify_model(presets: Preset):
     print("mean squared error = " f"{get_mean_squared_error(predictions):.4f}")
 
 
-def main(presets: Preset):
+def main(
+    args: argparse.Namespace, presets: Preset
+):  # pylint: disable=unused-argument
     """
     Main entry point
     """

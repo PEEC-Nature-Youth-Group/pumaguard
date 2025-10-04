@@ -179,37 +179,59 @@ jobs:
             pipewire
       - name: Start server and test
         run: |
-          set -e -u -x
+          set -e -u
+          rm -rf watchfolder
           mkdir -p watchfolder
-          poetry run pumaguard server watchfolder &
+          rm -f pumaguard.log
+          poetry run pumaguard server --no-play-sound watchfolder &
           SERVER_PID=$!
+          server_started=0
+          echo -n "Waiting for server to start"
           while true; do
             if [[ -f pumaguard.log ]]; then
-              break
-            fi
-            sleep 1
-          done
-          server_started=0
-          for i in {1..60}; do
-            if grep "Starting new observer" pumaguard.log; then
               server_started=1
               break
             fi
+            echo -n .
             sleep 1
           done
+          echo
           if (( server_started != 1 )); then
+            echo "Server failed to start"
+            kill ${SERVER_PID}
+            exit 1
+          fi
+          observer_started=0
+          echo -n "Waiting for server to start observer"
+          for i in {1..60}; do
+            if grep "New observer started" pumaguard.log; then
+              observer_started=1
+              break
+            fi
+            echo -n .
+            sleep 1
+          done
+          echo
+          if (( observer_started != 1 )); then
+            echo "Server failed to start observer"
+            kill ${SERVER_PID}
             exit 1
           fi
           cp training-data/verification/lion/IMG_9177.JPG watchfolder/
           image_found=0
+          echo -n "Check whether server identifies image"
           for i in {1..60}; do
             if grep "Chance of puma in watchfolder/IMG_9177.JPG" pumaguard.log; then
               image_found=1
               break
             fi
+            echo -n .
             sleep 1
           done
+          echo
           if (( image_found != 1 )); then
+            echo "Server did not classify image"
+            kill ${SERVER_PID}
             exit 1
           fi
           kill ${SERVER_PID}

@@ -153,6 +153,7 @@ class FolderObserver:
                 encoding="utf-8",
                 text=True,
             ) as process:
+                logger.info("New observer started")
                 if process.stdout is None:
                     raise ValueError("Failed to initialize process.stdout")
 
@@ -174,6 +175,7 @@ class FolderObserver:
                         )
         elif self.method == "os":
             known_files = set(os.listdir(self.folder))
+            logger.info("New observer started")
             while not self._stop_event.is_set():
                 current_files = set(os.listdir(self.folder))
                 new_files = current_files - known_files

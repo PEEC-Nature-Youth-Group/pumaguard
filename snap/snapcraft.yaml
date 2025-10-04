@@ -105,15 +105,16 @@ parts:
       fi
       craftctl set version="v${VERSION}"
       poetry version "${VERSION}"
+    override-build: |
+      craftctl default
       if [[ ${CRAFT_ARCH_BUILD_FOR} == xamd64 ]]; then
         poetry install --extras and-cuda
       else
         poetry install
       fi
-    override-build: |
-      craftctl default
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     override-stage: |
+      craftctl default
       ls -l ${CRAFT_PART_INSTALL}/usr/lib
     stage:
       - bin

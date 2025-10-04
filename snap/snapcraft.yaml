@@ -118,7 +118,7 @@ parts:
     stage:
       - bin
       - lib/python3.12/site-packages/pumaguard*
-      - usr/lib/x86_64-linux-gnu
+      - usr/lib/*-linux-gnu
 
   inotify:
     plugin: nil

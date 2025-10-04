@@ -51,9 +51,15 @@ def configure_subparser(parser: argparse.ArgumentParser):
     )
     parser.add_argument(
         "--no-play-sound",
+        help="Do not play a sound when detecting a Puma",
         default=False,
         action="store_true",
-        help="Do not play a sound when detecting a Puma",
+    )
+    parser.add_argument(
+        "--no-download-progress",
+        help="Do not print out model download progress",
+        default=False,
+        action="store_true",
     )
     parser.add_argument(
         "--watch-method",
@@ -270,6 +276,10 @@ def main(options: argparse.Namespace, presets: Preset):
     if options.no_play_sound:
         logger.debug("Will not play sounds")
         presets.play_sound = False
+
+    if options.no_download_progress:
+        logger.debug("Will not print out download progress")
+        presets.print_download_progress = False
 
     logger.debug("getting folder manager")
     manager = FolderManager(presets)

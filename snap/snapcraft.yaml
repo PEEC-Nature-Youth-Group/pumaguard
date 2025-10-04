@@ -113,6 +113,8 @@ parts:
     override-build: |
       craftctl default
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
+    override-stage: |
+      ls -l ${CRAFT_PART_INSTALL}/usr/lib
     stage:
       - bin
       - lib/python3.12/site-packages/pumaguard*

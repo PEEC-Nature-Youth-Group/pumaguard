@@ -337,15 +337,19 @@ def prepare_image(img_path: str, image_dimensions: Tuple[int, int]):
     return img_array
 
 
-def cache_model_two_stage():
+def cache_model_two_stage(print_progress: bool = True):
     """
     Caches the model weights.
     """
-    ensure_model_available("puma_cls_efficientnetv2s_balanced.h5")
-    ensure_model_available("yolov8s_balanced.pt")
+    ensure_model_available(
+        "puma_cls_efficientnetv2s_balanced.h5", print_progress
+    )
+    ensure_model_available("yolov8s_balanced.pt", print_progress)
 
 
-def classify_image_two_stage(presets: Preset, image_path: str) -> float:
+def classify_image_two_stage(
+    presets: Preset, image_path: str, print_progress: bool = True
+) -> float:
     """
     Classify the image using two-stage approach: YOLO detection + EfficientNet
     classification.
@@ -384,9 +388,13 @@ def classify_image_two_stage(presets: Preset, image_path: str) -> float:
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "puma_cls_efficientnetv2s_balanced.h5"
+        "puma_cls_efficientnetv2s_balanced.h5",
+        print_progress,
     )
-    yolo_model_path = ensure_model_available("yolov8s_balanced.pt")
+    yolo_model_path = ensure_model_available(
+        "yolov8s_balanced.pt",
+        print_progress,
+    )
 
     image_size = 384  # must match training
     conf_thresh = 0.25  # YOLO confidence threshold

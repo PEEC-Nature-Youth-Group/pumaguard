@@ -230,10 +230,7 @@ def download_file(
                             end="",
                             flush=True,
                         )
-            print(
-                f"\rDownload progress: {100:.1f}% "
-                f"({downloaded/1024/1024:.1f}/{total_size/1024/1024:.1f} MB)",
-            )
+            logger.info("Done downloading %s", url)
 
         # Verify checksum if provided
         if expected_sha256:

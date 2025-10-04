@@ -118,7 +118,7 @@ parts:
     stage:
       - bin
       - lib/python3.12/site-packages/pumaguard*
-      - usr/lib/*-linux-gnu
+      - usr/lib/$SNAP_ARCH_TRIPLE/*
 
   inotify:
     plugin: nil

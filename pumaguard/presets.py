@@ -49,6 +49,7 @@ class Preset:
         self.model_function_name = "xception"
         self.model_version = "undefined"
         self.play_sound = True
+        self.print_download_progress = True
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
@@ -129,6 +130,9 @@ class Preset:
         self.alpha = float(settings.get("alpha", 1e-5))
         self.color_mode = settings.get("color-mode", "rgb")
         self.play_sound = settings.get("play-sound", True)
+        self.print_download_progress = settings.get(
+            "print-download-progress", True
+        )
 
     def save(self):
         """

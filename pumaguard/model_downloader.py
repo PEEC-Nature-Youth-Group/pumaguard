@@ -189,7 +189,10 @@ def verify_file_checksum(file_path: Path, expected_sha256: str) -> bool:
 
 
 def download_file(
-    url: str, destination: Path, expected_sha256: Optional[str] = None
+    url: str,
+    destination: Path,
+    expected_sha256: Optional[str] = None,
+    print_progress: bool = True,
 ) -> bool:
     """
     Download a file from URL to destination with progress reporting.
@@ -217,7 +220,7 @@ def download_file(
                 if chunk:
                     f.write(chunk)
                     downloaded += len(chunk)
-                    if total_size > 0:
+                    if total_size > 0 and print_progress:
                         percent = (downloaded / total_size) * 100
                         logger.debug("Download progress: %.1f%%", percent)
                         # pylint: disable=line-too-long
@@ -319,7 +322,9 @@ def assemble_model_fragments(
 
 
 def download_model_fragments(
-    fragment_urls: List[str], models_dir: Path
+    fragment_urls: List[str],
+    models_dir: Path,
+    print_progress: bool = True,
 ) -> List[Path]:
     """
     Download all fragments for a split model.
@@ -339,7 +344,9 @@ def download_model_fragments(
         fragment_path = models_dir / fragment_name
 
         if not fragment_path.exists():
-            if not download_file(url, fragment_path):
+            if not download_file(
+                url, fragment_path, print_progress=print_progress
+            ):
                 raise RuntimeError(f"Failed to download fragment: {url}")
 
         fragment_paths.append(fragment_path)
@@ -348,7 +355,9 @@ def download_model_fragments(
 
 
 # pylint: disable=too-many-branches
-def ensure_model_available(model_name: str) -> Path:
+def ensure_model_available(
+    model_name: str, print_progress: bool = True
+) -> Path:
     """
     Ensure a model is available locally, downloading and assembling
     if necessary.
@@ -414,6 +423,7 @@ def ensure_model_available(model_name: str) -> Path:
                 fragment_data["url"] + "/" + fragment_name,
                 models_dir / fragment_name,
                 fragment_data["sha256"],
+                print_progress=print_progress,
             ):
                 raise RuntimeError(
                     f"Failed to download fragment: {fragment_name}"
@@ -442,9 +452,7 @@ def ensure_model_available(model_name: str) -> Path:
                 f"Invalid or missing sha256 for model: {model_name}"
             )
         if not download_file(
-            url + "/" + model_name,
-            model_path,
-            sha256,
+            url + "/" + model_name, model_path, sha256, print_progress
         ):
             raise RuntimeError(f"Failed to download model: {model_name}")
 

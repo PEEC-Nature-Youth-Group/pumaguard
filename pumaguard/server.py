@@ -12,9 +12,6 @@ import sys
 import threading
 import time
 
-from pumaguard.model_factory import (
-    model_factory,
-)
 from pumaguard.presets import (
     Preset,
 )
@@ -82,7 +79,7 @@ class FolderObserver:
         self.folder = folder
         self.method = method
         self.presets = presets
-        self.model = model_factory(presets).model
+        # self.model = model_factory(presets).model
         self._stop_event = threading.Event()
 
     def start(self):
@@ -142,7 +139,7 @@ class FolderObserver:
         Observe whether a new file is created in the folder.
         """
         logger.info("Starting new observer, method = %s", self.method)
-        cache_model_two_stage()
+        cache_model_two_stage(self.presets.print_download_progress)
         if self.method == "inotify":
             with subprocess.Popen(
                 [
@@ -289,12 +286,13 @@ def main(options: argparse.Namespace, presets: Preset):
     manager.start_all()
 
     def handle_termination(signum, frame):  # pylint: disable=unused-argument
-        logger.info("Received termination signal. Stopping...")
+        logger.info("Received termination signal (%d). Stopping...", signum)
         manager.stop_all()
         logger.info("Stopped watching folders.")
         sys.exit(0)
 
     signal.signal(signal.SIGTERM, handle_termination)
+    signal.signal(signal.SIGINT, handle_termination)
 
     try:
         while True:

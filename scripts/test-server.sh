@@ -9,6 +9,7 @@ cleanup() {
         sleep 2
         kill -KILL ${SERVER_PID} 2> /dev/null || true
     fi
+    rm -rf watchfolder
 }
 
 trap cleanup EXIT

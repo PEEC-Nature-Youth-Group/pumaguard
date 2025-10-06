@@ -31,6 +31,7 @@ environment:
   PYTHONPATH: "$SNAP/pumaguard-tensorflow/lib/python3.12/site-packages:$SNAP/pumaguard-tensorflow/usr/lib/python3/dist-packages:$SNAP/lib/python3.12/site-packages"
   LD_LIBRARY_PATH: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP/pumaguard-tensorflow/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR:$SNAP_LIBRARY_PATH"
   MPG123_MODDIR: "$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/mpg123"
+  YOLO_CONFIG_DIR: "$SNAP_USER_DATA"
 
 layout:
   /usr/share/alsa:

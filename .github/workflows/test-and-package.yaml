@@ -95,7 +95,7 @@ jobs:
           git archive --output ../pumaguard-models.tar.gz HEAD
           popd
           pushd training-data
-          git archive --output ../training-data.tar.gz HEAD verification Stables
+          git archive --output ../training-data.tar.gz HEAD verification Stables testlion_100525
           popd
       - uses: actions/upload-artifact@v4
         with:

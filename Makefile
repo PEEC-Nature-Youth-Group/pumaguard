@@ -87,21 +87,43 @@ snap:
 	snapcraft
 
 FUNCTIONAL_FILES = \
-    "training-data/Stables/lion/SYFW2061.JPG" \
-    "training-data/Stables/lion/SYFW0270.JPG"
+    "training-data/testlion_100525/lion.5.jpg" \
+    "training-data/testlion_100525/lion.10.jpg" \
+    "training-data/testlion_100525/lion.15.jpg" \
+    "training-data/testlion_100525/other.2.jpg" \
+    "training-data/testlion_100525/other.7.jpg" \
+    "training-data/testlion_100525/other.17.jpg"
 
 .PHONY: run-functional
 run-functional:
 	@echo "running functional test"
-	$(EXE) classify --debug --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml $(FUNCTIONAL_FILES) 2>&1 | tee functional-test.output
+	$(EXE) classify --debug $(FUNCTIONAL_FILES) 2>&1 | tee functional-test.output
 
 .PHONY: check-functional
 check-functional:
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*2061/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '28.80%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.5/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '91.12%' ]; then \
 		cat functional-test.output; \
+		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*270.JPG/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '64.72%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.10/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '98.12%' ]; then \
 		cat functional-test.output; \
+		exit 1; \
+	fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.15/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '100.00%' ]; then \
+		cat functional-test.output; \
+		exit 1; \
+	fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.2/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.00%' ]; then \
+		cat functional-test.output; \
+		exit 1; \
+	fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.7/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.09%' ]; then \
+		cat functional-test.output; \
+		exit 1; \
+	fi; \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.17/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.00%' ]; then \
+		cat functional-test.output; \
+		exit 1; \
 	fi
 	@echo "Success"
 

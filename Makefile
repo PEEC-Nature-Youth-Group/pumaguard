@@ -156,6 +156,10 @@ verify:
 train:
 	pumaguard train --debug --epochs 1 --model-output . --lion training-data/Stables/lion --no-lion training-data/Stables/no-lion/ --no-load-previous-session
 
+.PHONY: test-server
+test-server: install
+	./scripts/test-server.sh
+
 .PHONY: pre-commit
 pre-commit: lint docs poetry
 	sed --in-place --regexp-extended 's/^python.*=.*/python = ">=3.10,<3.11"/' pyproject.toml

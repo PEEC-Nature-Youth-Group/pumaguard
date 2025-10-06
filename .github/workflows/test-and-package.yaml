@@ -178,7 +178,7 @@ jobs:
             mpg123 \
             pipewire
       - name: Start server and test
-        run: ./scripts/test-server.sh
+        run: make test-server
       - name: Verify server output
         run: |
           grep "Chance of puma" pumaguard.log

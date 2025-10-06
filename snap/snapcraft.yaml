@@ -89,11 +89,6 @@ parts:
   pumaguard:
     plugin: poetry
     source: .
-    build-packages:
-      - git
-      - python3-pip
-    stage-packages:
-      - libgl1
     override-pull: |
       set -e -u -x
       poetry --version
@@ -105,6 +100,9 @@ parts:
       fi
       craftctl set version="v${VERSION}"
       poetry version "${VERSION}"
+    build-packages:
+      - git
+      - python3-pip
     override-build: |
       craftctl default
       if [[ ${CRAFT_ARCH_BUILD_FOR} == xamd64 ]]; then
@@ -113,13 +111,12 @@ parts:
         poetry install
       fi
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
-    override-stage: |
-      craftctl default
-      ls -l ${CRAFT_PART_INSTALL}/usr/lib
+    stage-packages:
+      - libgl1
     stage:
       - bin
       - lib/python3.12/site-packages/pumaguard*
-      - usr/lib/$SNAP_ARCH_TRIPLE/*
+      - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/*
 
   inotify:
     plugin: nil

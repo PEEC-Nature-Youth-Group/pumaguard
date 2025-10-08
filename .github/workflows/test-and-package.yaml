@@ -417,8 +417,6 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-          sudo snap connect pumaguard:home
-          mkdir --parents ${HOME}/.config
           for (( i = 0; i < 5; i++ )); do
             if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
               exit 0
@@ -491,8 +489,6 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-          sudo snap connect pumaguard:home
-          mkdir --parents ${HOME}/.config
           for (( i = 0; i < 5; i++ )); do
             if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
               exit 0
@@ -537,8 +533,6 @@ jobs:
           set -e -u -x
           sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
           sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-          sudo snap connect pumaguard:home
-          mkdir --parents ${HOME}/.config
           for (( i = 0; i < 5; i++ )); do
             if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
               exit 0

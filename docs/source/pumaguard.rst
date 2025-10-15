@@ -28,6 +28,14 @@ pumaguard.classify module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.lock\_manager module
+------------------------------
+
+.. automodule:: pumaguard.lock_manager
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.main module
 ---------------------
 

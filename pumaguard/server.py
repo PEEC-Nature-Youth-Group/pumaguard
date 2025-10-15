@@ -12,6 +12,9 @@ import sys
 import threading
 import time
 
+from pumaguard.lock_manager import (
+    acquire_lock,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -139,7 +142,11 @@ class FolderObserver:
         Observe whether a new file is created in the folder.
         """
         logger.info("Starting new observer, method = %s", self.method)
+        lock = acquire_lock()
+        logger.debug("Caching models")
         cache_model_two_stage(self.presets.print_download_progress)
+        lock.release()
+        logger.debug("Models are cached")
         if self.method == "inotify":
             with subprocess.Popen(
                 [
@@ -207,6 +214,15 @@ class FolderObserver:
         Arguments:
             filepath -- The path of the new file.
         """
+        logger.debug("Acquiring classification lock")
+        lock = acquire_lock()
+        logger.debug("Acquired lock after %d seconds", lock.time_waited())
+        if lock.time_waited() > 10 * 60:
+            logger.info(
+                "Could not acquire lock in time, skipping classification"
+            )
+            lock.release()
+            return
         logger.debug("Classifying: %s", filepath)
         prediction = classify_image_two_stage(self.presets, filepath)
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
@@ -217,6 +233,7 @@ class FolderObserver:
                     self.presets.sound_path, "cougar_call.mp3"
                 )
                 playsound(sound_file_path)
+        lock.release()
 
 
 class FolderManager:
@@ -284,7 +301,10 @@ def main(options: argparse.Namespace, presets: Preset):
         manager.register_folder(folder, options.watch_method)
 
     manager.start_all()
+
+    lock = acquire_lock()
     cache_model_two_stage()
+    lock.release()
 
     def handle_termination(signum, frame):  # pylint: disable=unused-argument
         logger.info("Received termination signal (%d). Stopping...", signum)

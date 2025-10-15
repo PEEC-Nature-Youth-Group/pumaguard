@@ -267,7 +267,6 @@ def download_file(
                     downloaded += len(chunk)
                     if total_size > 0 and print_progress:
                         percent = (downloaded / total_size) * 100
-                        logger.debug("Download progress: %.1f%%", percent)
                         # pylint: disable=line-too-long
                         print(
                             f"\rDownload progress: {percent:.1f}% "

@@ -2,6 +2,8 @@
 Some utility functions.
 """
 
+# pylint: disable=wrong-import-position
+
 import datetime
 import glob
 import hashlib
@@ -16,6 +18,10 @@ from typing import (
 )
 
 import keras  # type: ignore
+import matplotlib
+
+matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas

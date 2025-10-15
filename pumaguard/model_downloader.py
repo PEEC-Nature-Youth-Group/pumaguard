@@ -520,7 +520,7 @@ def clear_model_cache():
         logger.info("Cleared model cache: %s", models_dir)
 
 
-def cache_model():
+def update_model():
     """
     Update a model to cache.
     """
@@ -531,3 +531,12 @@ def export_registry():
     Export registry to standard out.
     """
     print(yaml.dump(MODEL_REGISTRY))
+
+
+def cache_models():
+    """
+    Cache all available models.
+    """
+    for model_name in MODEL_REGISTRY:
+        logger.info("Caching %s", model_name)
+        ensure_model_available(model_name)

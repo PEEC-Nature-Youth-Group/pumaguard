@@ -19,6 +19,7 @@ from typing import (
 )
 
 import requests
+import yaml
 
 logger = logging.getLogger("PumaGuard")
 
@@ -523,3 +524,10 @@ def cache_model():
     """
     Update a model to cache.
     """
+
+
+def export_registry():
+    """
+    Export registry to standard out.
+    """
+    print(yaml.dump(MODEL_REGISTRY))

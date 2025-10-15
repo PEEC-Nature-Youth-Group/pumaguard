@@ -7,6 +7,7 @@ import logging
 
 from pumaguard.model_downloader import (
     clear_model_cache,
+    export_registry,
     list_available_models,
 )
 from pumaguard.presets import (
@@ -29,6 +30,10 @@ def configure_subparser(parser: argparse.ArgumentParser):
         "clear",
         help="Clear model cache",
     )
+    subparsers.add_parser(
+        "export",
+        help="Export model registry",
+    )
 
 
 def main(
@@ -41,5 +46,7 @@ def main(
         logger.info(list_available_models())
     elif args.model_action == "clear":
         clear_model_cache()
+    elif args.model_action == "export":
+        export_registry()
     else:
         logger.error("What do you want to do with the models?")

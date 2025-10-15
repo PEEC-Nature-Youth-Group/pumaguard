@@ -22,11 +22,82 @@ import requests
 
 logger = logging.getLogger("PumaGuard")
 
-MODEL_TAG = "94502c899db1189ad31ff61cbcf2df96305f14cd"
+MODEL_TAG = "c3535fd37db833f93d2e77cad0734d7e8b681741"
 MODEL_BASE_URI = (
     "https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/raw"
 )
 MODEL_REGISTRY: Dict[str, Dict[str, Union[str, Dict[str, Dict[str, str]]]]] = {
+    "puma_101425_efficientnetv2s.h5": {
+        # pylint: disable=line-too-long
+        "sha256": "48e2026d5da0cb2100b3d4306936925bb490f1e76e134646060c876ef5d127b0",
+        "fragments": {
+            "puma_101425_efficientnetv2s.h5_aa": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "7431170b2724a760a2d8b5451d9023c254f8bc4ad90fe550a76284b7c89362ea",
+            },
+            "puma_101425_efficientnetv2s.h5_ab": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "69c9b0e1f70c64cf9d2d548ab72eae772b94be6a39e5e690a65ff94ea72bef5a",
+            },
+            "puma_101425_efficientnetv2s.h5_ac": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "37d22e4c01de7ca30b748d6a1be46620a1685e47b37a051d98217ad2c8af68db",
+            },
+            "puma_101425_efficientnetv2s.h5_ad": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "cb1cf243494b8735014f42549991daf115fabe1beea5b58e4f6996b84b800de8",
+            },
+            "puma_101425_efficientnetv2s.h5_ae": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "77c9c5466a676b4370d1518a424f861f07df4773b1f0a538041e3896adbee65d",
+            },
+            "puma_101425_efficientnetv2s.h5_af": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "8f6362aede94a1523515fe9a9c78bc8376002c69b93596b0303d592f60cc5625",
+            },
+            "puma_101425_efficientnetv2s.h5_ag": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "511a0b6586dc28219f9e66992e48af0f2ae0528bc0666b2bee6d7f01042dfe0c",
+            },
+            "puma_101425_efficientnetv2s.h5_ah": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "5de7c756660c2a9b28853efab95dbde6bb1ca6715c4dff81abb768b05dd9a409",
+            },
+            "puma_101425_efficientnetv2s.h5_ai": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "2dd99904ad761605d8fc4ee9ad47ac26bbc1e3f5b12ca14c16c6dd969bb85772",
+            },
+            "puma_101425_efficientnetv2s.h5_aj": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "b1882e985355995361f8d0083f411502e3adef9e28c55207b4ac751355a0b0bf",
+            },
+            "puma_101425_efficientnetv2s.h5_ak": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "8cf7149311e0f54d664e099660a4bba0dd686fd5ad5937a77d95e4a5c275756e",
+            },
+            "puma_101425_efficientnetv2s.h5_al": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "89b691ead316d6b0910e7dd4116d737412c7ede29fd0eaf4052b09a417c23968",
+            },
+            "puma_101425_efficientnetv2s.h5_am": {
+                "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+                # pylint: disable=line-too-long
+                "sha256": "7a4ee577afd44e153cc9a4ba8cb1126591730d86137c15e6f95ed8ee6d1148ff",
+            },
+        },
+    },
     "puma_cls_efficientnetv2s.h5": {
         "fragments": {
             "puma_cls_efficientnetv2s.h5_aa": {
@@ -125,6 +196,11 @@ MODEL_REGISTRY: Dict[str, Dict[str, Union[str, Dict[str, Dict[str, str]]]]] = {
         "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a",
     },
     "yolov8s_balanced.pt": {
+        "url": MODEL_BASE_URI + "/" + MODEL_TAG,
+        # pylint: disable=line-too-long
+        "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a",
+    },
+    "yolov8s_101425.pt": {
         "url": MODEL_BASE_URI + "/" + MODEL_TAG,
         # pylint: disable=line-too-long
         "sha256": "1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a",

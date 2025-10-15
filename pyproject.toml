@@ -4,6 +4,7 @@ include = [
     "sdist",
     "wheel",
   ] },
+  { path = "settings/model-registry.yaml", format = [ "sdist", "wheel", ] },
 ]
 name = "pumaguard"
 version = "0.0.0"

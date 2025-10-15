@@ -341,10 +341,8 @@ def cache_model_two_stage(print_progress: bool = True):
     """
     Caches the model weights.
     """
-    ensure_model_available(
-        "puma_cls_efficientnetv2s_balanced.h5", print_progress
-    )
-    ensure_model_available("yolov8s_balanced.pt", print_progress)
+    ensure_model_available("puma_101425_efficientnetv2s.h5", print_progress)
+    ensure_model_available("yolov8s_101425.pt", print_progress)
 
 
 def classify_image_two_stage(
@@ -388,11 +386,11 @@ def classify_image_two_stage(
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "puma_cls_efficientnetv2s_balanced.h5",
+        "puma_101425_efficientnetv2s.h5",
         print_progress,
     )
     yolo_model_path = ensure_model_available(
-        "yolov8s_balanced.pt",
+        "yolov8s_101425.pt",
         print_progress,
     )
 

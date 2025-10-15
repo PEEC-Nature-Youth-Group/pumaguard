@@ -284,6 +284,7 @@ def main(options: argparse.Namespace, presets: Preset):
         manager.register_folder(folder, options.watch_method)
 
     manager.start_all()
+    cache_model_two_stage()
 
     def handle_termination(signum, frame):  # pylint: disable=unused-argument
         logger.info("Received termination signal (%d). Stopping...", signum)

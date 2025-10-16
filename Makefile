@@ -1,4 +1,5 @@
 LAPTOP ?= laptop
+DEVICE ?= pi-5
 
 .PHONY: apidoc
 apidoc: poetry
@@ -80,7 +81,8 @@ bashate: install-dev
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-pi.yaml
+	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-device.yaml
+	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:
@@ -149,13 +151,9 @@ release:
 	    sort --numeric-sort | tail --lines 1 | awk '{print $$1 + 1}') && \
 	  git tag -a -m "Release v$${NEW_RELEASE}" v$${NEW_RELEASE}
 
-.PHONY: configure-pi-zero
-configure-pi-zero: install-dev
-	poetry run ansible-playbook --inventory pi-zero, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
-
-.PHONY: configure-pi-5
-configure-pi-5: install-dev
-	poetry run ansible-playbook --inventory pi-5, --diff --ask-become-pass --ask-vault-pass scripts/configure-pi.yaml
+.PHONY: configure-device
+configure-device: install-dev
+	poetry run ansible-playbook --inventory $(DEVICE), --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev

@@ -1,5 +1,5 @@
 ---
-- name: Configure Raspberry Pi Zero
+- name: Configure PumaGuard Device
   hosts: all
   become: true
   vars_files:
@@ -221,10 +221,16 @@
         post_reboot_delay: 30
       when: reboot_required.rc == 0
 
-    - name: Install pumaguard snap
-      community.general.snap:
-        name: pumaguard
-        state: present
+    # - name: Install pumaguard snap
+    #   community.general.snap:
+    #     name: pumaguard
+    #     state: present
+
+    - name: Install PumaGuard Python Package
+      ansible.builtin.pip:
+        name:
+          - pumaguard
+        virtualenv: /usr/local
 
     - name: Configure netplan for wireless networks
       ansible.builtin.template:

@@ -22,6 +22,7 @@
       ansible.builtin.template:
         src: vsftpd.conf.j2
         dest: /etc/vsftpd.conf
+        mode: '0755'
       notify: Restart vsftpd
 
     - name: Create FTP user

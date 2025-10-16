@@ -78,7 +78,8 @@ jobs:
         run: |
           make install-dev
           echo "${ANSIBLE_VAULT_PASSWORD}" > .vault_pass
-          ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass poetry run ansible-lint -v scripts/configure-pi.yaml
+          ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass poetry run ansible-lint -v scripts/configure-device.yaml
+          ANSIBLE_VAULT_PASSWORD_FILE=.vault_pass poetry run ansible-lint -v scripts/configure-laptop.yaml
           rm -f .vault_pass
 
   compress-submodules:

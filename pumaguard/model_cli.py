@@ -48,7 +48,10 @@ def main(
     Main entry point.
     """
     if args.model_action == "list":
-        logger.info(list_available_models())
+        logger.info("Available Models")
+        models = list_available_models()
+        for name in models:
+            logger.info("  %s", name)
     elif args.model_action == "clear":
         clear_model_cache()
     elif args.model_action == "export":

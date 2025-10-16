@@ -28,9 +28,9 @@ MODEL_BASE_URI = (
     "https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/raw"
 )
 
-_settings_file = Path(__file__).parent / "settings" / "model-registry.yaml"
+_settings_file = Path(__file__).parent / "model-registry.yaml"
 if not _settings_file.exists():
-    _settings_file = Path("settings/model-registry.yaml")
+    raise FileNotFoundError("Could not open model registry")
 
 with open(_settings_file, encoding="utf-8") as fd_registry:
     MODEL_REGISTRY: Dict[
@@ -356,18 +356,14 @@ def ensure_model_available(
     return model_path
 
 
-def list_available_models() -> Dict[str, str]:
+def list_available_models() -> List[str]:
     """
     List all available models in the registry.
 
     Returns:
         Dict: Mapping of model names to their URLs
     """
-    return {
-        name: info["url"]
-        for name, info in MODEL_REGISTRY.items()
-        if "url" in info and isinstance(info["url"], str)
-    }
+    return list(MODEL_REGISTRY.keys())
 
 
 def clear_model_cache():

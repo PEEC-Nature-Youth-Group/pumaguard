@@ -99,7 +99,7 @@ class FolderObserver:
         self._stop_event.set()
 
     def _wait_for_file_stability(
-        self, filepath: str, timeout: int = 10, interval: float = 0.2
+        self, filepath: str, timeout: int = 30, interval: float = 0.5
     ):
         """
         Wait until the file is no longer open by any process.
@@ -130,8 +130,11 @@ class FolderObserver:
                 logger.debug("%s is still open by PID %s", filepath, pid)
                 time.sleep(interval)
             except FileNotFoundError:
-                # File might not exist yet, retry
                 time.sleep(interval)
+            except subprocess.TimeoutExpired:
+                logger.warning(
+                    "Could not get exclusive access to file %s", filepath
+                )
         logger.warning(
             "File %s is still open after %d seconds", filepath, timeout
         )
@@ -173,7 +176,6 @@ class FolderObserver:
                         break
                     filepath = line.strip()
                     logger.info("New file detected: %s", filepath)
-                    time.sleep(2)
                     if self._wait_for_file_stability(filepath):
                         threading.Thread(
                             target=self._handle_new_file,
@@ -192,7 +194,6 @@ class FolderObserver:
                 for new_file in new_files:
                     filepath = os.path.join(self.folder, new_file)
                     logger.info("New file detected: %s", filepath)
-                    time.sleep(2)
                     if self._wait_for_file_stability(filepath):
                         threading.Thread(
                             target=self._handle_new_file,

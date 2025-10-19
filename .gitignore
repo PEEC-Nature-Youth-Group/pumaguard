@@ -1,9 +1,11 @@
-__pycache__
+*.snap
+.ansible
 .coverage
 .python-version
 .vscode
-*.snap
+__pycache__
 dist/*
 docs/build/*
 prime/*
+scripts/.wheelhouse
 venv/*

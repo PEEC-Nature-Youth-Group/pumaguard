@@ -6,6 +6,8 @@
     - wireless_credentials.yaml
   vars:
     swap_size: "{{ 6 * 1024 }}"
+    wheelhouse_remote: /opt/pumaguard/wheels
+    wheelhouse_local_base: "{{ playbook_dir }}/.wheelhouse"
 
   tasks:
     - name: Check the current size of the swap file
@@ -120,6 +122,12 @@
         port: ssh
         proto: tcp
 
+    - name: Allow inbound ssh on port 21 (ftp)
+      community.general.ufw:
+        rule: limit
+        port: ftp
+        proto: tcp
+
     - name: Enable firewall
       community.general.ufw:
         state: enabled
@@ -138,14 +146,23 @@
     - name: Install packages
       ansible.builtin.apt:
         name:
+          - alsa-utils
           - git
           - htop
           - inotify-tools
           - libatomic1 # For VSCode
+          - libgl1
           - lm-sensors
           - make
+          - mpg123
+          - network-manager
+          - pulseaudio
           - python3-pip
+          - python3-venv
+          - rsync
           - vim
+          - vsftpd
+        update_cache: true
 
     - name: Install timer for lm-sensors
       ansible.builtin.copy:
@@ -196,15 +213,50 @@
         name: lm-sensors.timer
         state: started
 
-    - name: Install poetry
-      ansible.builtin.pip:
-        break_system_packages: true
-        name: poetry
+    - name: Compute local wheelhouse path for this host arch
+      ansible.builtin.set_fact:
+        wheelhouse_local: "{{ wheelhouse_local_base }}/{{ ansible_architecture }}"
 
-    - name: Add bash completions for poetry
-      ansible.builtin.lineinfile:
-        path: .bashrc
-        line: source <(poetry completions bash)
+    - name: Ensure local wheelhouse exists
+      ansible.builtin.file:
+        path: "{{ wheelhouse_local }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      become: false
+
+    - name: Pre-download wheels for pumaguard and deps
+      delegate_to: localhost
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -m
+          - pip
+          - download
+          - --dest
+          - "{{ wheelhouse_local }}"
+          - pumaguard
+      changed_when: false
+      become: false
+
+    - name: Ensure remote wheelhouse dir exists
+      ansible.builtin.file:
+        path: "{{ wheelhouse_remote }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Sync wheelhouse from control to target
+      delegate_to: localhost
+      become: false
+      ansible.posix.synchronize:
+        src: "{{ wheelhouse_local }}/"
+        dest: "{{ inventory_hostname }}:{{ wheelhouse_remote }}/"
+        archive: true
+        compress: true
+        delete: false
+        rsync_path: "sudo rsync"
 
     - name: Check if a reboot is required
       ansible.builtin.command: /usr/bin/test -f /var/run/reboot-required
@@ -221,26 +273,92 @@
         post_reboot_delay: 30
       when: reboot_required.rc == 0
 
+    - name: Ensure vsftpd is running and enabled
+      ansible.builtin.systemd:
+        name: vsftpd
+        state: started
+        enabled: true
+
+    - name: Configure vsftpd (write_enable)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: write_enable=YES
+        regexp: "^write_enable"
+        insertafter: "^#write_enable"
+
+    - name: Configure vsftpd (log_ftp_protocol)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: log_ftp_protocol=YES
+        regexp: "^log_ftp_protocol"
+
+    - name: Configure vsftpd (pasv_enable)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: pasv_enable=Yes
+        regexp: "^pasv_enable"
+
     # - name: Install pumaguard snap
     #   community.general.snap:
     #     name: pumaguard
     #     state: present
 
-    - name: Install PumaGuard Python Package
-      ansible.builtin.pip:
-        name:
-          - pumaguard
-        virtualenv: /usr/local
+    - name: Configure netplan to use NetworkManager
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/netplan-network-manager.j2
+        dest: /etc/netplan/01-network-manager.yaml
+        mode: "0600"
 
     - name: Configure netplan for wireless networks
       ansible.builtin.template:
         lstrip_blocks: true
         trim_blocks: true
-        src: templates/netplan.j2
+        src: templates/netplan-wireless.j2
         dest: /etc/netplan/90-wireless-networks.yaml
         mode: "0600"
 
     - name: Apply netplan configuration
-      ansible.builtin.command: netplan apply
-      register: netplan_apply
-      changed_when: netplan_apply.rc == 0
+      ansible.builtin.command: netplan generate
+      register: netplan_generate
+      changed_when: netplan_generate.rc == 0
+
+    - name: Ensure pumaguard directory exists
+      ansible.builtin.file:
+        path: /opt/pumaguard
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create a Python3 virtualenv for PumaGuard
+      ansible.builtin.command: python3 -m venv /opt/pumaguard
+      args:
+        creates: /opt/pumaguard/bin/activate
+
+    - name: Install PumaGuard Python package into the virtualenv
+      ansible.builtin.pip:
+        name:
+          - pumaguard
+        virtualenv_site_packages: false
+        executable: /opt/pumaguard/bin/pip
+        extra_args: "--no-index --find-links={{ wheelhouse_remote }}"
+
+    - name: Add /opt/pumaguard/bin to PATH for all users (profile.d)
+      ansible.builtin.copy:
+        dest: /etc/profile.d/pumaguard.sh
+        content: |
+          # PumaGuard bin in PATH
+          export PATH="/opt/pumaguard/bin:$PATH"
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Reboot the server
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Ansible"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30

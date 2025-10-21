@@ -405,6 +405,7 @@ def classify_image_two_stage(
     iou_thresh = 0.45  # YOLO NMS IoU
     max_dets = 12  # max detections per image
     crop_expand = 0.15  # padding around detected box for crop
+    min_size = 0.10  # minimum fraction of crop compared to image size
 
     classifier = keras.models.load_model(classifier_model_path)
     detector = ultralytics.YOLO(str(yolo_model_path))
@@ -431,9 +432,23 @@ def classify_image_two_stage(
         else []
     )
     logger.debug("boxes:\n%s", boxes)
+    logger.debug(
+        "box sizes: %s",
+        [
+            float((x2 - x1) * (y2 - y1) / image_size / image_size)
+            for _, (x1, y1, x2, y2) in enumerate(boxes)
+        ],
+    )
 
     det_probs, crops_xyxy, crops_imgs = [], [], []
     for j, (x1, y1, x2, y2) in enumerate(boxes):
+        # Filter crops smaller than min_size fraction
+        if (x2 - x1) * (y2 - y1) / image_size / image_size < min_size:
+            logger.debug(
+                "ignoring bounding box below threshold: %s",
+                [float(x1), float(y1), float(x2), float(y2)],
+            )
+            continue
         x1e, y1e, x2e, y2e = expand_box(
             [x1, y1, x2, y2], crop_expand, width, height
         )

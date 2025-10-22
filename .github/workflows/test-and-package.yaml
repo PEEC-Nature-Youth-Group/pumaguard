@@ -25,6 +25,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: poetry
       - name: Get version
         run: |
           git describe --tags | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//' > version

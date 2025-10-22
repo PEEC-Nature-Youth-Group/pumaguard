@@ -1,5 +1,6 @@
 LAPTOP ?= laptop
 DEVICE ?= pi-5
+DEVICE_USER ?= pumaguard
 
 .PHONY: apidoc
 apidoc: poetry
@@ -153,7 +154,7 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev
-	poetry run ansible-playbook --inventory $(DEVICE), --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
+	poetry run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev

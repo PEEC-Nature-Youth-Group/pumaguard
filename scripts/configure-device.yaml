@@ -116,7 +116,7 @@
       community.general.ufw:
         state: reset
 
-    - name: Allow inbound ssh on port 22
+    - name: Allow inbound ssh on port 22 (ssh)
       community.general.ufw:
         rule: limit
         port: ssh
@@ -147,6 +147,7 @@
       ansible.builtin.apt:
         name:
           - alsa-utils
+          - dnsmasq
           - git
           - htop
           - inotify-tools
@@ -212,6 +213,44 @@
       ansible.builtin.systemd_service:
         name: lm-sensors.timer
         state: started
+
+    - name: Stop dnsmasq before configuration
+      ansible.builtin.systemd:
+        name: dnsmasq
+        state: stopped
+
+    - name: Configure dnsmasq for wlan0
+      ansible.builtin.copy:
+        dest: /etc/dnsmasq.d/wlan0.conf
+        content: |
+          # Listen only on wlan0
+          interface=wlan0
+          # Never forward plain names (without a dot or domain part)
+          domain-needed
+          # Never forward addresses in the non-routed address spaces
+          bogus-priv
+          # DHCP range for wlan0
+          dhcp-range=192.168.50.50,192.168.50.150,12h
+          # Optional: Set default gateway (this device)
+          dhcp-option=3,192.168.50.1
+          # Optional: Set DNS server (this device)
+          dhcp-option=6,192.168.50.1
+          # Bind only to the interface specified
+          bind-interfaces
+        owner: root
+        group: root
+        mode: '0644'
+      notify: restart dnsmasq
+
+    - name: Allow ansible user to run rsync without password
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/ansible-rsync
+        content: |
+          {{ ansible_user }} ALL=(ALL) NOPASSWD: /usr/bin/rsync
+        owner: root
+        group: root
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
 
     - name: Compute local wheelhouse path for this host arch
       ansible.builtin.set_fact:
@@ -362,3 +401,9 @@
         reboot_timeout: 600
         pre_reboot_delay: 0
         post_reboot_delay: 30
+
+  handlers:
+    - name: Restart dnsmasq
+      ansible.builtin.systemd:
+        name: dnsmasq
+        state: restarted

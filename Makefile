@@ -120,7 +120,7 @@ check-functional:
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.7/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.00%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.7/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '7.48%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \

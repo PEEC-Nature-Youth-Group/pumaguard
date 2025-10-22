@@ -405,7 +405,7 @@ def classify_image_two_stage(
     iou_thresh = 0.45  # YOLO NMS IoU
     max_dets = 12  # max detections per image
     crop_expand = 0.15  # padding around detected box for crop
-    min_size = 0.10  # minimum fraction of crop compared to image size
+    min_size = 0.02  # minimum fraction of crop compared to image size
 
     classifier = keras.models.load_model(classifier_model_path)
     detector = ultralytics.YOLO(str(yolo_model_path))

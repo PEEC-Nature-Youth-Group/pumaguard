@@ -65,6 +65,47 @@ puma_cls_efficientnetv2s_balanced.h5:
     puma_cls_efficientnetv2s_balanced.h5_am:
       sha256: 938a3d929e4732ba799901cc37d65f80162018c3dfd4236e2d3a22f29a3e18e7
   sha256: c43e6505f9d987b9f624b2a5129a6baa3dd165f5c51989911fcc5e36002b1839
+two_models_gpu.h5:
+  fragments:
+    two_models_gpu.h5_aa:
+      sha256: 5e0bb145f0632ddeaa3fac87f1cf0dc7eeda547bc2d8d6672004f737251a7357
+    two_models_gpu.h5_ab:
+      sha256: 39892d3a57d24cf5637aabf881b19dee48911071387c0177459a20852fa1edac
+    two_models_gpu.h5_ac:
+      sha256: e550ee8c27aaa511fc3ddc4d9a00c029c0523b1b70f5675ca19133000a318f77
+    two_models_gpu.h5_ad:
+      sha256: 00e5551250fd26712edf93479e9653339f31d798a282a57e87352e05a68df1be
+    two_models_gpu.h5_ae:
+      sha256: 821f4dd471037c7f80efefd45750ce8504a5ca59ae91daa5dbb090c45726184c
+    two_models_gpu.h5_af:
+      sha256: eae5788a24d478228b4a5c79c72703dcbff9dd8bbf9f45e12a49b3ce90ff5fc2
+    two_models_gpu.h5_ag:
+      sha256: a8193cfb9a3a5acab7988e70a0cd22b683b84c9c355d992c4647367720454d60
+    two_models_gpu.h5_ah:
+      sha256: 02bc6b9531902764ecb60c40fdd440987ecd4673e857f4027a3ba642c26db31c
+    two_models_gpu.h5_ai:
+      sha256: 6840c1c15af3877b58cb4aba9af50417b68f08517a08e6f4be64910b375386ff
+    two_models_gpu.h5_aj:
+      sha256: 8c5abc65b0178bf55a57f8e8266388fcccc129e480b01f5889777497c21aaffe
+    two_models_gpu.h5_ak:
+      sha256: aacf9b71f3a08c5749ac493852c1ee5b4219243467378b442b31363202b9271e
+    two_models_gpu.h5_al:
+      sha256: 912cf7c28457df8156b195384e4865b338977c1a4ed4ddc33d55b6a59b7ed853
+    two_models_gpu.h5_am:
+      sha256: 7d72e406afe318df0d91ddf5490f5f3e8c7820cace0c12de9c631c39014f052c
+    two_models_gpu.h5_an:
+      sha256: a2acf097a15a8c30ff8078814e3ca961093a5c9c48fe7d91b77de85ea9ba2e8d
+    two_models_gpu.h5_ao:
+      sha256: d5f82a7ace545d9e358e651f027dcdba3258cb219a1ad491968b42c24f8d6b16
+    two_models_gpu.h5_ap:
+      sha256: ca9afc5197ad6c8fc80554cd50f314ca6a7760de65febdedbe6a38ac8868a1ed
+    two_models_gpu.h5_aq:
+      sha256: db2e2b1af7c84c0c7186ee048a9b6ec8339a790aab519fa213180f036165d106
+    two_models_gpu.h5_ar:
+      sha256: 9dbb44bf1ea9b45de563b131d31b778aed27cedd20726f001a3d7024eabd1d43
+    two_models_gpu.h5_as:
+      sha256: e7800337e98d3ea7154e27371660d4e8fc3bd2b43e5d62005a6f97df85f43f60
+  sha256: 31c5fd78bea60ae2a2cd94cf02cebcf0a323e79079deee689b79fe6c85ba8732
 yolov8s.pt:
   sha256: 1f47a78bf100391c2a140b7ac73a1caae18c32779be7d310658112f7ac9aa78a
 yolov8s_101425.pt:

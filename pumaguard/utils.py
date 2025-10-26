@@ -440,20 +440,22 @@ def classify_image_two_stage(
         ],
     )
 
-    det_probs, crops_xyxy, crops_imgs = [], [], []
+    det_probs, crops_xyxy, crops_imgs, dropped = [], [], [], []
     for j, (x1, y1, x2, y2) in enumerate(boxes):
         # Filter crops smaller than min_size fraction
+        dropout = False
         if (x2 - x1) * (y2 - y1) / image_size / image_size < min_size:
             logger.debug(
                 "ignoring bounding box below threshold: %s",
                 [float(x1), float(y1), float(x2), float(y2)],
             )
-            continue
+            dropout = True
+        dropped.append(dropout)
         x1e, y1e, x2e, y2e = expand_box(
             [x1, y1, x2, y2], crop_expand, width, height
         )
         crop = image.crop((x1e, y1e, x2e, y2e))
-        p = prob_puma_from_crop(crop)
+        p = prob_puma_from_crop(crop) if not dropout else 0
         det_probs.append(p)
         crops_xyxy.append((x1e, y1e, x2e, y2e))
         crops_imgs.append(crop)
@@ -499,7 +501,7 @@ def classify_image_two_stage(
         if det_probs
         else "no detections"
     )
-    ax.set_title(f"{image_path} — det_probs: {title_probs}")
+    ax.set_title(f"{image_path} {dropout_string}— det_probs: {title_probs}")
 
     idx = 0
     for r in range(1, rows):

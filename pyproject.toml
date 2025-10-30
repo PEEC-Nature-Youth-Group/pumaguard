@@ -1,53 +1,80 @@
-[tool.poetry]
-include = [
-  { path = "pumaguard-sounds/cougar_call.mp3", format = [ "sdist", "wheel" ] },
-]
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "pumaguard"
 version = "0.0.0"
 description = ""
-authors = ["Nicolas Bock <nicolasbock@gmail.com>"]
 readme = "README.md"
-homepage = "http://pumaguard.rtfd.io/"
-repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
+requires-python = ">=3.10,<4.0"
+authors = [
+    {name = "Nicolas Bock", email = "nicolasbock@gmail.com"}
+]
+license = {text = "MIT"}
+keywords = []
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-packaging = "~=25.0"
-pandas = "~=2.3"
-pillow = "~=11.1"
-pyyaml = "~=6.0"
-tensorflow = "~=2.20"
-ultralytics = "~=8.3"
-requests = "~=2.32"
+dependencies = [
+    "packaging>=25.0,<26.0",
+    "pandas>=2.3,<3.0",
+    "pillow>=11.1,<12.0",
+    "pyyaml>=6.0,<7.0",
+    "tensorflow>=2.20,<3.0",
+    "ultralytics>=8.3,<9.0",
+    "requests>=2.32,<3.0",
+]
 
-[tool.poetry.group.dev.dependencies]
-ansible = "~=10.7"
-ansible-lint = { version = "~=25.2", markers = 'platform_system != "Windows"' }
-bashate = "~=2.1"
-black = "~=25.9"
-ipykernel = "~=6.29"
-isort = "~=6.0"
-mypy = "~=1.18"
-opencv-python = "~=4.11"
-passlib = "~=1.7"
-plotly = "~=6.0"
-pylint = "~=3.3"
-pytest = "~=8.3"
-pytest-cov = "~=7.0"
-scipy = "~=1.15"
+[project.optional-dependencies]
+dev = [
+    "ansible>=10.7,<11.0",
+    "ansible-lint>=25.2,<26.0; platform_system != 'Windows'",
+    "bashate>=2.1,<3.0",
+    "black>=25.9,<26.0",
+    "ipykernel>=6.29,<7.0",
+    "isort>=6.0,<7.0",
+    "mypy>=1.18,<2.0",
+    "opencv-python>=4.11,<5.0",
+    "passlib>=1.7,<2.0",
+    "plotly>=6.0,<7.0",
+    "pylint>=3.3,<4.0",
+    "pytest>=8.3,<9.0",
+    "pytest-cov>=7.0,<8.0",
+    "scipy>=1.15,<2.0",
+]
 
-[tool.poetry.extras]
 and-cuda = ["tensorflow-and-cuda"]
 
-[tool.poetry.scripts]
-pick-files = 'scripts.pick_files:main'
-pumaguard = 'pumaguard.main:main'
-playsound = 'pumaguard.sound:main'
-pumaguard-models = 'pumaguard.model_cli:main'
+[project.scripts]
+pick-files = "scripts.pick_files:main"
+pumaguard = "pumaguard.main:main"
+playsound = "pumaguard.sound:main"
+pumaguard-models = "pumaguard.model_cli:main"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[project.urls]
+Homepage = "http://pumaguard.rtfd.io/"
+Repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
+Documentation = "http://pumaguard.rtfd.io/"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pumaguard*", "scripts*"]
+
+[tool.setuptools.package-data]
+pumaguard = ["*.yaml"]
+
+[tool.setuptools.data-files]
+"share/pumaguard/sounds" = ["pumaguard-sounds/*.mp3", "pumaguard-sounds/*.wav"]
 
 [tool.isort]
 ensure_newline_before_comments = true

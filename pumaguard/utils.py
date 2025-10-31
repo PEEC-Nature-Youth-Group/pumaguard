@@ -61,8 +61,8 @@ def copy_images(work_directory, lion_images, no_lion_images):
     Copy images to work directory.
     """
     print(
-        f"Copying images to working directory "
-        f"{os.path.realpath(work_directory)}"
+        "Copying images to working directory "
+        + os.path.realpath(work_directory)
     )
     for image in lion_images:
         shutil.copy(image, f"{work_directory}/lion")
@@ -79,7 +79,7 @@ def organize_data(
     """
     logger.debug(
         "organizing training data, work directory is %s, "
-        "validation directory is %s",
+        + "validation directory is %s",
         work_directory,
         validation_directory,
     )
@@ -347,7 +347,7 @@ def cache_model_two_stage(print_progress: bool = True):
     """
     Caches the model weights.
     """
-    ensure_model_available("two_models_gpu.h5", print_progress)
+    ensure_model_available("color_103025.h5", print_progress)
     ensure_model_available("yolov8s_101425.pt", print_progress)
 
 
@@ -392,7 +392,7 @@ def classify_image_two_stage(
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "two_models_gpu.h5",
+        "color_103025.h5",
         print_progress,
     )
     yolo_model_path = ensure_model_available(

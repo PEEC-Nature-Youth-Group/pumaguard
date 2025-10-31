@@ -23,7 +23,7 @@ import yaml
 
 logger = logging.getLogger("PumaGuard")
 
-MODEL_TAG = "00c4e043955a7600628e065cdce7918263308ea4"
+MODEL_TAG = "40a6588a06abf72d674b650959b801e52f227143"
 MODEL_BASE_URI = (
     "https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/raw"
 )

@@ -347,7 +347,7 @@ def cache_model_two_stage(print_progress: bool = True):
     """
     Caches the model weights.
     """
-    ensure_model_available("color_103025.h5", print_progress)
+    ensure_model_available("colorbw_110225.h5", print_progress)
     ensure_model_available("yolov8s_101425.pt", print_progress)
 
 
@@ -392,7 +392,7 @@ def classify_image_two_stage(
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "color_103025.h5",
+        "colorbw_110225.h5",
         print_progress,
     )
     yolo_model_path = ensure_model_available(

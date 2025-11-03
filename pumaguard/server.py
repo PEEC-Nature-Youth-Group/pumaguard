@@ -79,11 +79,11 @@ class FolderObserver:
     """
 
     def __init__(self, folder: str, method: str, presets: Preset):
-        self.folder = folder
-        self.method = method
-        self.presets = presets
+        self.folder: str = folder
+        self.method: str = method
+        self.presets: Preset = presets
         # self.model = model_factory(presets).model
-        self._stop_event = threading.Event()
+        self._stop_event: threading.Event = threading.Event()
 
     def start(self):
         """
@@ -215,10 +215,11 @@ class FolderObserver:
         Arguments:
             filepath -- The path of the new file.
         """
-        logger.debug("Acquiring classification lock")
+        me = threading.current_thread()
+        logger.debug("Acquiring classification lock (%s)", me.name)
         lock = acquire_lock()
         logger.debug("Acquired lock after %d seconds", lock.time_waited())
-        if lock.time_waited() > 10 * 60:
+        if lock.time_waited() > 1 * 60:
             logger.info(
                 "Could not acquire lock in time, skipping classification"
             )
@@ -235,6 +236,7 @@ class FolderObserver:
                 )
                 playsound(sound_file_path)
         lock.release()
+        logger.debug("Exiting (%s)", me.name)
 
 
 class FolderManager:

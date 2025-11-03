@@ -147,7 +147,10 @@ class FolderObserver:
         logger.info("Starting new observer, method = %s", self.method)
         lock = acquire_lock()
         logger.debug("Caching models")
-        cache_model_two_stage(self.presets.print_download_progress)
+        cache_model_two_stage(
+            classifier_model_filename=self.presets.classifier_model_filename,
+            print_progress=self.presets.print_download_progress,
+        )
         lock.release()
         logger.debug("Models are cached")
         if self.method == "inotify":
@@ -232,7 +235,7 @@ class FolderObserver:
             logger.info("Puma detected in %s", filepath)
             if self.presets.play_sound:
                 sound_file_path = os.path.join(
-                    self.presets.sound_path, "deterrent_puma.mp3"
+                    self.presets.sound_path, self.presets.deterrent_sound_file
                 )
                 playsound(sound_file_path)
         lock.release()
@@ -306,7 +309,9 @@ def main(options: argparse.Namespace, presets: Preset):
     manager.start_all()
 
     lock = acquire_lock()
-    cache_model_two_stage()
+    cache_model_two_stage(
+        classifier_model_filename=presets.classifier_model_filename
+    )
     lock.release()
 
     def handle_termination(signum, frame):  # pylint: disable=unused-argument

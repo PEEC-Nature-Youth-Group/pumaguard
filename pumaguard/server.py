@@ -180,6 +180,14 @@ class FolderObserver:
                     filepath = line.strip()
                     logger.info("New file detected: %s", filepath)
                     if self._wait_for_file_stability(filepath):
+                        if self.presets.file_stabilization_extra_wait > 0:
+                            logger.debug(
+                                "Waiting an extra %f:.2 seconds",
+                                self.presets.file_stabilization_extra_wait,
+                            )
+                            time.sleep(
+                                self.presets.file_stabilization_extra_wait
+                            )
                         threading.Thread(
                             target=self._handle_new_file,
                             args=(filepath,),
@@ -198,6 +206,14 @@ class FolderObserver:
                     filepath = os.path.join(self.folder, new_file)
                     logger.info("New file detected: %s", filepath)
                     if self._wait_for_file_stability(filepath):
+                        if self.presets.file_stabilization_extra_wait > 0:
+                            logger.debug(
+                                "Waiting an extra %f:.2 seconds",
+                                self.presets.file_stabilization_extra_wait,
+                            )
+                            time.sleep(
+                                self.presets.file_stabilization_extra_wait
+                            )
                         threading.Thread(
                             target=self._handle_new_file,
                             args=(filepath,),

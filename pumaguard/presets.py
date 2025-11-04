@@ -45,6 +45,7 @@ class Preset:
         self.batch_size = 16
         self.notebook_number = 1
         self.color_mode = "rgb"
+        self.file_stabilization_extra_wait = 0
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
@@ -145,6 +146,9 @@ class Preset:
         self.batch_size = settings.get("batch-size", 1)
         self.alpha = float(settings.get("alpha", 1e-5))
         self.color_mode = settings.get("color-mode", "rgb")
+        self.file_stabilization_extra_wait = settings.get(
+            "file-stabilization-extra-wait", 0
+        )
         self.play_sound = settings.get("play-sound", True)
         self.print_download_progress = settings.get(
             "print-download-progress", True
@@ -177,6 +181,7 @@ class Preset:
             "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,
+            "file-stabilization-extra-wait": self.file_stabilization_extra_wait,
             "epochs": self.epochs,
             "image-dimensions": self.image_dimensions,
             "lion-directories": self.lion_directories,
@@ -335,6 +340,26 @@ class Preset:
                 f"notebook can not be zero or negative ({notebook})"
             )
         self._notebook_number = notebook
+
+    @property
+    def file_stabilization_extra_wait(self) -> int:
+        """
+        Get extra wait.
+        """
+        return (
+            self._file_stabilization_extra_wait
+            if hasattr(self, "_file_stabilization_extra_wait")
+            else 0
+        )
+
+    @file_stabilization_extra_wait.setter
+    def file_stabilization_extra_wait(self, extra_wait: int):
+        """
+        Set the extra wait.
+        """
+        if extra_wait < 0:
+            raise ValueError(f"extra_wait can not be negative ({extra_wait})")
+        self._file_stabilization_extra_wait = extra_wait
 
     @property
     def model_version(self) -> str:

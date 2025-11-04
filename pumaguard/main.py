@@ -243,7 +243,7 @@ def main():
 
     configure_presets(args, presets)
 
-    logger.debug("presets: %s", str(presets).rstrip())
+    logger.debug("presets:\n%s", str(presets).rstrip())
 
     if args.command == "train":
         train.main(args, presets)

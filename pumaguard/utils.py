@@ -398,11 +398,13 @@ def prepare_image(img_path: str, image_dimensions: Tuple[int, int]):
     return img_array
 
 
-def cache_model_two_stage(print_progress: bool = True):
+def cache_model_two_stage(
+    classifier_model_filename: str, print_progress: bool = True
+):
     """
     Caches the model weights.
     """
-    ensure_model_available("colorbw_110225.h5", print_progress)
+    ensure_model_available(classifier_model_filename, print_progress)
     ensure_model_available("yolov8s_101425.pt", print_progress)
 
 
@@ -447,7 +449,7 @@ def classify_image_two_stage(
     assert presets is not None
 
     classifier_model_path = ensure_model_available(
-        "colorbw_110225.h5",
+        presets.classifier_model_filename,
         print_progress,
     )
     yolo_model_path = ensure_model_available(
@@ -456,11 +458,8 @@ def classify_image_two_stage(
     )
 
     image_size = 384  # must match training
-    conf_thresh = 0.25  # YOLO confidence threshold
     iou_thresh = 0.45  # YOLO NMS IoU
-    max_dets = 12  # max detections per image
     crop_expand = 0.15  # padding around detected box for crop
-    min_size = 0.02  # minimum fraction of crop compared to image size
 
     classifier = get_cached_model("classifier", classifier_model_path)
     detector = get_cached_model("detector", yolo_model_path)
@@ -479,9 +478,9 @@ def classify_image_two_stage(
             res = detector.predict(
                 str(image_path),
                 imgsz=640,
-                conf=conf_thresh,
+                conf=presets.yolo_conf_thresh,
                 iou=iou_thresh,
-                max_det=max_dets,
+                max_det=presets.yolo_max_dets,
                 verbose=False,
             )
             boxes = (
@@ -503,7 +502,9 @@ def classify_image_two_stage(
             det_probs, crops_xyxy, crops_imgs = [], [], []
             for j, (x1, y1, x2, y2) in enumerate(boxes):
                 # Filter crops smaller than min_size fraction
-                if (x2 - x1) * (y2 - y1) / image_size / image_size < min_size:
+                if (x2 - x1) * (
+                    y2 - y1
+                ) / image_size / image_size < presets.yolo_min_size:
                     logger.debug(
                         "ignoring bounding box below threshold: %s",
                         [float(x1), float(y1), float(x2), float(y2)],

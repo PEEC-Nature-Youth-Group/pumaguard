@@ -29,6 +29,10 @@ class Preset:
     _model_file: str = ""
 
     def __init__(self):
+        self.yolo_min_size = 0.02
+        self.yolo_conf_thresh = 0.25
+        self.yolo_max_dets = 12
+        self.classifier_model_filename = "colorbw_110225.h5"
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"
@@ -36,6 +40,7 @@ class Preset:
         self.sound_path = os.path.join(
             os.path.dirname(__file__), "../pumaguard-sounds"
         )
+        self.deterrent_sound_file = "cougar_call.mp3"
         self.verification_path = "data/stable/stable_test"
         self.batch_size = 16
         self.notebook_number = 1
@@ -72,6 +77,18 @@ class Preset:
             )
             return
 
+        self.yolo_min_size = settings.get("YOLO-min-size", 0.02)
+        self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.25)
+        self.yolo_max_dets = settings.get("YOLO-max-dets", 12)
+        self.classifier_model_filename = settings.get(
+            "classifier-model-filename", "colorbw_110225.h5"
+        )
+        self.sound_path = settings.get(
+            "sound-path", os.path.dirname(__file__) + "../pumaguard-sounds"
+        )
+        self.deterrent_sound_file = settings.get(
+            "deterrent-sound-file", "cougar_call.mp3"
+        )
         self.notebook_number = settings.get("notebook", 1)
         self.epochs = settings.get("epochs", 1)
         dimensions = settings.get("image-dimensions", [0, 0])
@@ -121,8 +138,7 @@ class Preset:
             isinstance(p, str) for p in validation_no_lions
         ):
             raise ValueError(
-                "expected validation-no-lion-directories "
-                "to be a list of paths"
+                "expected validation-no-lion-directories to be a list of paths"
             )
         self.validation_no_lion_directories = validation_no_lions
         self.with_augmentation = settings.get("with-augmentation", False)
@@ -152,6 +168,12 @@ class Preset:
         """
         # pylint: disable=line-too-long
         yield from {
+            "YOLO-min-size": self.yolo_min_size,
+            "YOLO-conf-thresh": self.yolo_conf_thresh,
+            "YOLO-max-dets": self.yolo_max_dets,
+            "classifier-model-filename": self.classifier_model_filename,
+            "sound-path": self.sound_path,
+            "deterrent-sound-file": self.deterrent_sound_file,
             "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,
@@ -173,6 +195,80 @@ class Preset:
         Serialize this class.
         """
         return yaml.dump(dict(self), indent=2)
+
+    @property
+    def yolo_min_size(self) -> float:
+        """
+        Get the YOLO min-size.
+        """
+        return self._yolo_min_size
+
+    @yolo_min_size.setter
+    def yolo_min_size(self, yolo_min_size: float):
+        """
+        Set the YOLO min-size.
+        """
+        if not isinstance(yolo_min_size, float):
+            raise TypeError(
+                "yolo_min_size needs to be a floating point number"
+            )
+        if yolo_min_size <= 0 or yolo_min_size > 1:
+            raise ValueError("yolo_min_size needs to be between (0, 1]")
+        self._yolo_min_size = yolo_min_size
+
+    @property
+    def yolo_conf_thresh(self) -> float:
+        """
+        Get the YOLO conf-thresh.
+        """
+        return self._yolo_conf_thresh
+
+    @yolo_conf_thresh.setter
+    def yolo_conf_thresh(self, yolo_conf_thresh: float):
+        """
+        Set the YOLO conf-thresh.
+        """
+        if not isinstance(yolo_conf_thresh, float):
+            raise TypeError(
+                "yolo_conf_thresh needs to be a floating point number"
+            )
+        if yolo_conf_thresh <= 0 or yolo_conf_thresh > 1:
+            raise ValueError("yolo_conf_thresh needs to be between (0, 1]")
+        self._yolo_conf_thresh = yolo_conf_thresh
+
+    @property
+    def yolo_max_dets(self) -> int:
+        """
+        Get the YOLO max-dets.
+        """
+        return self._yolo_max_dets
+
+    @yolo_max_dets.setter
+    def yolo_max_dets(self, yolo_max_dets: int):
+        """
+        Set the YOLO max-dets.
+        """
+        if not isinstance(yolo_max_dets, int):
+            raise TypeError("yolo_max_dets needs to be a integer")
+        if yolo_max_dets <= 0 or yolo_max_dets > 20:
+            raise ValueError("yolo_max_dets needs to be between (0, 20]")
+        self._yolo_max_dets = yolo_max_dets
+
+    @property
+    def classifier_model_filename(self) -> str:
+        """
+        Get the classifier model filename.
+        """
+        return self._classifier_model_filename
+
+    @classifier_model_filename.setter
+    def classifier_model_filename(self, classifier_model_filename: str):
+        """
+        Set the classifier model filename.
+        """
+        if not isinstance(classifier_model_filename, str):
+            raise TypeError("classifier_model_filename needs to be a string")
+        self._classifier_model_filename = classifier_model_filename
 
     @property
     def alpha(self) -> float:
@@ -236,7 +332,7 @@ class Preset:
         """
         if notebook < 1:
             raise ValueError(
-                "notebook can not be zero " f"or negative ({notebook})"
+                f"notebook can not be zero or negative ({notebook})"
             )
         self._notebook_number = notebook
 
@@ -267,6 +363,20 @@ class Preset:
         Set the sound path.
         """
         self._sound_path = sound_path
+
+    @property
+    def deterrent_sound_file(self):
+        """
+        Get the deterrent sound file.
+        """
+        return self._deterrent_sound_file
+
+    @deterrent_sound_file.setter
+    def deterrent_sound_file(self, sound_file: str):
+        """
+        Set the deterrent sound file.
+        """
+        self._deterrent_sound_file = sound_file
 
     @property
     def model_file(self):
@@ -353,9 +463,7 @@ class Preset:
         Set the number of color channels.
         """
         if channels not in [1, 3]:
-            raise ValueError(
-                "illegal number of color " f"channels ({channels})"
-            )
+            raise ValueError(f"illegal number of color channels ({channels})")
         self._number_color_channels = channels
         if channels == 1:
             self._color_mode = "grayscale"

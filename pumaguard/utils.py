@@ -471,111 +471,117 @@ def classify_image_two_stage(
 
     image_file = Path(image_path)
 
-    with PIL.Image.open(image_path) as img:
-        image = img.convert("RGB")
-        width, height = image.size
+    try:
+        with PIL.Image.open(image_path) as img:
+            image = img.convert("RGB")
+            width, height = image.size
 
-        res = detector.predict(
-            str(image_path),
-            imgsz=640,
-            conf=conf_thresh,
-            iou=iou_thresh,
-            max_det=max_dets,
-            verbose=False,
-        )
-        boxes = (
-            res[0].boxes.xyxy.cpu().numpy()
-            if res
-            and res[0].boxes is not None
-            and res[0].boxes.xyxy is not None
-            else []
-        )
-        logger.debug("boxes:\n%s", boxes)
-        logger.debug(
-            "box sizes: %s",
-            [
-                float((x2 - x1) * (y2 - y1) / image_size / image_size)
-                for _, (x1, y1, x2, y2) in enumerate(boxes)
-            ],
-        )
+            res = detector.predict(
+                str(image_path),
+                imgsz=640,
+                conf=conf_thresh,
+                iou=iou_thresh,
+                max_det=max_dets,
+                verbose=False,
+            )
+            boxes = (
+                res[0].boxes.xyxy.cpu().numpy()
+                if res
+                and res[0].boxes is not None
+                and res[0].boxes.xyxy is not None
+                else []
+            )
+            logger.debug("boxes:\n%s", boxes)
+            logger.debug(
+                "box sizes: %s",
+                [
+                    float((x2 - x1) * (y2 - y1) / image_size / image_size)
+                    for _, (x1, y1, x2, y2) in enumerate(boxes)
+                ],
+            )
 
-        det_probs, crops_xyxy, crops_imgs = [], [], []
-        for j, (x1, y1, x2, y2) in enumerate(boxes):
-            # Filter crops smaller than min_size fraction
-            if (x2 - x1) * (y2 - y1) / image_size / image_size < min_size:
-                logger.debug(
-                    "ignoring bounding box below threshold: %s",
-                    [float(x1), float(y1), float(x2), float(y2)],
+            det_probs, crops_xyxy, crops_imgs = [], [], []
+            for j, (x1, y1, x2, y2) in enumerate(boxes):
+                # Filter crops smaller than min_size fraction
+                if (x2 - x1) * (y2 - y1) / image_size / image_size < min_size:
+                    logger.debug(
+                        "ignoring bounding box below threshold: %s",
+                        [float(x1), float(y1), float(x2), float(y2)],
+                    )
+                    continue
+                x1e, y1e, x2e, y2e = expand_box(
+                    [x1, y1, x2, y2], crop_expand, width, height
                 )
-                continue
-            x1e, y1e, x2e, y2e = expand_box(
-                [x1, y1, x2, y2], crop_expand, width, height
-            )
-            crop = image.crop((x1e, y1e, x2e, y2e))
-            p = prob_puma_from_crop(crop)
-            det_probs.append(p)
-            crops_xyxy.append((x1e, y1e, x2e, y2e))
-            crops_imgs.append(crop)
-            all_rows.append(
-                {
-                    "file": image_path,
-                    "det_id": j,
-                    "x1": x1e,
-                    "y1": y1e,
-                    "x2": x2e,
-                    "y2": y2e,
-                    "prob_puma": p,
-                    "pred_label": "Puma" if p >= best_t else "Not-puma",
-                }
-            )
-        rows = 1 + ((len(crops_imgs) + 3) // 4)
+                crop = image.crop((x1e, y1e, x2e, y2e))
+                p = prob_puma_from_crop(crop)
+                det_probs.append(p)
+                crops_xyxy.append((x1e, y1e, x2e, y2e))
+                crops_imgs.append(crop)
+                all_rows.append(
+                    {
+                        "file": image_path,
+                        "det_id": j,
+                        "x1": x1e,
+                        "y1": y1e,
+                        "x2": x2e,
+                        "y2": y2e,
+                        "prob_puma": p,
+                        "pred_label": "Puma" if p >= best_t else "Not-puma",
+                    }
+                )
+            rows = 1 + ((len(crops_imgs) + 3) // 4)
 
-        fig = plt.figure(figsize=(max(8, min(16, 4 * 4)), max(5, 3 * rows)))
-
-        # Original with boxes
-        ax = fig.add_subplot(rows, 1, 1)
-        ax.imshow(image)
-        ax.axis("off")
-        for p, (x1e, y1e, x2e, y2e) in zip(det_probs, crops_xyxy):
-            rect = plt.Rectangle(
-                (x1e, y1e),
-                x2e - x1e,
-                y2e - y1e,
-                fill=False,
-                color="lime",
-                linewidth=2,
+            fig = plt.figure(
+                figsize=(max(8, min(16, 4 * 4)), max(5, 3 * rows))
             )
-            ax.add_patch(rect)
-            ax.text(
-                x1e,
-                max(0, y1e - 5),
-                f"{p:.2f}",
-                color="black",
-                bbox={"facecolor": "lime", "alpha": 0.7, "pad": 2},
+
+            # Original with boxes
+            ax = fig.add_subplot(rows, 1, 1)
+            ax.imshow(image)
+            ax.axis("off")
+            for p, (x1e, y1e, x2e, y2e) in zip(det_probs, crops_xyxy):
+                rect = plt.Rectangle(
+                    (x1e, y1e),
+                    x2e - x1e,
+                    y2e - y1e,
+                    fill=False,
+                    color="lime",
+                    linewidth=2,
+                )
+                ax.add_patch(rect)
+                ax.text(
+                    x1e,
+                    max(0, y1e - 5),
+                    f"{p:.2f}",
+                    color="black",
+                    bbox={"facecolor": "lime", "alpha": 0.7, "pad": 2},
+                )
+            title_probs = (
+                ", ".join(f"{i}:{p:.2f}" for i, p in enumerate(det_probs))
+                if det_probs
+                else "no detections"
             )
-        title_probs = (
-            ", ".join(f"{i}:{p:.2f}" for i, p in enumerate(det_probs))
-            if det_probs
-            else "no detections"
-        )
-        ax.set_title(f"{image_path} — det_probs: {title_probs}")
+            ax.set_title(f"{image_path} — det_probs: {title_probs}")
 
-        idx = 0
-        for r in range(1, rows):
-            for c in range(1, 5):
-                if idx >= len(crops_imgs):
-                    break
-                axc = fig.add_subplot(rows, 4, r * 4 + c)
-                axc.imshow(crops_imgs[idx])
-                axc.axis("off")
-                lbl = "Puma" if det_probs[idx] >= best_t else "Not-puma"
-                axc.set_title(f"det {idx} — {det_probs[idx]:.3f} → {lbl}")
-                idx += 1
+            idx = 0
+            for r in range(1, rows):
+                for c in range(1, 5):
+                    if idx >= len(crops_imgs):
+                        break
+                    axc = fig.add_subplot(rows, 4, r * 4 + c)
+                    axc.imshow(crops_imgs[idx])
+                    axc.axis("off")
+                    lbl = "Puma" if det_probs[idx] >= best_t else "Not-puma"
+                    axc.set_title(f"det {idx} — {det_probs[idx]:.3f} → {lbl}")
+                    idx += 1
 
-        out_png = f"{image_file.stem}_viz.png"
-        plt.tight_layout()
-        plt.savefig(out_png, dpi=160)
-        plt.close(fig)
+            out_png = f"{image_file.stem}_viz.png"
+            plt.tight_layout()
+            plt.savefig(out_png, dpi=160)
+            plt.close(fig)
+    except OSError as e:
+        logger.warning("Cannot open image file: %s", e)
+        return 0
 
     logger.debug("Freeing memory")
     gc.collect()

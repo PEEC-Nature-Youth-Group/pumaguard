@@ -342,7 +342,7 @@ class Preset:
         self._notebook_number = notebook
 
     @property
-    def file_stabilization_extra_wait(self) -> int:
+    def file_stabilization_extra_wait(self) -> float:
         """
         Get extra wait.
         """
@@ -353,7 +353,7 @@ class Preset:
         )
 
     @file_stabilization_extra_wait.setter
-    def file_stabilization_extra_wait(self, extra_wait: int):
+    def file_stabilization_extra_wait(self, extra_wait: float):
         """
         Set the extra wait.
         """

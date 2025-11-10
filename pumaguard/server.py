@@ -11,6 +11,11 @@ import subprocess
 import sys
 import threading
 import time
+from pathlib import (
+    Path,
+)
+
+import PIL
 
 from pumaguard.lock_manager import (
     acquire_lock,
@@ -99,8 +104,8 @@ class FolderObserver:
         self._stop_event.set()
 
     def _wait_for_file_stability(
-        self, filepath: str, timeout: int = 30, interval: float = 0.5
-    ) -> bool:
+        self, filepath: Path, timeout: int = 30, interval: float = 0.5
+    ):
         """
         Wait until the file is no longer open by any process.
 
@@ -109,27 +114,19 @@ class FolderObserver:
             timeout -- Maximum time to wait for stability (in seconds).
             interval -- Time interval between checks (in seconds).
         """
-        logger.info("Making sure %s is closed", filepath)
+        logger.info("Making sure %s is readable", filepath)
         if timeout < 1:
             raise ValueError("timeout needs to be greater than 0")
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
-                result = subprocess.run(
-                    ["lsof", "-F", "p", "--", filepath],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=min(1, timeout),
-                    text=True,
-                    check=False,
-                )
-                # lsof returns non-zero if the file is not open
-                if result.returncode != 0:
-                    return True
-                pid = result.stdout.strip()
-                logger.debug("%s is still open by PID %s", filepath, pid)
-                time.sleep(interval)
+                with PIL.Image.open(filepath) as img:
+                    image = img.convert("RGB")
+                return image
             except FileNotFoundError:
+                time.sleep(interval)
+            except OSError as e:
+                logger.debug("Image not completely uploaded: %s", e)
                 time.sleep(interval)
             except subprocess.TimeoutExpired:
                 logger.warning(
@@ -138,7 +135,7 @@ class FolderObserver:
         logger.warning(
             "File %s is still open after %d seconds", filepath, timeout
         )
-        return False
+        return None
 
     def _observe(self):
         """
@@ -153,86 +150,39 @@ class FolderObserver:
         )
         lock.release()
         logger.debug("Models are cached")
-        if self.method == "inotify":
-            with subprocess.Popen(
-                [
-                    "inotifywait",
-                    "--monitor",
-                    "--event",
-                    "create",
-                    "--format",
-                    "%w%f",
-                    self.folder,
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding="utf-8",
-                text=True,
-            ) as process:
-                logger.info("New observer started")
-                if process.stdout is None:
-                    raise ValueError("Failed to initialize process.stdout")
 
-                for line in process.stdout:
-                    if self._stop_event.is_set():
-                        process.terminate()
-                        break
-                    filepath = line.strip()
-                    logger.info("New file detected: %s", filepath)
-                    if self._wait_for_file_stability(filepath):
-                        if self.presets.file_stabilization_extra_wait > 0:
-                            logger.debug(
-                                "Waiting an extra %f:.2 seconds",
-                                self.presets.file_stabilization_extra_wait,
-                            )
-                            time.sleep(
-                                self.presets.file_stabilization_extra_wait
-                            )
-                        threading.Thread(
-                            target=self._handle_new_file,
-                            args=(filepath,),
-                        ).start()
-                    else:
-                        logger.warning(
-                            "File %s not closed, ignoring", filepath
-                        )
-        elif self.method == "os":
-            known_files = set(os.listdir(self.folder))
-            logger.info("New observer started")
-            while not self._stop_event.is_set():
-                current_files = set(os.listdir(self.folder))
-                new_files = current_files - known_files
-                for new_file in new_files:
-                    filepath = os.path.join(self.folder, new_file)
-                    logger.info("New file detected: %s", filepath)
-                    if self._wait_for_file_stability(filepath):
-                        if self.presets.file_stabilization_extra_wait > 0:
-                            logger.debug(
-                                "Waiting an extra %f:.2 seconds",
-                                self.presets.file_stabilization_extra_wait,
-                            )
-                            time.sleep(
-                                self.presets.file_stabilization_extra_wait
-                            )
-                        threading.Thread(
-                            target=self._handle_new_file,
-                            args=(filepath,),
-                        ).start()
-                    else:
-                        logger.warning(
-                            "File %s not closed, ignoring", filepath
-                        )
-                known_files = current_files
-                time.sleep(1)
-        else:
-            raise ValueError("FIXME: This method is not implemented")
+        known_files = set(os.listdir(self.folder))
+        logger.info("New observer started")
+        while not self._stop_event.is_set():
+            current_files = set(os.listdir(self.folder))
+            new_files = current_files - known_files
+            for new_file in new_files:
+                filepath = Path(os.path.join(self.folder, new_file))
+                logger.info("New file detected: %s", filepath)
+                image = self._wait_for_file_stability(filepath)
+                if image is None:
+                    logger.warning("File %s not closed, ignoring", filepath)
+                    continue
+                if self.presets.file_stabilization_extra_wait > 0:
+                    logger.debug(
+                        "Waiting an extra %.2f seconds",
+                        self.presets.file_stabilization_extra_wait,
+                    )
+                    time.sleep(self.presets.file_stabilization_extra_wait)
+                threading.Thread(
+                    target=self._handle_new_file,
+                    args=(filepath, image),
+                ).start()
+            known_files = current_files
+            time.sleep(1)
 
-    def _handle_new_file(self, filepath: str):
+    def _handle_new_file(self, filepath: Path, image):
         """
         Handle the new file detected in the folder.
 
         Arguments:
             filepath -- The path of the new file.
+            image -- The image loaded with PIL.
         """
         me = threading.current_thread()
         logger.debug("Acquiring classification lock (%s)", me.name)
@@ -245,7 +195,9 @@ class FolderObserver:
             lock.release()
             return
         logger.debug("Classifying: %s", filepath)
-        prediction = classify_image_two_stage(self.presets, filepath)
+        prediction = classify_image_two_stage(
+            presets=self.presets, image_path=filepath, image=image
+        )
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
         if prediction > 0.5:
             logger.info("Puma detected in %s", filepath)

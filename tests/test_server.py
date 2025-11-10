@@ -33,19 +33,29 @@ class TestFolderObserver(unittest.TestCase):
         self.observer = FolderObserver(self.folder, "inotify", self.presets)
 
     @patch("pumaguard.server.subprocess.Popen")
-    def test_observe_new_file(self, MockPopen):  # pylint: disable=invalid-name
+    @patch("pumaguard.server.os.listdir")
+    def test_observe_new_file(self, mockListdir, MockPopen):
         """
         Test observing a new file.
         """
-        mock_process = MagicMock()
-        mock_process.stdout = iter(["test_folder/new_file.jpg\n"])
-        MockPopen.return_value.__enter__.return_value = mock_process
+        # mock_process = MagicMock()
+        # mock_process.stdout = iter(["test_folder/new_file.jpg\n"])
+        # MockPopen.return_value.__enter__.return_value = mock_process
 
-        with patch.object(
-            self.observer, "_handle_new_file"
-        ) as mock_handle_new_file, patch.object(
-            self.observer, "_wait_for_file_stability"
-        ) as mock_wait:
+        mockListdir.side_effect = [
+            [],
+            ["new_file.jpg"],
+            ["new_file.jpg"],
+        ]
+
+        with (
+            patch.object(
+                self.observer, "_handle_new_file"
+            ) as mock_handle_new_file,
+            patch.object(
+                self.observer, "_wait_for_file_stability"
+            ) as mock_wait,
+        ):
             self.observer._observe()  # pylint: disable=protected-access
             mock_handle_new_file.assert_called_once_with(
                 "test_folder/new_file.jpg"
@@ -84,7 +94,8 @@ class TestFolderObserver(unittest.TestCase):
         when classify_image returns 0.7.
         """
         self.observer._handle_new_file(  # pylint: disable=protected-access
-            "fake_image.jpg"
+            filepath="fake_image.jpg",
+            image=None,
         )
 
         mock_playsound.assert_called_once()
@@ -175,9 +186,7 @@ class TestFolderManager(unittest.TestCase):
         self.manager = FolderManager(self.presets)
 
     @patch("pumaguard.server.FolderObserver")
-    def test_register_folder(
-        self, MockFolderObserver
-    ):  # pylint: disable=invalid-name
+    def test_register_folder(self, MockFolderObserver):  # pylint: disable=invalid-name
         """
         Test register folder.
         """

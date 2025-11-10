@@ -6,6 +6,11 @@ This script classifies images.
 
 import argparse
 import logging
+from pathlib import (
+    Path,
+)
+
+import PIL
 
 from pumaguard.presets import (
     Preset,
@@ -37,12 +42,20 @@ def main(options: argparse.Namespace, presets: Preset):
 
     logger.debug("starting classify")
 
-    for image in options.image:
-        prediction = classify_image_two_stage(presets, image)
+    for image_file in options.image:
+        image_path = Path(image_file)
+        try:
+            with PIL.Image.open(image_path) as img:
+                image = img.convert("RGB")
+        except OSError as e:
+            logger.error("Could not open file: %s", e)
+        prediction = classify_image_two_stage(
+            presets=presets, image_path=image_path, image=image
+        )
         if prediction >= 0:
             print(
-                f"Predicted {image}: {100*prediction:6.2f}% lion "
-                f'({"lion" if prediction > 0.5 else "no lion"})'
+                f"Predicted {image}: {100 * prediction:6.2f}% lion "
+                f"({'lion' if prediction > 0.5 else 'no lion'})"
             )
         else:
             logger.warning("predicted label < 0!")

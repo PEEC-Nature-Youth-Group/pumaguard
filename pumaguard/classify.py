@@ -37,12 +37,14 @@ def main(options: argparse.Namespace, presets: Preset):
 
     logger.debug("starting classify")
 
-    for image in options.image:
-        prediction = classify_image_two_stage(presets, image)
+    for image_path in options.image:
+        prediction = classify_image_two_stage(
+            presets=presets, image_path=image_path
+        )
         if prediction >= 0:
             print(
-                f"Predicted {image}: {100*prediction:6.2f}% lion "
-                f'({"lion" if prediction > 0.5 else "no lion"})'
+                f"Predicted {image_path}: {100 * prediction:6.2f}% lion "
+                + f"({'lion' if prediction > 0.5 else 'no lion'})"
             )
         else:
             logger.warning("predicted label < 0!")

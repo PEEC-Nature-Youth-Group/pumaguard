@@ -32,6 +32,7 @@ class Preset:
         self.yolo_min_size = 0.02
         self.yolo_conf_thresh = 0.25
         self.yolo_max_dets = 12
+        self.yolo_model_filename = "yolov8s_101425.pt"
         self.classifier_model_filename = "colorbw_110225.h5"
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
@@ -81,6 +82,9 @@ class Preset:
         self.yolo_min_size = settings.get("YOLO-min-size", 0.02)
         self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.25)
         self.yolo_max_dets = settings.get("YOLO-max-dets", 12)
+        self.yolo_model_filename = settings.get(
+            "YOLO-model-filename", "yolov8s_101425.pt"
+        )
         self.classifier_model_filename = settings.get(
             "classifier-model-filename", "colorbw_110225.h5"
         )
@@ -175,6 +179,7 @@ class Preset:
             "YOLO-min-size": self.yolo_min_size,
             "YOLO-conf-thresh": self.yolo_conf_thresh,
             "YOLO-max-dets": self.yolo_max_dets,
+            "YOLO-model-filename": self.yolo_model_filename,
             "classifier-model-filename": self.classifier_model_filename,
             "sound-path": self.sound_path,
             "deterrent-sound-file": self.deterrent_sound_file,
@@ -258,6 +263,22 @@ class Preset:
         if yolo_max_dets <= 0 or yolo_max_dets > 20:
             raise ValueError("yolo_max_dets needs to be between (0, 20]")
         self._yolo_max_dets = yolo_max_dets
+
+    @property
+    def yolo_model_filename(self) -> str:
+        """
+        Get the YOLO model filename.
+        """
+        return self._yolo_model_filename
+
+    @yolo_model_filename.setter
+    def yolo_model_filename(self, yolo_model_filename: str):
+        """
+        Set the YOLO model filename.
+        """
+        if not isinstance(yolo_model_filename, str):
+            raise TypeError("yolo_model_filename needs to be a string")
+        self._yolo_model_filename = yolo_model_filename
 
     @property
     def classifier_model_filename(self) -> str:

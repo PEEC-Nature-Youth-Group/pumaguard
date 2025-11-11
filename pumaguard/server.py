@@ -82,7 +82,6 @@ class FolderObserver:
         self.folder: str = folder
         self.method: str = method
         self.presets: Preset = presets
-        # self.model = model_factory(presets).model
         self._stop_event: threading.Event = threading.Event()
 
     def start(self):
@@ -148,6 +147,7 @@ class FolderObserver:
         lock = acquire_lock()
         logger.debug("Caching models")
         cache_model_two_stage(
+            yolo_model_filename=self.presets.yolo_model_filename,
             classifier_model_filename=self.presets.classifier_model_filename,
             print_progress=self.presets.print_download_progress,
         )
@@ -326,7 +326,8 @@ def main(options: argparse.Namespace, presets: Preset):
 
     lock = acquire_lock()
     cache_model_two_stage(
-        classifier_model_filename=presets.classifier_model_filename
+        yolo_model_filename=presets.yolo_model_filename,
+        classifier_model_filename=presets.classifier_model_filename,
     )
     lock.release()
 

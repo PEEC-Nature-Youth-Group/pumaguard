@@ -399,13 +399,15 @@ def prepare_image(img_path: str, image_dimensions: Tuple[int, int]):
 
 
 def cache_model_two_stage(
-    classifier_model_filename: str, print_progress: bool = True
+    yolo_model_filename: str,
+    classifier_model_filename: str,
+    print_progress: bool = True,
 ):
     """
     Caches the model weights.
     """
-    ensure_model_available(classifier_model_filename, print_progress)
-    ensure_model_available("yolov8s_101425.pt", print_progress)
+    _ = ensure_model_available(classifier_model_filename, print_progress)
+    _ = ensure_model_available(yolo_model_filename, print_progress)
 
 
 def classify_image_two_stage(
@@ -453,7 +455,7 @@ def classify_image_two_stage(
         print_progress,
     )
     yolo_model_path = ensure_model_available(
-        "yolov8s_101425.pt",
+        presets.yolo_model_filename,
         print_progress,
     )
 

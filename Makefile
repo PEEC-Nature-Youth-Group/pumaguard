@@ -1,23 +1,31 @@
 LAPTOP ?= laptop
 DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
+VENV = $(CURDIR)/venv/bin/
+ANSIBLE_ASK_VAULT_PASS ?= true
+ANSIBLE_VAULT_PASSWORD_FILE ?=
+
+.PHONY: venv
+venv:
+	python3 -m venv venv
+	$(VENV)pip install --upgrade pip
 
 .PHONY: apidoc
-apidoc: poetry
-	poetry run pip install --requirement docs/source/requirements.txt
-	cd docs && poetry run sphinx-apidoc -o source --force ../pumaguard
+apidoc: venv
+	$(VENV)pip install --requirement docs/source/requirements.txt
+	cd docs && $(VENV)sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
-docs: poetry
+docs: venv
 	@echo "building documentation webpage"
-	poetry run pip install --requirement docs/source/requirements.txt
-	cd docs && poetry run sphinx-apidoc --output-dir source --force ../pumaguard
+	$(VENV)pip install --requirement docs/source/requirements.txt
+	cd docs && $(VENV)sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
 	git diff
 	git diff --shortstat | wc -l | grep "^0" --quiet
-	poetry run sphinx-build --builder html --fail-on-warning docs/source docs/build
-	poetry run sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
+	$(VENV)sphinx-build --builder html --fail-on-warning docs/source docs/build
+	$(VENV)sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
 .PHONY: assemble
 assemble:
@@ -41,49 +49,53 @@ poetry:
 	pip install --upgrade pip
 	pip install poetry~=1.8
 
+.PHONY: uv
+uv: venv
+	$(VENV)pip install --upgrade uv
+
 .PHONY: install
-install: assemble poetry
-	poetry install
+install: assemble venv
+	$(VENV)pip install --editable .
 
 .PHONY: install-dev
-install-dev: poetry
-	poetry install --only dev
+install-dev: venv
+	$(VENV)pip install --editable ".[dev]"
 
 .PHONY: test
-test: install
-	poetry run pytest --verbose --cov=pumaguard --cov-report=term-missing
+test: install-dev
+	$(VENV)pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
-build: assemble poetry
-	poetry build
+build: assemble install-dev
+	$(VENV)python3 -m build
 
 .PHONY: lint
 lint: black pylint isort mypy bashate ansible-lint
 
 .PHONY: black
 black: install-dev
-	poetry run black --check pumaguard
+	$(VENV)black --check pumaguard
 
 .PHONY: pylint
-pylint: install
-	poetry run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+pylint: install-dev
+	$(VENV)pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	poetry run isort pumaguard tests scripts
+	$(VENV)isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
-	poetry run mypy --install-types --non-interactive --check-untyped-defs pumaguard
+	$(VENV)mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
 bashate: install-dev
-	poetry run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	$(VENV)bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-device.yaml
-	ANSIBLE_ASK_VAULT_PASS=true poetry run ansible-lint -v scripts/configure-laptop.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) $(VENV)ansible-lint -v scripts/configure-device.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) $(VENV)ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:
@@ -132,12 +144,12 @@ check-functional:
 
 .PHONY: functional-poetry
 functional-poetry: install
-	$(MAKE) EXE="poetry run pumaguard" run-functional
+	$(MAKE) EXE="$(VEVN)pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: functional-snap
 functional-snap:
-	$(MAKE) EXE="pumaguard" run-functional
+	$(MAKE) EXE="$(VENV)pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: prepare-trailcam prepare-output prepare-central
@@ -154,15 +166,15 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev
-	poetry run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
+	$(VENV)ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev
-	poetry run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
+	$(VENV)ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
 verify-poetry: install
-	$(MAKE) EXE="poetry run pumaguard" verify
+	$(MAKE) EXE="$(VENV)pumaguard" verify
 
 .PHONY: verify-snap
 verify-snap:
@@ -183,11 +195,4 @@ test-server: install
 
 .PHONY: pre-commit
 pre-commit: lint docs poetry
-	sed --in-place --regexp-extended 's/^python.*=.*/python = ">=3.10,<3.11"/' pyproject.toml
-	poetry add 'tensorflow==2.15'
-	poetry install
 	$(MAKE) test
-	# poetry run pip install tensorflow~=2.17.0
-	# $(MAKE) test
-	# poetry run pip install tensorflow~=2.18.0
-	# $(MAKE) test

@@ -471,6 +471,7 @@ def classify_image_two_stage(
 
     image_file = Path(image_path)
     try:
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
         with PIL.Image.open(image_path) as img:
             image = img.convert("RGB")
         width, height = image.size

@@ -12,6 +12,10 @@ import sys
 import threading
 import time
 
+from PIL import (
+    Image,
+)
+
 from pumaguard.lock_manager import (
     acquire_lock,
 )
@@ -97,6 +101,18 @@ class FolderObserver:
         """
         self._stop_event.set()
 
+    def _get_time(self) -> float:
+        """
+        Get the current time.
+        """
+        return time.time()
+
+    def _sleep(self, duration: float):
+        """
+        Sleep a little.
+        """
+        time.sleep(duration)
+
     def _wait_for_file_stability(
         self, filepath: str, timeout: int = 30, interval: float = 0.5
     ) -> bool:
@@ -108,32 +124,23 @@ class FolderObserver:
             timeout -- Maximum time to wait for stability (in seconds).
             interval -- Time interval between checks (in seconds).
         """
-        logger.info("Making sure %s is closed", filepath)
+        logger.info("Making sure %s is readable", filepath)
         if timeout < 1:
             raise ValueError("timeout needs to be greater than 0")
-        start_time = time.time()
-        while time.time() - start_time < timeout:
+        start_time = self._get_time()
+        while self._get_time() - start_time < timeout:
             try:
-                result = subprocess.run(
-                    ["lsof", "-F", "p", "--", filepath],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    timeout=min(1, timeout),
-                    text=True,
-                    check=False,
-                )
-                # lsof returns non-zero if the file is not open
-                if result.returncode != 0:
-                    return True
-                pid = result.stdout.strip()
-                logger.debug("%s is still open by PID %s", filepath, pid)
-                time.sleep(interval)
+                logger.debug("Attempting to open image")
+                with Image.open(filepath) as img:
+                    img.verify()
+                return True
             except FileNotFoundError:
-                time.sleep(interval)
-            except subprocess.TimeoutExpired:
-                logger.warning(
-                    "Could not get exclusive access to file %s", filepath
-                )
+                logger.error("Could not find file %s", filepath)
+                raise
+            except OSError as e:
+                logger.debug("Image not completely uploaded: %s", e)
+                self._sleep(interval)
+                continue
         logger.warning(
             "File %s is still open after %d seconds", filepath, timeout
         )
@@ -182,7 +189,7 @@ class FolderObserver:
                     if self._wait_for_file_stability(filepath):
                         if self.presets.file_stabilization_extra_wait > 0:
                             logger.debug(
-                                "Waiting an extra %f:.2 seconds",
+                                "Waiting an extra %.2f seconds",
                                 self.presets.file_stabilization_extra_wait,
                             )
                             time.sleep(
@@ -208,7 +215,7 @@ class FolderObserver:
                     if self._wait_for_file_stability(filepath):
                         if self.presets.file_stabilization_extra_wait > 0:
                             logger.debug(
-                                "Waiting an extra %f:.2 seconds",
+                                "Waiting an extra %.2f seconds",
                                 self.presets.file_stabilization_extra_wait,
                             )
                             time.sleep(
@@ -245,7 +252,9 @@ class FolderObserver:
             lock.release()
             return
         logger.debug("Classifying: %s", filepath)
-        prediction = classify_image_two_stage(self.presets, filepath)
+        prediction = classify_image_two_stage(
+            presets=self.presets, image_path=filepath
+        )
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
         if prediction > 0.5:
             logger.info("Puma detected in %s", filepath)

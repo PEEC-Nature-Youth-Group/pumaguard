@@ -474,6 +474,7 @@ def classify_image_two_stage(
         PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
         with PIL.Image.open(image_path) as img:
             image = img.convert("RGB")
+        PIL.ImageFile.LOAD_TRUNCATED_IMAGES = False
         width, height = image.size
     except FileNotFoundError:
         logger.error("Could not find file %s", image_file)

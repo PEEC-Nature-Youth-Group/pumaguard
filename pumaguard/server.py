@@ -117,7 +117,7 @@ class FolderObserver:
         time.sleep(duration)
 
     def _wait_for_file_stability(
-        self, filepath: str, timeout: int = 30, interval: float = 0.5
+        self, filepath: str, timeout: int = 10, interval: float = 0.5
     ) -> bool:
         """
         Wait until the file is no longer open by any process.
@@ -136,6 +136,7 @@ class FolderObserver:
                 logger.debug("Attempting to open image")
                 with Image.open(filepath) as img:
                     img.verify()
+                logger.debug("Image is loadable")
                 return True
             except FileNotFoundError:
                 logger.error("Could not find file %s", filepath)

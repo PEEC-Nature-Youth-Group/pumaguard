@@ -29,6 +29,9 @@ from pumaguard.utils import (
     cache_model_two_stage,
     classify_image_two_stage,
 )
+from pumaguard.web_ui import (
+    WebUI,
+)
 
 logger = logging.getLogger("PumaGuard")
 
@@ -349,9 +352,13 @@ def main(options: argparse.Namespace, presets: Preset):
     signal.signal(signal.SIGTERM, handle_termination)
     signal.signal(signal.SIGINT, handle_termination)
 
+    webui = WebUI()
+    webui.start()
+
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
         manager.stop_all()
+        webui.stop()
         logger.info("Stopped watching folders.")

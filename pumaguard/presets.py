@@ -183,6 +183,7 @@ class Preset:
             "classifier-model-filename": self.classifier_model_filename,
             "sound-path": self.sound_path,
             "deterrent-sound-file": self.deterrent_sound_file,
+            "play-sound": self.play_sound,
             "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,
@@ -710,3 +711,19 @@ class Preset:
         if compat not in ["2.15", "2.17"]:
             raise ValueError("tf compat needs to be in [2.15, 2.17]")
         self._tf_compat = compat
+
+    @property
+    def play_sound(self) -> bool:
+        """
+        Get play-sound.
+        """
+        return self._play_sound
+
+    @play_sound.setter
+    def play_sound(self, play_sound: bool):
+        """
+        Set play-sound.
+        """
+        if not isinstance(play_sound, bool):
+            raise TypeError("play_sound needs to be a bool")
+        self._play_sound = play_sound

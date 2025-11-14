@@ -110,19 +110,7 @@ class WebUI:
             Get current settings.
             """
             try:
-                settings = {
-                    "yolo_min_size": self.presets.yolo_min_size,
-                    "yolo_conf_thresh": self.presets.yolo_conf_thresh,
-                    "yolo_max_dets": self.presets.yolo_max_dets,
-                    "yolo_model_filename": self.presets.yolo_model_filename,
-                    "classifier_model_filename": self.presets.classifier_model_filename,
-                    "sound_path": self.presets.sound_path,
-                    "deterrent_sound_file": self.presets.deterrent_sound_file,
-                    "file_stabilization_extra_wait": self.presets.file_stabilization_extra_wait,
-                    "model_function_name": self.presets.model_function_name,
-                    "play_sound": self.presets.play_sound,
-                }
-                return jsonify(settings)
+                return jsonify(dict(self.presets))
             except Exception as e:
                 logger.error(f"Error getting settings: {e}")
                 return jsonify({"error": str(e)}), 500
@@ -135,45 +123,34 @@ class WebUI:
                 if not data:
                     return jsonify({"error": "No data provided"}), 400
 
-                # Update settings
-                if "yolo_min_size" in data:
-                    self.presets.yolo_min_size = float(data["yolo_min_size"])
-                if "yolo_conf_thresh" in data:
-                    self.presets.yolo_conf_thresh = float(
-                        data["yolo_conf_thresh"]
-                    )
-                if "yolo_max_dets" in data:
-                    self.presets.yolo_max_dets = int(data["yolo_max_dets"])
-                if "yolo_model_filename" in data:
-                    self.presets.yolo_model_filename = data[
-                        "yolo_model_filename"
-                    ]
-                if "classifier_model_filename" in data:
-                    self.presets.classifier_model_filename = data[
-                        "classifier_model_filename"
-                    ]
-                if "sound_path" in data:
-                    self.presets.sound_path = data["sound_path"]
-                if "deterrent_sound_file" in data:
-                    self.presets.deterrent_sound_file = data[
-                        "deterrent_sound_file"
-                    ]
-                if "file_stabilization_extra_wait" in data:
-                    self.presets.file_stabilization_extra_wait = float(
-                        data["file_stabilization_extra_wait"]
-                    )
-                if "model_function_name" in data:
-                    self.presets.model_function_name = data[
-                        "model_function_name"
-                    ]
-                if "play_sound" in data:
-                    self.presets.play_sound = bool(data["play_sound"])
+                allowed_settings = [
+                    "YOLO-min-size",
+                    "YOLO-conf-thresh",
+                    "YOLO-max-dets",
+                    "YOLO-model-filename",
+                    "classifier-model-filename",
+                    "deterrent-sound-file",
+                    "file-stabilization-extra-wait",
+                    "play-sound",
+                ]
+
+                if len(data) == 0:
+                    raise ValueError("Did not receive any settings")
+
+                for key, value in data.items():
+                    logger.debug("Trying to update %s", key)
+                    if key in allowed_settings:
+                        logger.debug("Updating %s with %v", key, value)
+                        setattr(self.presets, key, value)
+                    else:
+                        logger.debug("Unknown setting %s", key)
+                        raise ValueError(f"Ignoring unknown setting {key}")
 
                 logger.info("Settings updated successfully")
                 return jsonify(
                     {"success": True, "message": "Settings updated"}
                 )
-            except Exception as e:
+            except ValueError as e:
                 logger.error(f"Error updating settings: {e}")
                 return jsonify({"error": str(e)}), 500
 

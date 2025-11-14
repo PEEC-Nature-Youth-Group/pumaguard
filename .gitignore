@@ -2,6 +2,7 @@
 .ansible
 .coverage
 .python-version
+.python-version
 .vscode
 __pycache__
 dist/*

@@ -204,3 +204,7 @@ add-model:
 	cd pumaguard-models; sha256sum $(NEW_MODEL)_* | while read checksum fragment; do \
         yq --inplace ".\"$(NEW_MODEL)\".fragments.\"$${fragment}\".sha256sum = \"$${checksum}\"" ../pumaguard/model-registry.yaml; \
     done
+
+.PHONY: web-ui
+web-ui: install
+	cd web-ui-flutter; flutter build web --wasm

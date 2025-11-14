@@ -330,10 +330,15 @@ def main(options: argparse.Namespace, presets: Preset):
         logger.debug("Will not print out download progress")
         presets.print_download_progress = False
 
-    logger.debug("getting folder manager")
+    logger.debug("Starting web UI")
+    webui = WebUI(presets=presets)
+    webui.start()
+
+    logger.debug("Getting folder manager")
     manager = FolderManager(presets)
     for folder in options.FOLDER:
         manager.register_folder(folder, options.watch_method)
+        webui.add_image_directory(folder)
 
     manager.start_all()
 
@@ -352,9 +357,6 @@ def main(options: argparse.Namespace, presets: Preset):
 
     signal.signal(signal.SIGTERM, handle_termination)
     signal.signal(signal.SIGINT, handle_termination)
-
-    webui = WebUI()
-    webui.start()
 
     try:
         while True:

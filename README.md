@@ -25,20 +25,50 @@ GitHub Codespaces, which provide a development environment in your browser.
 
 ## Local Development Environment
 
-A local development environment can be created by using the `poetry` tool,
-which can be installed with
+You can set up a local development environment using either `uv` (recommended for speed) or `poetry`.
+
+### Using uv (Recommended)
+
+[uv](https://github.com/astral-sh/uv) is an extremely fast Python package installer and resolver.
+
+Install `uv`:
+
+```console
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Or on Windows:
+
+```console
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Create a virtual environment and install dependencies:
+
+```console
+uv venv
+source .venv/bin/activate  # On Linux/macOS
+# or
+.venv\Scripts\activate  # On Windows
+
+# Install with development dependencies
+uv pip install -e ".[dev,extra-dev]"
+```
+
+Or use `uv sync` for automatic environment management:
+
+```console
+uv sync --extra dev --extra extra-dev
+```
+
+### Using Poetry
+
+Alternatively, you can use `poetry`:
 
 ```console
 sudo apt install python3-poetry
-```
-
-Run
-
-```console
 poetry install
 ```
-
-To install all of the necessary Python modules.
 
 ## Running the scripts on colab.research.google.com
 
@@ -64,6 +94,14 @@ scripts/train.py --notebook 1
 The `pumaguard-server` watches a folder and classifies new files as they are
 added to that folder. Run with
 
+**Using uv:**
+
+```console
+uv run pumaguard-server FOLDER
+```
+
+**Using poetry:**
+
 ```console
 poetry run pumaguard-server FOLDER
 ```
@@ -81,31 +119,40 @@ should be committed to the repository.
 1. Get a TPU instance on Colab or run the script on your local machine.
 2. Open a terminal and run
 
-    ```console
-    git clone https://github.com/PEEC-Nature-Youth-Group/pumaguard.git
-    cd pumaguard
-    ```
+   ```console
+   git clone https://github.com/PEEC-Nature-Youth-Group/pumaguard.git
+   cd pumaguard
+   ```
 
 3. Get help on how to use the script
 
-    On Colab, run
+   On Colab, run
 
-    ```console
-    ./scripts/pumaguard --help
-    ./scripts/pumaguard train --help
-    ```
+   ```console
+   ./scripts/pumaguard --help
+   ./scripts/pumaguard train --help
+   ```
 
-    On your local machine, run
+   On your local machine with uv:
 
-    ```console
-    sudo apt install nvidia-cudnn
-    poetry install
-    poetry run pumaguard --help
-    poetry run pumaguard train --help
-    ```
+   ```console
+   sudo apt install nvidia-cudnn
+   uv sync --extra dev --extra extra-dev
+   uv run pumaguard --help
+   uv run pumaguard train --help
+   ```
+
+   Or with poetry:
+
+   ```console
+   sudo apt install nvidia-cudnn
+   poetry install
+   poetry run pumaguard --help
+   poetry run pumaguard train --help
+   ```
 
 4. Train the model from scratch
 
-    ```console
-    ./scripts/pumaguard train --no-load --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml
-    ```
+   ```console
+   ./scripts/pumaguard train --no-load --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml
+   ```

@@ -196,3 +196,9 @@ test-server: install
 .PHONY: pre-commit
 pre-commit: lint docs poetry
 	$(MAKE) test
+
+.PHONY: add-model
+add-model:
+	cd pumaguard-models; sha256sum colorbw_111325.h5_* | while read checksum fragment; do \
+        yq --inplace ".\"colorbw_111325.h5\".fragments.\"${fragment}\".sha256sum = \"${checksum}\"" ../pumaguard/model-registry.yaml; \
+    done

@@ -4,6 +4,7 @@ DEVICE_USER ?= pumaguard
 VENV = $(CURDIR)/venv/bin/
 ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
+NEW_MODEL ?=
 
 .PHONY: venv
 venv:
@@ -199,6 +200,7 @@ pre-commit: lint docs poetry
 
 .PHONY: add-model
 add-model:
-	cd pumaguard-models; sha256sum colorbw_111325.h5_* | while read checksum fragment; do \
-        yq --inplace ".\"colorbw_111325.h5\".fragments.\"${fragment}\".sha256sum = \"${checksum}\"" ../pumaguard/model-registry.yaml; \
+	if [ -z "$(NEW_MODEL)" ]; then false; fi
+	cd pumaguard-models; sha256sum $(NEW_MODEL)_* | while read checksum fragment; do \
+        yq --inplace ".\"$(NEW_MODEL)\".fragments.\"$${fragment}\".sha256sum = \"$${checksum}\"" ../pumaguard/model-registry.yaml; \
     done

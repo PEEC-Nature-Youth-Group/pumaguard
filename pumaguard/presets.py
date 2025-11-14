@@ -33,7 +33,7 @@ class Preset:
         self.yolo_conf_thresh = 0.25
         self.yolo_max_dets = 12
         self.yolo_model_filename = "yolov8s_101425.pt"
-        self.classifier_model_filename = "colorbw_110225.h5"
+        self.classifier_model_filename = "colorbw_111325.h5"
         self.alpha = 1e-5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"
@@ -86,7 +86,7 @@ class Preset:
             "YOLO-model-filename", "yolov8s_101425.pt"
         )
         self.classifier_model_filename = settings.get(
-            "classifier-model-filename", "colorbw_110225.h5"
+            "classifier-model-filename", "colorbw_111325.h5"
         )
         self.sound_path = settings.get(
             "sound-path", os.path.dirname(__file__) + "../pumaguard-sounds"

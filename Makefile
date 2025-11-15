@@ -32,69 +32,49 @@ assemble:
 		$(MAKE) -C pumaguard-models; \
 	fi
 
-.PHONY: lock
-lock: poetry
-	poetry lock
-
-.PHONY: update
-update: poetry
-	poetry update
-
-# This version should match the base of the snap.
-# core24 uses poetry-1.8. Later versions of poetry use a different lockfile format
-# which is incompatible with older versions, leading to build failures in snapcraft.
-.PHONY: poetry
-poetry:
-	pip install --upgrade pip
-	pip install poetry~=1.8
-
-.PHONY: uv
-uv: venv
-	$(VENV)pip install --upgrade uv
-
 .PHONY: install
-install: assemble venv
-	$(VENV)pip install --editable .
+install: assemble .venv
+	uv pip install --editable .
 
 .PHONY: install-dev
-install-dev: venv
-	$(VENV)pip install --editable ".[dev]"
+install-dev: .venv
+	uv pip install --editable ".[dev]"
 
 .PHONY: test
 test: install-dev
-	$(VENV)pytest --verbose --cov=pumaguard --cov-report=term-missing
+	pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
 build: assemble install-dev
-	$(VENV)python3 -m build
+	uv build
 
 .PHONY: lint
 lint: black pylint isort mypy bashate ansible-lint
 
 .PHONY: black
 black: install-dev
-	$(VENV)black --check pumaguard
+	black --check pumaguard
 
 .PHONY: pylint
 pylint: install-dev
-	$(VENV)pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+	pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	$(VENV)isort pumaguard tests scripts
+	isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
-	$(VENV)mypy --install-types --non-interactive --check-untyped-defs pumaguard
+	mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
 bashate: install-dev
-	$(VENV)bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) $(VENV)ansible-lint -v scripts/configure-device.yaml
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) $(VENV)ansible-lint -v scripts/configure-laptop.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) ansible-lint -v scripts/configure-device.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:

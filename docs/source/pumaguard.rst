@@ -140,6 +140,14 @@ pumaguard.verify module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.web\_ui module
+------------------------
+
+.. automodule:: pumaguard.web_ui
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

@@ -1,19 +1,17 @@
 LAPTOP ?= laptop
 DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
-VENV = $(CURDIR)/venv/bin/
 ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
 NEW_MODEL ?=
 
-.PHONY: venv
 venv:
-	python3 -m venv venv
-	$(VENV)pip install --upgrade pip
+	uv venv
+	uv pip install --upgrade pip
 
 .PHONY: apidoc
 apidoc: venv
-	$(VENV)pip install --requirement docs/source/requirements.txt
+	uv pip install --requirement docs/source/requirements.txt
 	cd docs && $(VENV)sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs

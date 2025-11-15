@@ -5,26 +5,26 @@ ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
 NEW_MODEL ?=
 
-venv:
+.venv:
 	uv venv
 	uv pip install --upgrade pip
 
 .PHONY: apidoc
-apidoc: venv
+apidoc: .venv
 	uv pip install --requirement docs/source/requirements.txt
-	cd docs && $(VENV)sphinx-apidoc -o source --force ../pumaguard
+	cd docs && sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
-docs: venv
+docs: .venv
 	@echo "building documentation webpage"
-	$(VENV)pip install --requirement docs/source/requirements.txt
-	cd docs && $(VENV)sphinx-apidoc --output-dir source --force ../pumaguard
+	uv pip install --requirement docs/source/requirements.txt
+	cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
 	git diff
 	git diff --shortstat | wc -l | grep "^0" --quiet
-	$(VENV)sphinx-build --builder html --fail-on-warning docs/source docs/build
-	$(VENV)sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
+	sphinx-build --builder html --fail-on-warning docs/source docs/build
+	sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
 .PHONY: assemble
 assemble:

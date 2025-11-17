@@ -10,6 +10,9 @@ import time
 from pathlib import (
     Path,
 )
+from typing import (
+    TypedDict,
+)
 
 import yaml
 from flask import (
@@ -28,6 +31,17 @@ from pumaguard.presets import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class PhotoDict(TypedDict):
+    """Type definition for photo metadata dictionary."""
+
+    filename: str
+    path: str
+    directory: str
+    size: int
+    modified: float
+    created: float
 
 
 class WebUI:
@@ -192,7 +206,7 @@ class WebUI:
         @self.app.route("/api/photos", methods=["GET"])
         def get_photos():
             """Get list of captured photos."""
-            photos = []
+            photos: list[PhotoDict] = []
             for directory in self.image_directories:
                 if not os.path.exists(directory):
                     continue

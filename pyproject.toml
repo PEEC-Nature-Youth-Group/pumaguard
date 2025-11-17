@@ -44,7 +44,7 @@ extra-dev = [
     "plotly ~= 6.0",
     "scipy ~= 1.15",
 ]
-and-cuda = ["tensorflow-and-cuda"]
+# and-cuda = ["tensorflow-and-cuda ~= 2.19; platform_system != 'Windows'"]
 
 [project.urls]
 Homepage = "http://pumaguard.rtfd.io/"

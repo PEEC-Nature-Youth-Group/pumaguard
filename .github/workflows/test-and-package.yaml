@@ -22,11 +22,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip
-          cache-dependency-path: pyproject.toml
       - name: Get version
         run: |
           git describe --tags | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//' > version
@@ -41,8 +39,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Lint Python Sources (pylint)
@@ -59,8 +58,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -76,8 +76,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -128,6 +129,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -143,7 +145,7 @@ jobs:
           set -e -u -x
           tar -C training-data -xf training-data.tar.gz
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
+        uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -164,6 +166,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -209,6 +212,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -258,58 +262,8 @@ jobs:
       - get-version
 
     steps:
-      - name: Check container free disk space
-        run: df --human-readable /
-      - name: Get largest installed packages
-        run: |
-          dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
-            sort --human-numeric-sort --key 2 --reverse | \
-            head --lines 20
-      - name: Check disk allocation
-        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse
-      - name: Check disk allocation (/usr/local)
-        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse
-      - name: Remove unnecessary packages on amd64
-        run: |
-          sudo apt-get remove --auto-remove --purge \
-            azure-cli \
-            microsoft-edge-stable \
-            google-cloud-cli \
-            google-chrome-stable \
-            \*temurin\* \
-            \*llvm\* \
-            powershell \
-            \*dotnet\* \
-            firefox \
-            \*jdk\* \
-            \*g++\* \
-            \*mysql\*
-        if: ${{ matrix.os == 'ubuntu-24.04' }}
-      - name: Clean up /usr/local
-        run: |
-          sudo rm -rf /usr/local/{julia*,aws*}
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/local/share/{chromium,powershell}
-      - name: Get largest installed packages
-        run: |
-          dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
-            sort --human-numeric-sort --key 2 --reverse | \
-            head --lines 20
-      - name: Get installed snaps
-        run: snap list
-      - name: Check disk allocation
-        run: du --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-      - name: Check disk allocation (/usr)
-        run: du --human-readable --max-depth 1 /usr 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-      - name: Check disk allocation (/usr/local)
-        run: du --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-      - name: Check disk allocation (/usr/local/{lib,share,bin})
-        run: du --human-readable --max-depth 1 /usr/local/{lib,share,bin} 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-      - name: Check disk allocation (/opt)
-        run: du --human-readable --max-depth 1 /opt 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-      - name: Check container free disk space
-        run: df --human-readable /
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -349,6 +303,7 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v4
+      - uses: ./.github/actions/clean-runner
       - name: Upload release artifacts
         run: |
           #!/bin/bash
@@ -380,6 +335,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -417,6 +373,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models
         run: |
@@ -452,6 +409,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
           name: submodule-models
@@ -489,6 +447,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models
         run: |
@@ -533,6 +492,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models
         run: |

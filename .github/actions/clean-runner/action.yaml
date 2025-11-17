@@ -1,0 +1,79 @@
+name: "Clean Runner"
+description: "Clean runner by removing unneeded packages"
+
+runs:
+  using: "composite"
+  steps:
+    # - name: Check container free disk space
+    #   run: df --human-readable /
+    #   shell: bash
+    - name: Get largest installed packages
+      run: |
+        set +o pipefail
+        dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' > packages
+        sort --human-numeric-sort --key 2 --reverse packages packages > packages-sorted
+        head --lines 20 packages-sorted
+      shell: bash
+    # - name: Check disk allocation
+    #   run: |
+    #     set +o pipefail
+    #     du --one-file-system --human-readable --max-depth 1 / 2> /dev/null > du-all
+    #     sort --human-numeric-sort --reverse du-all
+    #   shell: bash
+    # - name: Check disk allocation (/usr/local)
+    #   run: |
+    #     set +o pipefail
+    #     du --one-file-system --human-readable --max-depth 1 /usr/local 2> /dev/null > du-usr-local
+    #     sort --human-numeric-sort --reverse du-usr-local
+    #   shell: bash
+    - name: Remove unnecessary packages on amd64
+      run: |
+        sudo apt-get remove --auto-remove --purge \
+          azure-cli \
+          microsoft-edge-stable \
+          google-cloud-cli \
+          google-chrome-stable \
+          \*temurin\* \
+          \*llvm\* \
+          powershell \
+          \*dotnet\* \
+          firefox \
+          \*jdk\* \
+          \*g++\* \
+          \*mysql\*
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      shell: bash
+    - name: Clean up /usr/local
+      run: |
+        sudo rm -rf /usr/local/{julia*,aws*}
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /usr/local/share/{chromium,powershell}
+      shell: bash
+    - name: Get largest installed packages
+      run: |
+        set +o pipefail
+        dpkg-query --show --showformat='${Package;-50}\t${Installed-Size}\n' | \
+          sort --human-numeric-sort --key 2 --reverse | \
+          head --lines 20
+      shell: bash
+    - name: Get installed snaps
+      run: snap list
+      shell: bash
+    # - name: Check disk allocation
+    #   run: du --one-file-system --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+    #   shell: bash
+    # - name: Check disk allocation (/usr)
+    #   run: du --one-file-system --human-readable --max-depth 1 /usr 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+    #   shell: bash
+    # - name: Check disk allocation (/usr/local)
+    #   run: du --one-file-system --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+    #   shell: bash
+    # - name: Check disk allocation (/usr/local/{lib,share,bin})
+    #   run: du --one-file-system --human-readable --max-depth 1 /usr/local/{lib,share,bin} 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+    #   shell: bash
+    # - name: Check disk allocation (/opt)
+    #   run: du --one-file-system --human-readable --max-depth 1 /opt 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
+    #   shell: bash
+    # - name: Check container free disk space
+    #   run: df --one-file-system --human-readable /
+    #   shell: bash

@@ -12,19 +12,19 @@ NEW_MODEL ?=
 .PHONY: apidoc
 apidoc: .venv
 	uv pip install --requirement docs/source/requirements.txt
-	cd docs && sphinx-apidoc -o source --force ../pumaguard
+	. .venv/bin/activate && cd docs && sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
 docs: .venv
 	@echo "building documentation webpage"
 	uv pip install --requirement docs/source/requirements.txt
-	cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
+	. .venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
 	git diff
 	git diff --shortstat | wc -l | grep "^0" --quiet
-	sphinx-build --builder html --fail-on-warning docs/source docs/build
-	sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
+	. .venv/bin/activate && sphinx-build --builder html --fail-on-warning docs/source docs/build
+	. .venv/bin/activate && sphinx-build --builder linkcheck --fail-on-warning docs/source docs/build
 
 .PHONY: assemble
 assemble:
@@ -42,7 +42,7 @@ install-dev: .venv
 
 .PHONY: test
 test: install-dev
-	pytest --verbose --cov=pumaguard --cov-report=term-missing
+	uv run pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: build
 build: assemble install-dev
@@ -53,28 +53,28 @@ lint: black pylint isort mypy bashate ansible-lint
 
 .PHONY: black
 black: install-dev
-	black --check pumaguard
+	uv run black --check pumaguard
 
 .PHONY: pylint
 pylint: install-dev
-	pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+	uv run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	isort pumaguard tests scripts
+	uv run isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
-	mypy --install-types --non-interactive --check-untyped-defs pumaguard
+	uv run mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
 bashate: install-dev
-	bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	uv run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) ansible-lint -v scripts/configure-device.yaml
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) ansible-lint -v scripts/configure-laptop.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run ansible-lint -v scripts/configure-device.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:
@@ -123,12 +123,12 @@ check-functional:
 
 .PHONY: functional-poetry
 functional-poetry: install
-	$(MAKE) EXE="$(VEVN)pumaguard" run-functional
+	$(MAKE) EXE=uv run pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: functional-snap
 functional-snap:
-	$(MAKE) EXE="$(VENV)pumaguard" run-functional
+	$(MAKE) EXE="pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: prepare-trailcam prepare-output prepare-central
@@ -153,7 +153,7 @@ configure-laptop: install-dev
 
 .PHONY: verify-poetry
 verify-poetry: install
-	$(MAKE) EXE="$(VENV)pumaguard" verify
+	$(MAKE) EXE="uv run pumaguard" verify
 
 .PHONY: verify-snap
 verify-snap:

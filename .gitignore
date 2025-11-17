@@ -8,5 +8,6 @@ __pycache__
 dist/*
 docs/build/*
 prime/*
+pumaguard.egg-info
 scripts/.wheelhouse
 venv/*

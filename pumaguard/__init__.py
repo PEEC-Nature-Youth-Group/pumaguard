@@ -14,6 +14,8 @@ except ModuleNotFoundError:
     raise
 
 try:
-    __VERSION__ = importlib.metadata.version("pumaguard")
+    __version__ = importlib.metadata.version("pumaguard")
+    __VERSION__ = __version__  # Keep for backward compatibility
 except importlib.metadata.PackageNotFoundError:
-    __VERSION__ = "undefined"
+    __version__ = "unknown"
+    __VERSION__ = __version__

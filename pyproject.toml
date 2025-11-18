@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools >= 61.0", "wheel"]
+requires = ["setuptools >= 61.0", "wheel", "setuptools-scm >= 8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pumaguard"
-version = "0.0.0"
+dynamic = ["version"]
 description = ""
 readme = "README.md"
 requires-python = ">= 3.10, < 4.0"
@@ -75,3 +75,7 @@ line-length = 79
 
 [tool.basedpyright]
 reportUnusedCallResult = "hint"
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"

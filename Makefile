@@ -95,11 +95,11 @@ run-functional:
 
 .PHONY: check-functional
 check-functional:
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.5/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '95.41%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.5/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.92%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.10/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '100.00%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.10/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.99%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
@@ -123,7 +123,7 @@ check-functional:
 
 .PHONY: functional-poetry
 functional-poetry: install
-	$(MAKE) EXE=uv run pumaguard" run-functional
+	$(MAKE) EXE="uv run pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: functional-snap

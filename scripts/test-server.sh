@@ -18,7 +18,7 @@ rm -rf watchfolder
 mkdir -p watchfolder
 rm -f pumaguard.log
 
-poetry run pumaguard server --no-play-sound --no-download-progress watchfolder &
+uv run pumaguard server --no-play-sound --no-download-progress watchfolder &
 
 SERVER_PID=$!
 server_started=0

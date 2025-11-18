@@ -13,11 +13,7 @@ from pumaguard import (
     classify,
     model_cli,
     server,
-    train,
     verify,
-)
-from pumaguard.models import (
-    __MODELS__,
 )
 from pumaguard.presets import (
     Preset,
@@ -74,11 +70,6 @@ def create_global_parser() -> argparse.ArgumentParser:
         help="The notebook to use",
         type=int,
     )
-    global_parser.add_argument(
-        "--list-models",
-        help="List the available models",
-        action="store_true",
-    )
     return global_parser
 
 
@@ -112,12 +103,6 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         logger.debug("setting model path to %s", model_path)
         presets.base_output_directory = model_path
 
-    if args.list_models:
-        logger.info("available models:")
-        for name, model in __MODELS__.items():
-            logger.info("  %s: %s", name, model.model_description())
-        sys.exit(0)
-
     if args.notebook is not None:
         presets.notebook_number = args.notebook
 
@@ -143,14 +128,6 @@ def configure_subparsers(
     subparsers = parser.add_subparsers(
         dest="command",
         help="Available sub-commands",
-    )
-    train.configure_subparser(
-        subparsers.add_parser(
-            "train",
-            help="Train a model",
-            description="Train a model and get the model weights.",
-            parents=[global_args_parser],
-        )
     )
     classify.configure_subparser(
         subparsers.add_parser(
@@ -245,9 +222,7 @@ def main():
 
     logger.debug("presets:\n%s", str(presets).rstrip())
 
-    if args.command == "train":
-        train.main(args, presets)
-    elif args.command == "server":
+    if args.command == "server":
         server.main(args, presets)
     elif args.command == "classify":
         classify.main(args, presets)

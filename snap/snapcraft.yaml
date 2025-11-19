@@ -88,11 +88,13 @@ parts:
           - g++-multilib
 
   pumaguard:
-    plugin: poetry
+    plugin: uv
     source: .
+    build-snaps:
+      - astral-uv
     override-pull: |
       set -e -u -x
-      poetry --version
+      uv --version
       pip list --verbose
       craftctl default
       VERSION=$(git describe --tags 2> /dev/null | sed --regexp-extended 's/^v([0-9]+)(-([0-9]+))?.*/\1.post\3/; s/.post$//') || VERSION='undefined'
@@ -100,17 +102,11 @@ parts:
         VERSION=$(cat version)
       fi
       craftctl set version="v${VERSION}"
-      poetry version "${VERSION}"
     build-packages:
       - git
       - python3-pip
     override-build: |
       craftctl default
-      if [[ ${CRAFT_ARCH_BUILD_FOR} == xamd64 ]]; then
-        poetry install --extras and-cuda
-      else
-        poetry install
-      fi
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage-packages:
       - libgl1

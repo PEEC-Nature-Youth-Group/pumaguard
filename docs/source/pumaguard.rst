@@ -1,14 +1,6 @@
 pumaguard package
 =================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   pumaguard.models
-
 Submodules
 ----------
 
@@ -44,14 +36,6 @@ pumaguard.main module
    :show-inheritance:
    :undoc-members:
 
-pumaguard.model module
-----------------------
-
-.. automodule:: pumaguard.model
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 pumaguard.model\_cli module
 ---------------------------
 
@@ -64,14 +48,6 @@ pumaguard.model\_downloader module
 ----------------------------------
 
 .. automodule:: pumaguard.model_downloader
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-pumaguard.model\_factory module
--------------------------------
-
-.. automodule:: pumaguard.model_factory
    :members:
    :show-inheritance:
    :undoc-members:
@@ -104,14 +80,6 @@ pumaguard.stats module
 ----------------------
 
 .. automodule:: pumaguard.stats
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-pumaguard.train module
-----------------------
-
-.. automodule:: pumaguard.train
    :members:
    :show-inheritance:
    :undoc-members:

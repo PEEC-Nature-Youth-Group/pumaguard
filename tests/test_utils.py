@@ -7,12 +7,6 @@ import os
 import tempfile
 import unittest
 
-from pumaguard.model_factory import (
-    model_factory,
-)
-from pumaguard.presets import (
-    Preset,
-)
 from pumaguard.utils import (
     get_md5,
     get_sha256,
@@ -51,19 +45,3 @@ class TestHashFunctions(unittest.TestCase):
             self.assertEqual(result, expected)
         finally:
             os.remove(tmp_name)
-
-
-class TestModel(unittest.TestCase):
-    """
-    Test Model class.
-    """
-
-    def test_model_singleton(self):
-        """
-        Test singleton property.
-        """
-        presets = Preset()
-        presets.notebook_number = 1
-        m1 = model_factory(presets)
-        m2 = model_factory(presets)
-        self.assertEqual(m1, m2)

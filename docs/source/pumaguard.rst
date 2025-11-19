@@ -4,14 +4,6 @@ pumaguard package
 Submodules
 ----------
 
-pumaguard.analyze module
-------------------------
-
-.. automodule:: pumaguard.analyze
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 pumaguard.classify module
 -------------------------
 
@@ -80,14 +72,6 @@ pumaguard.stats module
 ----------------------
 
 .. automodule:: pumaguard.stats
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
-pumaguard.traininghistory module
---------------------------------
-
-.. automodule:: pumaguard.traininghistory
    :members:
    :show-inheritance:
    :undoc-members:

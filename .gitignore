@@ -1,4 +1,3 @@
-*.snap
 .ansible
 .coverage
 .python-version

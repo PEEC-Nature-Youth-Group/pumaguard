@@ -435,6 +435,7 @@ def main():
     web_ui = WebUI(
         presets=presets, host=args.host, port=args.port, debug=args.debug
     )
+    logger.debug("Serving UI from %s", web_ui.flutter_dir)
 
     # Add image directories
     if args.image_dir:

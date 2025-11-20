@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
+import 'package:web/web.dart' as web;
+
+String _getApiBaseUrl() {
+  // Get the current window location to construct the API base URL
+  // This allows the app to work when accessed from any host/port
+  final window = web.window;
+  final protocol = window.location.protocol; // 'http:' or 'https:'
+  final host = window.location.host; // 'hostname:port' or just 'hostname'
+  return '$protocol//$host';
+}
 
 void main() {
   runApp(const PumaGuardApp());
@@ -13,7 +23,7 @@ class PumaGuardApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Provider<ApiService>(
-      create: (_) => ApiService(),
+      create: (_) => ApiService(baseUrl: _getApiBaseUrl()),
       child: MaterialApp(
         title: 'PumaGuard',
         debugShowCheckedModeBanner: false,

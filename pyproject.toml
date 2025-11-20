@@ -59,13 +59,18 @@ Homepage = "http://pumaguard.rtfd.io/"
 Repository = "https://github.com/PEEC-Nature-Youth-Group/pumaguard"
 
 [project.scripts]
-pick-files = 'scripts.pick_files:main'
 pumaguard = 'pumaguard.main:main'
 playsound = 'pumaguard.sound:main'
 pumaguard-models = 'pumaguard.model_cli:main'
 
 [tool.setuptools.packages.find]
-include = ["pumaguard*", "scripts*"]
+include = ["pumaguard*"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+pumaguard = ["web-ui-flutter/**/*"]
 
 [tool.isort]
 ensure_newline_before_comments = true
@@ -80,6 +85,11 @@ line-length = 79
 
 [tool.ruff]
 line-length = 79
+
+[tool.mypy]
+exclude = [
+    "^pumaguard/web-ui-flutter/",
+]
 
 [tool.basedpyright]
 reportUnusedCallResult = "hint"

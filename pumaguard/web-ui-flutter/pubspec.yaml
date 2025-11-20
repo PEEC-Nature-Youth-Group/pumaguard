@@ -47,6 +47,9 @@ dependencies:
   # Intl for date formatting
   intl: ^0.19.0
 
+  # Web APIs (modern replacement for dart:html)
+  web: ^1.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

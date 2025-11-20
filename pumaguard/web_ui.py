@@ -76,9 +76,7 @@ class WebUI:
         self.image_directories: list[str] = []
 
         # Determine the Flutter build directory
-        self.flutter_dir: Path = (
-            Path(__file__).parent.parent / "web-ui-flutter"
-        )
+        self.flutter_dir: Path = Path(__file__).parent / "web-ui-flutter"
         self.build_dir: Path = self.flutter_dir / "build" / "web"
 
         self._setup_routes()

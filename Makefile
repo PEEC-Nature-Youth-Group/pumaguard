@@ -46,9 +46,10 @@ test: install-dev
 
 .PHONY: test-ui
 test-ui:
-	cd web-ui-flutter; dart format --set-exit-if-changed lib test
-	cd web-ui-flutter; flutter analyze
-	cd web-ui-flutter; flutter test
+	cd pumaguard/web-ui-flutter; flutter pub get
+	cd pumaguard/web-ui-flutter; dart format --set-exit-if-changed lib test
+	cd pumaguard/web-ui-flutter; flutter analyze
+	cd pumaguard/web-ui-flutter; flutter test
 
 .PHONY: build
 build: assemble install-dev build-ui
@@ -191,7 +192,8 @@ add-model:
 
 .PHONY: build-ui
 build-ui: install
-	cd web-ui-flutter; flutter build web --wasm
+	cd pumaguard/web-ui-flutter; flutter pub get
+	cd pumaguard/web-ui-flutter; flutter build web --wasm
 
 .PHONY: run-server
 run-server: install build-ui

@@ -39,12 +39,20 @@ class TestFolderObserver(unittest.TestCase):
         self.presets.image_dimensions = (512, 512)
         self.observer = FolderObserver(self.folder, "inotify", self.presets)
 
+    @patch("pumaguard.server.acquire_lock")
+    @patch("pumaguard.server.cache_model_two_stage")
     @patch("pumaguard.server.subprocess.Popen")
     @patch("pumaguard.server.threading.Thread")
-    def test_observe_new_file(self, MockThread, MockPopen):  # pylint: disable=invalid-name
+    def test_observe_new_file(
+        self, MockThread, MockPopen, mock_cache, mock_lock
+    ):  # pylint: disable=invalid-name
         """
         Test observing a new file.
         """
+        # Mock the lock
+        mock_lock_instance = MagicMock()
+        mock_lock.return_value = mock_lock_instance
+
         mock_process = MagicMock()
         mock_process.stdout = iter(["test_folder/new_file.jpg\n"])
         MockPopen.return_value.__enter__.return_value = mock_process
@@ -58,6 +66,12 @@ class TestFolderObserver(unittest.TestCase):
         ):
             self.observer._observe()  # pylint: disable=protected-access
             mock_wait.assert_called_once_with("test_folder/new_file.jpg")
+            mock_cache.assert_called_with(
+                yolo_model_filename="yolov8s_101425.pt",
+                classifier_model_filename="colorbw_111325.h5",
+                print_progress=True,
+            )
+
             # Verify threading.Thread was called with _handle_new_file
             # as target
             MockThread.assert_called_once()

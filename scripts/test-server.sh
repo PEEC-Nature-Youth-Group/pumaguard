@@ -37,6 +37,16 @@ if (( server_started != 1 )); then
     exit 1
 fi
 
+api_available=0
+echo -n "Waiting for API to report status"
+while true; do
+    if [[ $(curl --silent http://localhost:5000/api/status | jq --raw-output .status) == running ]]; then
+        break
+    fi
+    sleep 1
+done
+echo
+
 observer_started=0
 echo -n "Waiting for server to start observer"
 for i in {1..60}; do

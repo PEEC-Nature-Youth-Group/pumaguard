@@ -65,7 +65,7 @@ isort: install-dev
 
 .PHONY: mypy
 mypy: install-dev
-	uv run mypy --install-types --non-interactive --check-untyped-defs pumaguard
+	. .venv/bin/activate && mypy --install-types --non-interactive --check-untyped-defs pumaguard
 
 .PHONY: bashate
 bashate: install-dev

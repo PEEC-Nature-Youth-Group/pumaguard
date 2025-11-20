@@ -2,6 +2,15 @@
 requires = ["setuptools >= 61.0", "wheel", "setuptools-scm >= 8.0"]
 build-backend = "setuptools.build_meta"
 
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
 [project]
 name = "pumaguard"
 dynamic = ["version"]
@@ -16,10 +25,11 @@ dependencies = [
     "flask-cors ~= 6.0",
     "matplotlib ~= 3.10",
     "packaging ~= 25.0",
-    "pandas ~= 2.3",
     "pillow ~= 11.1",
     "pyyaml ~= 6.0",
-    "tensorflow ~= 2.20",
+    "tensorflow-cpu ~= 2.20; platform_machine != 'aarch64' and platform_machine != 'arm64'",
+    "tensorflow ~= 2.20; platform_machine == 'aarch64' or platform_machine == 'arm64'",
+    "torch ~= 2.9",
     "ultralytics ~= 8.3",
     "requests ~= 2.32",
 ]
@@ -40,9 +50,7 @@ dev = [
 ]
 extra-dev = [
     "ipykernel ~= 6.29",
-    "opencv-python ~= 4.11",
     "plotly ~= 6.0",
-    "scipy ~= 1.15",
 ]
 # and-cuda = ["tensorflow-and-cuda ~= 2.19; platform_system != 'Windows'"]
 

@@ -4,6 +4,7 @@ Some utility functions.
 
 # pylint: disable=wrong-import-position
 
+import csv
 import datetime
 import gc
 import glob
@@ -26,7 +27,6 @@ import numpy as np
 import PIL
 
 matplotlib.use("Agg")
-import pandas
 import tensorflow as tf  # type: ignore
 import ultralytics
 
@@ -618,8 +618,20 @@ def classify_image_two_stage(
     # Write CSV outputs
     det_csv = "test_detections_predictions.csv"
     img_csv = "test_image_summary.csv"
-    pandas.DataFrame(all_rows).to_csv(det_csv, index=False)
-    pandas.DataFrame(image_summary).to_csv(img_csv, index=False)
+
+    # Write detection predictions CSV
+    if all_rows:
+        with open(det_csv, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=all_rows[0].keys())
+            writer.writeheader()
+            writer.writerows(all_rows)
+
+    # Write image summary CSV
+    if image_summary:
+        with open(img_csv, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=image_summary[0].keys())
+            writer.writeheader()
+            writer.writerows(image_summary)
 
     logger.debug("probabilities: %s", det_probs)
     if len(det_probs) == 0:

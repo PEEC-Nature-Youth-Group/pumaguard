@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
       - name: Archive submodules
@@ -116,7 +116,7 @@ jobs:
       - compress-submodules
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: false
       - uses: ./.github/actions/clean-runner
@@ -147,7 +147,7 @@ jobs:
       - build-python
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
@@ -188,7 +188,7 @@ jobs:
       - get-version
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -236,7 +236,7 @@ jobs:
       - get-version
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
@@ -276,7 +276,7 @@ jobs:
     permissions: write-all
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/download-artifact@v4
       - uses: ./.github/actions/clean-runner
       - name: Upload release artifacts
@@ -309,7 +309,7 @@ jobs:
       - build-python
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
@@ -344,7 +344,7 @@ jobs:
       - build-snap
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models
@@ -380,7 +380,7 @@ jobs:
       - build-python
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
         with:
@@ -416,7 +416,7 @@ jobs:
       - build-snap
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models
@@ -461,7 +461,7 @@ jobs:
     if: false
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v4
       - name: Unpack models

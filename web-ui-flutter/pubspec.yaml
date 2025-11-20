@@ -2,7 +2,7 @@ name: pumaguard_ui
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -35,6 +35,18 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # HTTP requests
+  http: ^1.1.0
+
+  # State management
+  provider: ^6.1.0
+
+  # JSON serialization
+  json_annotation: ^4.8.1
+
+  # Intl for date formatting
+  intl: ^0.19.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -46,12 +58,15 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # JSON serialization code generator
+  build_runner: ^2.4.0
+  json_serializable: ^6.7.0
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

@@ -110,10 +110,10 @@ parts:
       install --mode 0755 pumaguard/completions/pumaguard-completions.sh ${CRAFT_PART_INSTALL}/bin/bash-completions.sh
     stage-packages:
       - libgl1
-    stage:
-      - bin
-      - lib/python3.12/site-packages/pumaguard*
-      - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/*
+    # stage:
+    #   - bin
+    #   - lib/python3.12/site-packages/pumaguard*
+    #   - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/*
 
   inotify:
     plugin: nil

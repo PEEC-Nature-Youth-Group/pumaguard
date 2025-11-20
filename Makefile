@@ -44,8 +44,14 @@ install-dev: .venv
 test: install-dev
 	uv run pytest --verbose --cov=pumaguard --cov-report=term-missing
 
+.PHONY: test-ui
+test-ui:
+	cd web-ui-flutter; dart format --set-exit-if-changed lib test
+	cd web-ui-flutter; flutter analyze
+	cd web-ui-flutter; flutter test
+
 .PHONY: build
-build: assemble install-dev
+build: assemble install-dev build-ui
 	uv build
 
 .PHONY: lint
@@ -183,6 +189,10 @@ add-model:
         yq --inplace ".\"$(NEW_MODEL)\".fragments.\"$${fragment}\".sha256sum = \"$${checksum}\"" ../pumaguard/model-registry.yaml; \
     done
 
-.PHONY: web-ui
-web-ui: install
+.PHONY: build-ui
+build-ui: install
 	cd web-ui-flutter; flutter build web --wasm
+
+.PHONY: run-server
+run-server: install build-ui
+	uv run pumaguard server

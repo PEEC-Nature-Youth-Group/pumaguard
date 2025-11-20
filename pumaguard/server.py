@@ -331,7 +331,7 @@ def main(options: argparse.Namespace, presets: Preset):
         presets.print_download_progress = False
 
     logger.debug("Starting web UI")
-    webui = WebUI(presets=presets)
+    webui = WebUI(presets=presets, host="0.0.0.0")
     webui.start()
 
     logger.debug("Getting folder manager")

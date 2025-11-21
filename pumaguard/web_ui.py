@@ -26,6 +26,9 @@ from flask import (
 from flask_cors import (
     CORS,
 )
+from yaml.representer import (
+    YAMLError,
+)
 from zeroconf import (
     ServiceInfo,
     Zeroconf,
@@ -194,17 +197,45 @@ class WebUI:
                     raise ValueError("Did not receive any settings")
 
                 for key, value in data.items():
-                    logger.debug("Trying to update %s", key)
                     if key in allowed_settings:
                         logger.debug("Updating %s with %s", key, value)
-                        setattr(self.presets, key, value)
+                        # Convert hyphenated names to underscored attribute
+                        # names
+                        attr_name = key.replace("-", "_").replace(
+                            "YOLO_", "yolo_"
+                        )
+                        setattr(self.presets, attr_name, value)
                     else:
-                        logger.debug("Unknown setting %s", key)
-                        raise ValueError(f"Ignoring unknown setting {key}")
+                        logger.debug(
+                            "Skipping unknown/read-only setting: %s", key
+                        )
 
-                logger.info("Settings updated successfully")
+                # Auto-save settings to disk after updating
+                try:
+                    filepath = self.presets.settings_file
+                    settings_dict = {}
+                    for key, value in self.presets:
+                        settings_dict[key] = value
+
+                    with open(filepath, "w", encoding="utf-8") as f:
+                        yaml.dump(settings_dict, f, default_flow_style=False)
+
+                    logger.info("Settings updated and saved to %s", filepath)
+                except YAMLError:
+                    logger.exception(
+                        "Error saving settings"
+                    )  # logs stack trace too
+                    return (
+                        jsonify(
+                            {
+                                "error": "Settings updated but failed to save due to an internal error"  # pylint: disable=line-too-long
+                            }
+                        ),
+                        500,
+                    )
+
                 return jsonify(
-                    {"success": True, "message": "Settings updated"}
+                    {"success": True, "message": "Settings updated and saved"}
                 )
             except ValueError as e:
                 logger.error("Error updating settings: %s", e)

@@ -50,6 +50,9 @@ dependencies:
   # Web APIs (modern replacement for dart:html)
   web: ^1.1.0
 
+  # mDNS service discovery
+  multicast_dns: ^0.3.2+7
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

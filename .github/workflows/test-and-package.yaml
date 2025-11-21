@@ -246,6 +246,7 @@ jobs:
     needs:
       - test-python
       - lint-python
+      - test-ui
       - lint-bash
       - get-version
 

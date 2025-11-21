@@ -4,9 +4,14 @@ import '../models/status.dart';
 import '../models/settings.dart';
 
 class ApiService {
-  final String baseUrl;
+  String baseUrl;
 
   ApiService({this.baseUrl = 'http://localhost:5000'});
+
+  /// Update the base URL (useful when connecting to a discovered server)
+  void setBaseUrl(String url) {
+    baseUrl = url.replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
+  }
 
   /// Get system status
   Future<Status> getStatus() async {

@@ -89,6 +89,63 @@ For example, if you want to train the model from row 1 in the notebook,
 scripts/train.py --notebook 1
 ```
 
+## Web UI
+
+PumaGuard includes a modern Flutter-based web interface for monitoring and configuration.
+
+### Starting the Web UI
+
+**Using uv:**
+
+```console
+uv run pumaguard-webui --host 0.0.0.0 --port 5000
+```
+
+**Using poetry:**
+
+```console
+poetry run pumaguard-webui --host 0.0.0.0 --port 5000
+```
+
+The web interface will be accessible at `http://your-server-ip:5000` or `http://pumaguard.local:5000` (if mDNS is enabled).
+
+### mDNS/Zeroconf Support
+
+PumaGuard supports automatic server discovery via mDNS (also known as Bonjour or Zeroconf). This allows clients to connect using a friendly hostname like `pumaguard.local` instead of needing to know the IP address.
+
+**Setup mDNS on the server:**
+
+- **Linux**: Install Avahi
+  ```bash
+  sudo apt install avahi-daemon avahi-utils
+  sudo systemctl enable avahi-daemon
+  sudo systemctl start avahi-daemon
+  ```
+
+- **macOS**: Built-in, no setup needed
+
+- **Windows**: Install [Bonjour Print Services](https://support.apple.com/kb/DL999)
+
+**Using mDNS:**
+
+Once mDNS is set up, your server will be automatically discoverable at:
+```
+http://pumaguard.local:5000
+```
+
+You can customize the hostname:
+```console
+pumaguard-webui --mdns-name my-server
+# Accessible at: http://my-server.local:5000
+```
+
+Or disable mDNS:
+```console
+pumaguard-webui --no-mdns
+```
+
+For detailed mDNS setup instructions including Docker/container configurations, see [docs/MDNS_SETUP.md](docs/MDNS_SETUP.md).
+
 ## Running the server
 
 The `pumaguard-server` watches a folder and classifies new files as they are

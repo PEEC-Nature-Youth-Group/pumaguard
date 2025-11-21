@@ -222,11 +222,13 @@ class WebUI:
 
                     logger.info("Settings updated and saved to %s", filepath)
                 except YAMLError as save_error:
-                    logger.error("Error saving settings: %s", save_error)
+                    logger.exception(
+                        "Error saving settings"
+                    )  # logs stack trace too
                     return (
                         jsonify(
                             {
-                                "error": f"Settings updated but failed to save: {save_error}"  # pylint: disable=line-too-long
+                                "error": "Settings updated but failed to save due to an internal error"
                             }
                         ),
                         500,

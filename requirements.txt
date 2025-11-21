@@ -3,3 +3,4 @@ keras
 livelossplot
 matplotlib
 tensorflow
+zeroconf

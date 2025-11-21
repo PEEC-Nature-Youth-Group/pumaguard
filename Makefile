@@ -11,13 +11,13 @@ NEW_MODEL ?=
 
 .PHONY: apidoc
 apidoc: .venv
-	uv pip install --requirement docs/source/requirements.txt
+	uv sync --extra docs
 	. .venv/bin/activate && cd docs && sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
 docs: .venv
 	@echo "building documentation webpage"
-	uv pip install --requirement docs/source/requirements.txt
+	uv sync --extra docs
 	. .venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
@@ -46,13 +46,13 @@ test: install-dev
 
 .PHONY: test-ui
 test-ui:
-	cd pumaguard/web-ui-flutter; flutter pub get
-	cd pumaguard/web-ui-flutter; dart format --set-exit-if-changed lib test
-	cd pumaguard/web-ui-flutter; flutter analyze
-	cd pumaguard/web-ui-flutter; flutter test
+	cd pumaguard-ui; flutter pub get
+	cd pumaguard-ui; dart format --set-exit-if-changed lib test
+	cd pumaguard-ui; flutter analyze
+	cd pumaguard-ui; flutter test
 
 .PHONY: build
-build: assemble install-dev build-ui
+build: install-dev build-ui
 	uv build
 
 .PHONY: lint
@@ -180,7 +180,7 @@ test-server: install
 	./scripts/test-server.sh
 
 .PHONY: pre-commit
-pre-commit: lint docs poetry
+pre-commit: lint docs poetry test-ui
 	$(MAKE) test
 
 .PHONY: add-model
@@ -192,8 +192,10 @@ add-model:
 
 .PHONY: build-ui
 build-ui: install
-	cd pumaguard/web-ui-flutter; flutter pub get
-	cd pumaguard/web-ui-flutter; flutter build web --wasm
+	cd pumaguard-ui; flutter pub get
+	cd pumaguard-ui; flutter build web --wasm
+	mkdir -p pumaguard/pumaguard-ui
+	rsync -av --delete pumaguard-ui/build/web/ pumaguard/pumaguard-ui/
 
 .PHONY: run-server
 run-server: install build-ui

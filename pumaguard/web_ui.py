@@ -5,6 +5,7 @@ Web-UI for Pumaguard.
 import argparse
 import logging
 import os
+import socket
 import threading
 import time
 from pathlib import (
@@ -24,6 +25,10 @@ from flask import (
 )
 from flask_cors import (
     CORS,
+)
+from zeroconf import (
+    ServiceInfo,
+    Zeroconf,
 )
 
 from pumaguard.presets import (
@@ -49,12 +54,14 @@ class WebUI:
     The class for the WebUI.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         presets: Preset,
         host: str = "127.0.0.1",
         port: int = 5000,
         debug: bool = False,
+        mdns_enabled: bool = True,
+        mdns_name: str = "pumaguard",
     ):
         """
         Initialize the WebUI server.
@@ -64,20 +71,77 @@ class WebUI:
             port: The port to bind to (default: 5000)
             debug: Enable debug mode (default: False)
             presets: Preset instance to manage settings
+            mdns_enabled: Enable mDNS/Zeroconf service advertisement
+                          (default: True)
+            mdns_name: mDNS service name (default: pumaguard)
         """
         self.host: str = host
         self.port: int = port
         self.debug: bool = debug
+        self.mdns_enabled: bool = mdns_enabled
+        self.mdns_name: str = mdns_name
         self.app: Flask = Flask(__name__)
-        CORS(self.app)
+
+        # Configure CORS to allow all origins (for development and container
+        # access), This allows the web app to work when accessed from any
+        # IP/hostname
+        CORS(
+            self.app,
+            resources={r"/*": {"origins": "*"}},
+            allow_headers=["Content-Type"],
+            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        )
+
         self.server_thread: threading.Thread | None = None
         self._running: bool = False
         self.presets: Preset = presets
         self.image_directories: list[str] = []
 
+        # mDNS/Zeroconf support
+        self.zeroconf: Zeroconf | None = None
+        self.service_info: ServiceInfo | None = None
+
         # Determine the Flutter build directory
-        self.flutter_dir: Path = Path(__file__).parent / "web-ui-flutter"
-        self.build_dir: Path = self.flutter_dir / "build" / "web"
+        # Try multiple locations for flexibility:
+        # 1. Package data location (installed): pumaguard-ui/ (built files
+        #    copied here)
+        # 2. Development location: ../../pumaguard-ui/build/web
+        # 3. Old location (legacy): web-ui-flutter/build/web
+
+        # Package data location - built files copied directly to pumaguard-ui/
+        pkg_build_dir = Path(__file__).parent / "pumaguard-ui"
+
+        # Development location (relative to package directory)
+        dev_build_dir = (
+            Path(__file__).parent.parent.parent
+            / "pumaguard-ui"
+            / "build"
+            / "web"
+        )
+
+        # Legacy location
+        old_build_dir = (
+            Path(__file__).parent / "web-ui-flutter" / "build" / "web"
+        )
+
+        # Choose the first one that exists and has index.html
+        if pkg_build_dir.exists() and (pkg_build_dir / "index.html").exists():
+            self.flutter_dir = pkg_build_dir
+            self.build_dir = pkg_build_dir
+        elif (
+            dev_build_dir.exists() and (dev_build_dir / "index.html").exists()
+        ):
+            self.flutter_dir = dev_build_dir.parent.parent
+            self.build_dir = dev_build_dir
+        elif (
+            old_build_dir.exists() and (old_build_dir / "index.html").exists()
+        ):
+            self.flutter_dir = old_build_dir.parent.parent
+            self.build_dir = old_build_dir
+        else:
+            # Default to package location even if not built yet
+            self.flutter_dir = pkg_build_dir
+            self.build_dir = pkg_build_dir
 
         self._setup_routes()
 
@@ -98,27 +162,6 @@ class WebUI:
                     + f"in the {self.flutter_dir} directory first.",
                     500,
                 )
-            return send_file(self.build_dir / "index.html")
-
-        @self.app.route("/<path:path>")
-        def serve_static(path):
-            """
-            Serve static files (JS, CSS, assets, etc.).
-            """
-            if path.startswith("api/"):
-                return jsonify({"error": "Not found"}), 404
-
-            if not self.build_dir.exists():
-                return (
-                    "Flutter web app not built. Please run "
-                    + "'flutter build web' "
-                    + f"in the {self.flutter_dir} directory first.",
-                    500,
-                )
-
-            file_path = self.build_dir / path
-            if file_path.exists() and file_path.is_file():
-                return send_from_directory(self.build_dir, path)
             return send_file(self.build_dir / "index.html")
 
         @self.app.route("/api/settings", methods=["GET"])
@@ -329,6 +372,14 @@ class WebUI:
         @self.app.route("/api/status", methods=["GET"])
         def get_status():
             """Get server status."""
+            # Add request info to help debug CORS and origin issues
+            origin = request.headers.get("Origin", "No Origin header")
+            host = request.headers.get("Host", "No Host header")
+
+            logger.debug(
+                "API status called - Origin: %s, Host: %s", origin, host
+            )
+
             return jsonify(
                 {
                     "status": "running",
@@ -336,8 +387,77 @@ class WebUI:
                     "directories_count": len(self.image_directories),
                     "host": self.host,
                     "port": self.port,
+                    "request_origin": origin,
+                    "request_host": host,
                 }
             )
+
+        @self.app.route("/api/diagnostic", methods=["GET"])
+        def get_diagnostic():
+            """
+            Get diagnostic information to help debug URL detection issues.
+            """
+            # Get all relevant request information
+            diagnostic_info = {
+                "server": {
+                    "host": self.host,
+                    "port": self.port,
+                    "flutter_dir": str(self.flutter_dir),
+                    "build_dir": str(self.build_dir),
+                    "build_exists": self.build_dir.exists(),
+                    "mdns_enabled": self.mdns_enabled,
+                    "mdns_name": self.mdns_name if self.mdns_enabled else None,
+                    "mdns_url": (
+                        f"http://{self.mdns_name}.local:{self.port}"
+                        if self.mdns_enabled
+                        else None
+                    ),
+                    "local_ip": self._get_local_ip(),
+                },
+                "request": {
+                    "url": request.url,
+                    "base_url": request.base_url,
+                    "host": request.headers.get("Host", "N/A"),
+                    "origin": request.headers.get("Origin", "N/A"),
+                    "referer": request.headers.get("Referer", "N/A"),
+                    "user_agent": request.headers.get("User-Agent", "N/A"),
+                },
+                "expected_behavior": {
+                    "flutter_app_should_detect": f"{request.scheme}://{request.host}",  # pylint: disable=line-too-long
+                    "api_calls_should_go_to": f"{request.scheme}://{request.host}/api/...",  # pylint: disable=line-too-long
+                },
+                "troubleshooting": {
+                    "if_api_calls_go_to_localhost": "Browser is using cached old JavaScript - clear cache",  # pylint: disable=line-too-long
+                    "if_page_doesnt_load": "Check that Flutter app is built: make build-ui",  # pylint: disable=line-too-long
+                    "if_cors_errors": "Check browser console for details",
+                },
+            }
+
+            logger.info(
+                "Diagnostic endpoint called from: %s", request.remote_addr
+            )
+            return jsonify(diagnostic_info)
+
+        @self.app.route("/<path:path>")
+        def serve_static(path):
+            """
+            Serve static files (JS, CSS, assets, etc.).
+            """
+            if path.startswith("api/"):
+                return jsonify({"error": "Not found"}), 404
+
+            if not self.build_dir.exists():
+                return (
+                    "Flutter web app not built. Please run "
+                    + "'flutter build web' "
+                    + f"in the {self.flutter_dir} directory first.",
+                    500,
+                )
+
+            file_path = self.build_dir / path
+            if file_path.exists() and file_path.is_file():
+                return send_from_directory(self.build_dir, path)
+            return send_file(self.build_dir / "index.html")
 
     def add_image_directory(self, directory: str):
         """
@@ -349,6 +469,91 @@ class WebUI:
         if directory not in self.image_directories:
             self.image_directories.append(directory)
             logger.info("Added image directory: %s", directory)
+
+    def _get_local_ip(self) -> str:
+        """
+        Get the local IP address of this machine.
+
+        Returns:
+            Local IP address as string, or '127.0.0.1' if unable to determine
+        """
+        try:
+            # Create a socket to determine local IP
+            # This doesn't actually connect, just determines routing
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except OSError as e:
+            logger.warning("Could not determine local IP: %s", e)
+            return "127.0.0.1"
+
+    def _start_mdns(self):
+        """Start mDNS/Zeroconf service advertisement."""
+        if not self.mdns_enabled:
+            return
+
+        try:
+            # Get local IP address
+            local_ip = self._get_local_ip()
+
+            # Create Zeroconf instance
+            self.zeroconf = Zeroconf()
+
+            # Create service info
+            # Service type: _http._tcp.local.
+            service_type = "_http._tcp.local."
+            service_name = f"{self.mdns_name}.{service_type}"
+
+            # Get IP as bytes
+            ip_bytes = socket.inet_aton(local_ip)
+
+            # Create service info
+            self.service_info = ServiceInfo(
+                service_type,
+                service_name,
+                addresses=[ip_bytes],
+                port=self.port,
+                properties={
+                    "version": "1.0.0",
+                    "path": "/",
+                    "app": "pumaguard",
+                },
+                server=f"{self.mdns_name}.local.",
+            )
+
+            # Register service
+            self.zeroconf.register_service(self.service_info)
+
+            logger.info(
+                "mDNS service registered: %s at %s:%d",
+                service_name,
+                local_ip,
+                self.port,
+            )
+            logger.info(
+                "Server accessible at: http://%s.local:%d",
+                self.mdns_name,
+                self.port,
+            )
+        except OSError as e:
+            logger.error("Failed to start mDNS service: %s", e)
+            self.zeroconf = None
+            self.service_info = None
+
+    def _stop_mdns(self):
+        """Stop mDNS/Zeroconf service advertisement."""
+        if self.zeroconf and self.service_info:
+            try:
+                self.zeroconf.unregister_service(self.service_info)
+                self.zeroconf.close()
+                logger.info("mDNS service unregistered")
+            except OSError as e:
+                logger.error("Error stopping mDNS service: %s", e)
+            finally:
+                self.zeroconf = None
+                self.service_info = None
 
     def _run_server(self):
         """Internal method to run the Flask server."""
@@ -372,6 +577,9 @@ class WebUI:
         )
         self._running = True
 
+        # Start mDNS service
+        self._start_mdns()
+
         if self.debug:
             self._run_server()
         else:
@@ -390,6 +598,10 @@ class WebUI:
             return
 
         self._running = False
+
+        # Stop mDNS service
+        self._stop_mdns()
+
         logger.info(
             "WebUI server stop requested (will stop when main program exits)"
         )
@@ -407,6 +619,17 @@ def main():
     )
     parser.add_argument(
         "--debug", action="store_true", help="Enable debug mode"
+    )
+    parser.add_argument(
+        "--no-mdns",
+        action="store_true",
+        help="Disable mDNS/Zeroconf service advertisement",
+    )
+    parser.add_argument(
+        "--mdns-name",
+        type=str,
+        default="pumaguard",
+        help="mDNS service name (default: pumaguard)",
     )
     parser.add_argument(
         "--settings", type=str, help="Load settings from YAML file"
@@ -431,7 +654,12 @@ def main():
         presets.load(args.settings)
 
     web_ui = WebUI(
-        presets=presets, host=args.host, port=args.port, debug=args.debug
+        presets=presets,
+        host=args.host,
+        port=args.port,
+        debug=args.debug,
+        mdns_enabled=not args.no_mdns,
+        mdns_name=args.mdns_name,
     )
     logger.debug("Serving UI from %s", web_ui.flutter_dir)
 

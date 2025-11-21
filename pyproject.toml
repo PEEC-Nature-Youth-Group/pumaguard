@@ -32,6 +32,7 @@ dependencies = [
     "torch ~= 2.9",
     "ultralytics ~= 8.3",
     "requests ~= 2.32",
+    "zeroconf ~= 0.136",
 ]
 
 [project.optional-dependencies]
@@ -52,6 +53,19 @@ extra-dev = [
     "ipykernel ~= 6.29",
     "plotly ~= 6.0",
 ]
+docs = [
+    "cloud-sptheme",
+    "matplotlib ~= 3.10",
+    "pandas ~= 2.3",
+    "pillow ~= 11.1",
+    "playsound3",
+    "sphinx-book-theme",
+    "sphinx-copybutton",
+    "sphinx-new-tab-link",
+    "sphinxcontrib-mermaid",
+    "tensorflow ~= 2.20",
+    "ultralytics ~= 8.3",
+]
 # and-cuda = ["tensorflow-and-cuda ~= 2.19; platform_system != 'Windows'"]
 
 [project.urls]
@@ -70,7 +84,7 @@ include = ["pumaguard*"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-pumaguard = ["web-ui-flutter/**/*"]
+pumaguard = ["pumaguard-ui/**/*"]
 
 [tool.isort]
 ensure_newline_before_comments = true
@@ -88,7 +102,7 @@ line-length = 79
 
 [tool.mypy]
 exclude = [
-    "^pumaguard/web-ui-flutter/",
+    "^pumaguard-ui/",
 ]
 
 [tool.basedpyright]

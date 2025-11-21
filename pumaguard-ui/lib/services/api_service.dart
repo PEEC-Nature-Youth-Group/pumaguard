@@ -1,23 +1,41 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../models/status.dart';
 import '../models/settings.dart';
 
 class ApiService {
-  String baseUrl;
+  String? _baseUrl;
 
-  ApiService({this.baseUrl = 'http://localhost:5000'});
+  ApiService({String? baseUrl}) : _baseUrl = baseUrl;
 
   /// Update the base URL (useful when connecting to a discovered server)
   void setBaseUrl(String url) {
-    baseUrl = url.replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
+    _baseUrl = url.replaceAll(RegExp(r'/$'), ''); // Remove trailing slash
+  }
+
+  /// Get the appropriate API URL for the given endpoint
+  /// On web, uses the browser's current origin (e.g., http://192.168.1.100:5000)
+  /// On mobile/desktop, uses the configured baseUrl or localhost:5000 as fallback
+  String getApiUrl(String endpoint) {
+    // 1. If we are on the Web, use the browser's current location
+    if (kIsWeb) {
+      // Uri.base.origin gives you "http://192.168.1.55:5000" or whatever the current IP is
+      // It includes the scheme (http/https) and the port if it's not 80/443.
+      return '${Uri.base.origin}$endpoint';
+    }
+    // 2. If we are on Mobile/Desktop, use configured baseUrl or default to localhost
+    else {
+      final base = _baseUrl ?? 'http://localhost:5000';
+      return '$base$endpoint';
+    }
   }
 
   /// Get system status
   Future<Status> getStatus() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/status'),
+        Uri.parse(getApiUrl('/api/status')),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -36,7 +54,7 @@ class ApiService {
   Future<Settings> getSettings() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/settings'),
+        Uri.parse(getApiUrl('/api/settings')),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -55,7 +73,7 @@ class ApiService {
   Future<bool> updateSettings(Settings settings) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/api/settings'),
+        Uri.parse(getApiUrl('/api/settings')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(settings.toJson()),
       );
@@ -76,7 +94,7 @@ class ApiService {
     try {
       final body = filepath != null ? jsonEncode({'filepath': filepath}) : '{}';
       final response = await http.post(
-        Uri.parse('$baseUrl/api/settings/save'),
+        Uri.parse(getApiUrl('/api/settings/save')),
         headers: {'Content-Type': 'application/json'},
         body: body,
       );
@@ -96,7 +114,7 @@ class ApiService {
   Future<bool> loadSettings(String filepath) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/settings/load'),
+        Uri.parse(getApiUrl('/api/settings/load')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'filepath': filepath}),
       );
@@ -116,7 +134,7 @@ class ApiService {
   Future<List<String>> getDirectories() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/directories'),
+        Uri.parse(getApiUrl('/api/directories')),
         headers: {'Content-Type': 'application/json'},
       );
 
@@ -136,7 +154,7 @@ class ApiService {
   Future<List<String>> addDirectory(String directory) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/directories'),
+        Uri.parse(getApiUrl('/api/directories')),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'directory': directory}),
       );
@@ -158,7 +176,7 @@ class ApiService {
   Future<List<String>> removeDirectory(int index) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/api/directories/$index'),
+        Uri.parse(getApiUrl('/api/directories/$index')),
         headers: {'Content-Type': 'application/json'},
       );
 

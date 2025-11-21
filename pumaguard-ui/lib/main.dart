@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
-import 'utils/platform_url.dart';
 
 void main() {
   runApp(const PumaGuardApp());
@@ -14,7 +13,7 @@ class PumaGuardApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Provider<ApiService>(
-      create: (_) => ApiService(baseUrl: getApiBaseUrl()),
+      create: (_) => ApiService(),
       child: MaterialApp(
         title: 'PumaGuard',
         debugShowCheckedModeBanner: false,

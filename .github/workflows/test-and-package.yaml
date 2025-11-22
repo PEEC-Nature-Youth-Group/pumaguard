@@ -100,6 +100,9 @@ jobs:
           pushd training-data
           git archive --output ../training-data.tar.gz HEAD verification Stables testlion_100525
           popd
+          pushd pumaguard-ui
+          git archive --output ../pumaguard-ui.tar.gz HEAD
+          popd
       - uses: actions/upload-artifact@v4
         with:
           name: submodule-models
@@ -108,6 +111,10 @@ jobs:
         with:
           name: submodule-data
           path: training-data.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-data
+          path: pumaguard-ui.tar.gz
 
   test-python:
     runs-on: ubuntu-latest
@@ -143,12 +150,19 @@ jobs:
 
   test-ui:
     runs-on: ubuntu-latest
+    needs:
+      - compress-submodules
 
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: true
       - uses: ./.github/actions/clean-runner
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-data
+      - name: Unpack ui source
+        run: |
+          set -e -u -x
+          tar -C pumaguard-ui -xf pumaguard-ui.tar.gz
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
       - name: Test UI
@@ -214,6 +228,13 @@ jobs:
         run: |
           set -e -u -x
           tar -C pumaguard-models -xf pumaguard-models.tar.gz
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-data
+      - name: Unpack ui source
+        run: |
+          set -e -u -x
+          tar -C pumaguard-ui -xf pumaguard-ui.tar.gz
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
         with:

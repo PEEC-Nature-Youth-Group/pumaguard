@@ -5,7 +5,9 @@ The presets for each model.
 import copy
 import logging
 import os
-from pathlib import Path
+from pathlib import (
+    Path,
+)
 from typing import (
     Tuple,
 )
@@ -37,14 +39,29 @@ def get_default_settings_file() -> str:
     Get the default settings file path using XDG standards.
 
     Checks in order:
-    1. XDG_CONFIG_HOME/pumaguard/settings.yaml
-       (e.g., ~/.config/pumaguard/settings.yaml)
-    2. Current directory pumaguard-settings.yaml
-       (for backwards compatibility)
+    1. If running as snap: SNAP_USER_DATA/pumaguard/settings.yaml
+    2. XDG_CONFIG_HOME/pumaguard/settings.yaml
+    (e.g., ~/.config/pumaguard/settings.yaml)
+    3. Current directory pumaguard-settings.yaml
+    (for backwards compatibility)
 
     Returns:
         Path to the settings file
     """
+    # Check if running as snap (strict confinement requires snap path)
+    snap_user_data = os.environ.get("SNAP_USER_DATA")
+    if snap_user_data:
+        snap_config_dir = Path(snap_user_data) / "pumaguard"
+        snap_settings_file = snap_config_dir / "settings.yaml"
+
+        # If snap settings file exists, use it
+        if snap_settings_file.exists():
+            return str(snap_settings_file)
+
+        # Create snap config directory if needed and return path
+        snap_config_dir.mkdir(parents=True, exist_ok=True)
+        return str(snap_settings_file)
+
     # XDG compliant location
     xdg_config_dir = get_xdg_config_home() / "pumaguard"
     xdg_settings_file = xdg_config_dir / "settings.yaml"

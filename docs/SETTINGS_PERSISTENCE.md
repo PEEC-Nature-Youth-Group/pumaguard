@@ -204,7 +204,31 @@ setattr(self.presets, attr_name, value)
 
 ## Settings File Location
 
-The settings file path is determined by:
+The default settings file location is determined by `get_default_settings_file()` in `pumaguard/presets.py`:
+
+### Location Priority (in order):
+
+1. **Snap Environment** (when `SNAP_USER_DATA` is set):
+   ```
+   $SNAP_USER_DATA/pumaguard/settings.yaml
+   ```
+   Used when running as a snap with strict confinement to ensure the app has write access.
+
+2. **XDG Config Home** (standard Linux):
+   ```
+   $XDG_CONFIG_HOME/pumaguard/settings.yaml
+   (typically ~/.config/pumaguard/settings.yaml)
+   ```
+
+3. **Legacy Location** (backwards compatibility):
+   ```
+   ./pumaguard-settings.yaml
+   (in current directory)
+   ```
+
+### Model-Specific Settings
+
+The model-specific settings file path is determined by:
 
 ```python
 @property
@@ -220,6 +244,10 @@ def settings_file(self):
 ```
 /path/to/pumaguard-models/model_settings_1_undefined_128_128.yaml
 ```
+
+### Snap Confinement Note
+
+When running as a snap, the app uses `$SNAP_USER_DATA/pumaguard/` for settings storage because strict confinement prevents access to standard XDG locations like `~/.config`. The snap environment automatically sets `SNAP_USER_DATA` to a writable location specific to the snap.
 
 ## Flutter UI Implementation
 

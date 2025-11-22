@@ -46,6 +46,7 @@ dev = [
     "isort ~= 6.0",
     "mypy ~= 1.18",
     "passlib ~= 1.7",
+    "pip ~= 24.3",
     "pylint ~= 3.3",
     "pytest-cov ~= 7.0",
     "pytest ~= 8.3",

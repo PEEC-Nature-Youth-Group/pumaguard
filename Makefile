@@ -200,3 +200,19 @@ build-ui: install
 .PHONY: run-server
 run-server: install build-ui
 	uv run --frozen pumaguard server
+
+.PHONY: server-container-test
+server-container-test:
+	if [ -n $$(lxc list --format json | jq --raw-output '.[] | select(.name == "pumaguard") | .name') ]; then lxc delete --force pumaguard; fi
+	lxc init ubuntu:noble pumaguard
+	gio trash dist
+	$(MAKE) build
+	lxc config device add pumaguard dist disk source=$${PWD}/dist path=/dist
+	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set pumaguard raw.idmap -
+	lxc start pumaguard
+	lxc exec pumaguard -- cloud-init status --wait
+	lxc exec pumaguard -- apt-get update
+	lxc exec pumaguard -- apt-get install --no-install-recommends --yes pipx
+	lxc exec pumaguard -- sudo --user ubuntu --login pipx install --verbose --pip-args="--verbose" /$$(ls dist/*whl)
+	lxc exec pumaguard -- sudo --user ubuntu --login pipx ensurepath
+	lxc exec pumaguard -- sudo --user ubuntu --login pumaguard server --debug

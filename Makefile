@@ -11,13 +11,13 @@ NEW_MODEL ?=
 
 .PHONY: apidoc
 apidoc: .venv
-	uv sync --extra docs
+	uv sync --extra docs --frozen
 	. .venv/bin/activate && cd docs && sphinx-apidoc -o source --force ../pumaguard
 
 .PHONY: docs
 docs: .venv
 	@echo "building documentation webpage"
-	uv sync --extra docs
+	uv sync --extra docs --frozen
 	. .venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
@@ -38,11 +38,11 @@ install: assemble .venv
 
 .PHONY: install-dev
 install-dev: .venv
-	uv pip install --editable ".[dev]"
+	uv sync --extra dev --frozen
 
 .PHONY: test
 test: install-dev
-	uv run pytest --verbose --cov=pumaguard --cov-report=term-missing
+	uv run --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: test-ui
 test-ui:
@@ -60,15 +60,15 @@ lint: black pylint isort mypy bashate ansible-lint
 
 .PHONY: black
 black: install-dev
-	uv run black --check pumaguard
+	uv run --frozen black --check pumaguard
 
 .PHONY: pylint
 pylint: install-dev
-	uv run pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+	uv run --frozen pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	uv run isort pumaguard tests scripts
+	uv run --frozen isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
@@ -76,12 +76,12 @@ mypy: install-dev
 
 .PHONY: bashate
 bashate: install-dev
-	uv run bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	uv run --frozen bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run ansible-lint -v scripts/configure-device.yaml
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run ansible-lint -v scripts/configure-laptop.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run --frozen ansible-lint -v scripts/configure-device.yaml
+	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run --frozen ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:
@@ -160,7 +160,7 @@ configure-laptop: install-dev
 
 .PHONY: verify-poetry
 verify-poetry: install
-	$(MAKE) EXE="uv run pumaguard" verify
+	$(MAKE) EXE="uv run --frozen pumaguard" verify
 
 .PHONY: verify-snap
 verify-snap:
@@ -199,4 +199,4 @@ build-ui: install
 
 .PHONY: run-server
 run-server: install build-ui
-	uv run pumaguard server
+	uv run --frozen pumaguard server

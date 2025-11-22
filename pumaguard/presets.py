@@ -5,6 +5,7 @@ The presets for each model.
 import copy
 import logging
 import os
+from pathlib import Path
 from typing import (
     Tuple,
 )
@@ -18,6 +19,59 @@ from packaging import (
 logger = logging.getLogger("PumaGuard")
 
 
+def get_xdg_config_home() -> Path:
+    """
+    Get the XDG config home directory according to XDG Base Directory spec.
+
+    Returns:
+        Path to XDG_CONFIG_HOME (defaults to ~/.config if not set)
+    """
+    xdg_config = os.environ.get("XDG_CONFIG_HOME")
+    if xdg_config:
+        return Path(xdg_config)
+    return Path.home() / ".config"
+
+
+def get_default_settings_file() -> str:
+    """
+    Get the default settings file path using XDG standards.
+
+    Checks in order:
+    1. XDG_CONFIG_HOME/pumaguard/settings.yaml
+       (e.g., ~/.config/pumaguard/settings.yaml)
+    2. Current directory pumaguard-settings.yaml
+       (for backwards compatibility)
+
+    Returns:
+        Path to the settings file
+    """
+    # XDG compliant location
+    xdg_config_dir = get_xdg_config_home() / "pumaguard"
+    xdg_settings_file = xdg_config_dir / "settings.yaml"
+
+    # Legacy location (current directory)
+    legacy_settings_file = Path("pumaguard-settings.yaml")
+
+    # If the XDG file exists, use it
+    if xdg_settings_file.exists():
+        return str(xdg_settings_file)
+
+    # If the legacy file exists, use it but log a warning
+    if legacy_settings_file.exists():
+        logger.info(
+            "Using legacy settings file location: %s", legacy_settings_file
+        )
+        logger.info(
+            "Consider moving it to XDG location: %s", xdg_settings_file
+        )
+        return str(legacy_settings_file)
+
+    # Neither exists, return XDG location as default (will be created if
+    # needed). Create the directory if it doesn't exist.
+    xdg_config_dir.mkdir(parents=True, exist_ok=True)
+    return str(xdg_settings_file)
+
+
 # pylint: disable=too-many-public-methods
 class Preset:
     """
@@ -29,6 +83,7 @@ class Preset:
     _model_file: str = ""
 
     def __init__(self):
+        self.settings_file = get_default_settings_file()
         self.yolo_min_size = 0.02
         self.yolo_conf_thresh = 0.25
         self.yolo_max_dets = 12
@@ -465,15 +520,18 @@ class Preset:
         )
 
     @property
-    def settings_file(self):
+    def settings_file(self) -> str:
         """
         Get the settings file.
         """
-        return os.path.realpath(
-            f"{self.base_output_directory}/"
-            f"model_settings_{self.notebook_number}_{self.model_version}"
-            f"_{self.image_dimensions[0]}_{self.image_dimensions[1]}.yaml"
-        )
+        return self._settings_file
+
+    @settings_file.setter
+    def settings_file(self, filename: str):
+        """
+        Set the settings file.
+        """
+        self._settings_file = filename
 
     @property
     def color_mode(self) -> str:

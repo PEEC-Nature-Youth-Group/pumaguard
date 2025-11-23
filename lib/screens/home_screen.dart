@@ -4,6 +4,7 @@ import '../models/status.dart';
 import '../services/api_service.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
+import 'image_browser_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -194,6 +195,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const DirectoriesScreen(),
+                  ),
+                ).then((_) => _loadStatus());
+              },
+            ),
+            const Divider(),
+            _buildActionButton(
+              icon: Icons.photo_library,
+              label: 'Image Browser',
+              description: 'Browse and download images from watched folders',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ImageBrowserScreen(),
                   ),
                 ).then((_) => _loadStatus());
               },

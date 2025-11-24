@@ -27,8 +27,8 @@ dependencies = [
     "packaging ~= 25.0",
     "pillow ~= 11.1",
     "pyyaml ~= 6.0",
-    "tensorflow-cpu ~= 2.20; platform_machine != 'aarch64' and platform_machine != 'arm64'",
-    "tensorflow ~= 2.20; platform_machine == 'aarch64' or platform_machine == 'arm64'",
+    "tensorflow-cpu >= 2.18, < 2.20; platform_machine != 'aarch64' and platform_machine != 'arm64'",
+    "tensorflow >= 2.18, < 2.20; platform_machine == 'aarch64' or platform_machine == 'arm64'",
     "torch ~= 2.9",
     "ultralytics ~= 8.3",
     "requests ~= 2.32",
@@ -65,7 +65,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-new-tab-link",
     "sphinxcontrib-mermaid",
-    "tensorflow ~= 2.20",
+    "tensorflow >= 2.18, < 2.20",
     "ultralytics ~= 8.3",
 ]
 # and-cuda = ["tensorflow-and-cuda ~= 2.19; platform_system != 'Windows'"]

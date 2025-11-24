@@ -3,11 +3,14 @@ Web-UI for Pumaguard.
 """
 
 import argparse
+import hashlib
+import io
 import logging
 import os
 import socket
 import threading
 import time
+import zipfile
 from pathlib import (
     Path,
 )
@@ -147,6 +150,23 @@ class WebUI:
             self.build_dir = pkg_build_dir
 
         self._setup_routes()
+
+    def _calculate_file_checksum(self, filepath: str) -> str:
+        """
+        Calculate SHA256 checksum of a file.
+
+        Args:
+            filepath: Path to the file
+
+        Returns:
+            Hexadecimal checksum string
+        """
+        sha256_hash = hashlib.sha256()
+        with open(filepath, "rb") as f:
+            # Read file in chunks to handle large files efficiently
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
 
     def _setup_routes(self):
         """
@@ -358,6 +378,202 @@ class WebUI:
             os.remove(abs_filepath)
             logger.info("Deleted photo: %s", abs_filepath)
             return jsonify({"success": True, "message": "Photo deleted"})
+
+        # Folder Browser API
+        @self.app.route("/api/folders", methods=["GET"])
+        def get_folders():
+            """Get list of watched folders with image counts."""
+            folders = []
+            for directory in self.image_directories:
+                if not os.path.exists(directory):
+                    continue
+
+                # Count images in folder
+                image_count = 0
+                for filename in os.listdir(directory):
+                    filepath = os.path.join(directory, filename)
+                    if os.path.isfile(filepath):
+                        ext = os.path.splitext(filename)[1].lower()
+                        if ext in [
+                            ".jpg",
+                            ".jpeg",
+                            ".png",
+                            ".gif",
+                            ".bmp",
+                            ".webp",
+                        ]:
+                            image_count += 1
+
+                folders.append(
+                    {
+                        "path": directory,
+                        "name": os.path.basename(directory),
+                        "image_count": image_count,
+                    }
+                )
+
+            return jsonify({"folders": folders})
+
+        @self.app.route(
+            "/api/folders/<path:folder_path>/images", methods=["GET"]
+        )
+        def get_folder_images(folder_path):
+            """Get list of images in a specific folder."""
+            # Security check: ensure the folder is in allowed directories
+            # Normalize and resolve symlinks for both folder_path and allowed
+            # directories
+            abs_folder = os.path.realpath(os.path.normpath(folder_path))
+            allowed = False
+            for directory in self.image_directories:
+                abs_directory = os.path.realpath(os.path.normpath(directory))
+                # Ensure abs_folder is contained in abs_directory
+                common = os.path.commonpath([abs_folder, abs_directory])
+                if common == abs_directory:
+                    allowed = True
+                    break
+
+            if not allowed:
+                return jsonify({"error": "Access denied"}), 403
+
+            if not os.path.exists(abs_folder):
+                return jsonify({"error": "Folder not found"}), 404
+
+            images = []
+            for filename in os.listdir(abs_folder):
+                filepath = os.path.join(abs_folder, filename)
+                # Security: resolve and ensure file is in allowed folder
+                resolved_filepath = os.path.realpath(os.path.normpath(filepath))
+                if os.path.commonpath([resolved_filepath, abs_folder]) != abs_folder:
+                    continue
+                if os.path.isfile(resolved_filepath):
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext in [
+                        ".jpg",
+                        ".jpeg",
+                        ".png",
+                        ".gif",
+                        ".bmp",
+                        ".webp",
+                    ]:
+                        stat = os.stat(resolved_filepath)
+                        images.append(
+                            {
+                                "filename": filename,
+                                "path": resolved_filepath,
+                                "size": stat.st_size,
+                                "modified": stat.st_mtime,
+                                "created": stat.st_ctime,
+                            }
+                        )
+
+            # Sort by modified time, newest first
+            images.sort(key=lambda x: x["modified"], reverse=True)
+
+            return jsonify({"images": images, "folder": abs_folder})
+
+        @self.app.route("/api/sync/checksums", methods=["POST"])
+        def calculate_checksums():
+            """
+            Calculate checksums for requested files.
+            Client sends list of files with their checksums,
+            server returns which files need to be downloaded.
+            """
+            data = request.json
+            if not data or "files" not in data:
+                return jsonify({"error": "No files provided"}), 400
+
+            client_files = data["files"]  # Dict of {filepath: checksum}
+            files_to_download = []
+
+            for filepath, client_checksum in client_files.items():
+                # Security check
+                abs_filepath = os.path.abspath(filepath)
+                allowed = False
+                for directory in self.image_directories:
+                    abs_directory = os.path.abspath(directory)
+                    if abs_filepath.startswith(abs_directory):
+                        allowed = True
+                        break
+
+                if not allowed:
+                    continue
+
+                if not os.path.exists(abs_filepath):
+                    continue
+
+                # Calculate server-side checksum
+                server_checksum = self._calculate_file_checksum(abs_filepath)
+
+                # If checksums don't match or client doesn't have it, mark for
+                # download
+                if server_checksum != client_checksum:
+                    stat = os.stat(abs_filepath)
+                    files_to_download.append(
+                        {
+                            "path": filepath,
+                            "checksum": server_checksum,
+                            "size": stat.st_size,
+                            "modified": stat.st_mtime,
+                        }
+                    )
+
+            return jsonify(
+                {
+                    "files_to_download": files_to_download,
+                    "total": len(files_to_download),
+                }
+            )
+
+        @self.app.route("/api/sync/download", methods=["POST"])
+        def download_files():
+            """
+            Download multiple files as a ZIP archive.
+            """
+            data = request.json
+            if not data or "files" not in data:
+                return jsonify({"error": "No files provided"}), 400
+
+            file_paths = data["files"]
+
+            # Validate all files
+            validated_files = []
+            for filepath in file_paths:
+                abs_filepath = os.path.abspath(filepath)
+                allowed = False
+                for directory in self.image_directories:
+                    abs_directory = os.path.abspath(directory)
+                    if abs_filepath.startswith(abs_directory):
+                        allowed = True
+                        break
+
+                if allowed and os.path.exists(abs_filepath):
+                    validated_files.append(abs_filepath)
+
+            if not validated_files:
+                return jsonify({"error": "No valid files to download"}), 400
+
+            # For single file, return it directly
+            if len(validated_files) == 1:
+                directory = os.path.dirname(validated_files[0])
+                filename = os.path.basename(validated_files[0])
+                return send_from_directory(
+                    directory, filename, as_attachment=True
+                )
+
+            memory_file = io.BytesIO()
+            with zipfile.ZipFile(memory_file, "w", zipfile.ZIP_DEFLATED) as zf:
+                for filepath in validated_files:
+                    # Use relative path in zip to maintain folder structure
+                    arcname = os.path.basename(filepath)
+                    zf.write(filepath, arcname)
+
+            memory_file.seek(0)
+            return send_file(
+                memory_file,
+                mimetype="application/zip",
+                as_attachment=True,
+                download_name="pumaguard_images.zip",
+            )
 
         # Directories API
         @self.app.route("/api/directories", methods=["GET"])

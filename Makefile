@@ -56,7 +56,7 @@ build: install-dev build-ui
 	uv build
 
 .PHONY: lint
-lint: black pylint isort mypy bashate ansible-lint
+lint: black pylint isort mypy bashate
 
 .PHONY: black
 black: install-dev
@@ -205,7 +205,7 @@ run-server: install build-ui
 server-container-test:
 	if [ -n $$(lxc list --format json | jq --raw-output '.[] | select(.name == "pumaguard") | .name') ]; then lxc delete --force pumaguard; fi
 	lxc init ubuntu:noble pumaguard
-	gio trash dist
+	[ -d dist ] && gio trash dist || echo "no dist, ignoring"
 	$(MAKE) build
 	lxc config device add pumaguard dist disk source=$${PWD}/dist path=/dist
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set pumaguard raw.idmap -

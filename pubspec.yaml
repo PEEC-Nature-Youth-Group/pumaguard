@@ -53,6 +53,12 @@ dependencies:
   # mDNS service discovery
   multicast_dns: ^0.3.2+7
 
+  # Crypto for checksums
+  crypto: ^3.0.3
+
+  # File picker for selecting download destination
+  file_picker: ^8.0.0+1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

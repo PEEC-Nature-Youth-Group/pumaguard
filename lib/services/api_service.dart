@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
 import '../models/status.dart';
 import '../models/settings.dart';
 
@@ -191,5 +193,98 @@ class ApiService {
     } catch (e) {
       throw Exception('Failed to remove directory: $e');
     }
+  }
+
+  /// Get list of watched folders with image counts
+  Future<List<Map<String, dynamic>>> getFolders() async {
+    try {
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/folders')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final folders = json['folders'] as List<dynamic>;
+        return folders.map((f) => f as Map<String, dynamic>).toList();
+      } else {
+        throw Exception('Failed to load folders: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load folders: $e');
+    }
+  }
+
+  /// Get list of images in a specific folder
+  Future<Map<String, dynamic>> getFolderImages(String folderPath) async {
+    try {
+      final encodedPath = Uri.encodeComponent(folderPath);
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/folders/$encodedPath/images')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        throw Exception('Failed to load folder images: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load folder images: $e');
+    }
+  }
+
+  /// Calculate checksum for a file (client-side)
+  String calculateChecksum(Uint8List bytes) {
+    return sha256.convert(bytes).toString();
+  }
+
+  /// Compare local files with server and get list of files to download
+  Future<List<Map<String, dynamic>>> getFilesToSync(
+    Map<String, String> localFilesWithChecksums,
+  ) async {
+    try {
+      final response = await http.post(
+        Uri.parse(getApiUrl('/api/sync/checksums')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'files': localFilesWithChecksums}),
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final files = json['files_to_download'] as List<dynamic>;
+        return files.map((f) => f as Map<String, dynamic>).toList();
+      } else {
+        throw Exception('Failed to get sync info: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to get sync info: $e');
+    }
+  }
+
+  /// Download multiple files as ZIP or single file
+  Future<Uint8List> downloadFiles(List<String> filePaths) async {
+    try {
+      final response = await http.post(
+        Uri.parse(getApiUrl('/api/sync/download')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'files': filePaths}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      } else {
+        throw Exception('Failed to download files: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to download files: $e');
+    }
+  }
+
+  /// Get URL for a specific photo/image
+  String getPhotoUrl(String filepath) {
+    final encodedPath = Uri.encodeComponent(filepath);
+    return getApiUrl('/api/photos/$encodedPath');
   }
 }

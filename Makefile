@@ -4,6 +4,7 @@ DEVICE_USER ?= pumaguard
 ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
 NEW_MODEL ?=
+TEST_NAME ?= pumaguard-test
 
 .venv:
 	uv venv
@@ -203,16 +204,16 @@ run-server: install build-ui
 
 .PHONY: server-container-test
 server-container-test:
-	if [ -n $$(lxc list --format json | jq --raw-output '.[] | select(.name == "pumaguard") | .name') ]; then lxc delete --force pumaguard; fi
-	lxc init ubuntu:noble pumaguard
+	lxc delete --force $(TEST_NAME) || echo "no existing $(TEST_NAME) instance"
+	lxc init ubuntu:noble $(TEST_NAME)
 	[ -d dist ] && gio trash dist || echo "no dist, ignoring"
 	$(MAKE) build
-	lxc config device add pumaguard dist disk source=$${PWD}/dist path=/dist
-	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set pumaguard raw.idmap -
-	lxc start pumaguard
-	lxc exec pumaguard -- cloud-init status --wait
-	lxc exec pumaguard -- apt-get update
-	lxc exec pumaguard -- apt-get install --no-install-recommends --yes pipx
-	lxc exec pumaguard -- sudo --user ubuntu --login pipx install --verbose --pip-args="--verbose" /$$(ls dist/*whl)
-	lxc exec pumaguard -- sudo --user ubuntu --login pipx ensurepath
-	lxc exec pumaguard -- sudo --user ubuntu --login pumaguard server --debug
+	lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
+	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
+	lxc start $(TEST_NAME)
+	lxc exec $(TEST_NAME) -- cloud-init status --wait
+	lxc exec $(TEST_NAME) -- apt-get update
+	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install --verbose --pip-args="--verbose" /$$(ls dist/*whl)
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug

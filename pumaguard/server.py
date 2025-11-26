@@ -280,16 +280,21 @@ class FolderManager:
         self.presets = presets
         self.observers: list[FolderObserver] = []
 
-    def register_folder(self, folder: str, method: str):
+    def register_folder(self, folder: str, method: str, start: bool = True):
         """
         Register a new folder for observation.
 
         Arguments:
             folder -- The path of the folder to watch.
+            method -- The watch method to use (inotify or os).
+            start -- Whether to start watching immediately (default: True).
         """
         observer = FolderObserver(folder, method, self.presets)
         self.observers.append(observer)
         logger.info("registered %s", folder)
+        if start:
+            observer.start()
+            logger.info("started watching %s", folder)
 
     def start_all(self):
         """
@@ -343,7 +348,7 @@ def main(options: argparse.Namespace, presets: Preset):
     webui.start()
 
     for folder in options.FOLDER:
-        manager.register_folder(folder, options.watch_method)
+        manager.register_folder(folder, options.watch_method, start=False)
         webui.add_image_directory(folder)
 
     manager.start_all()

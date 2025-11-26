@@ -218,7 +218,9 @@ class ApiService {
   /// Get list of images in a specific folder
   Future<Map<String, dynamic>> getFolderImages(String folderPath) async {
     try {
-      final encodedPath = Uri.encodeComponent(folderPath);
+      // Encode each path segment separately to preserve slashes
+      final segments = folderPath.split('/').map((s) => Uri.encodeComponent(s));
+      final encodedPath = segments.join('/');
       final response = await http.get(
         Uri.parse(getApiUrl('/api/folders/$encodedPath/images')),
         headers: {'Content-Type': 'application/json'},

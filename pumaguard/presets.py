@@ -52,7 +52,7 @@ def get_default_settings_file() -> str:
     snap_user_data = os.environ.get("SNAP_USER_DATA")
     if snap_user_data:
         snap_config_dir = Path(snap_user_data) / "pumaguard"
-        snap_settings_file = snap_config_dir / "settings.yaml"
+        snap_settings_file = snap_config_dir / "pumaguard-settings.yaml"
 
         # If snap settings file exists, use it
         if snap_settings_file.exists():
@@ -64,27 +64,12 @@ def get_default_settings_file() -> str:
 
     # XDG compliant location
     xdg_config_dir = get_xdg_config_home() / "pumaguard"
-    xdg_settings_file = xdg_config_dir / "settings.yaml"
-
-    # Legacy location (current directory)
-    legacy_settings_file = Path("pumaguard-settings.yaml")
+    xdg_settings_file = xdg_config_dir / "pumaguard-settings.yaml"
 
     # If the XDG file exists, use it
     if xdg_settings_file.exists():
         return str(xdg_settings_file)
 
-    # If the legacy file exists, use it but log a warning
-    if legacy_settings_file.exists():
-        logger.info(
-            "Using legacy settings file location: %s", legacy_settings_file
-        )
-        logger.info(
-            "Consider moving it to XDG location: %s", xdg_settings_file
-        )
-        return str(legacy_settings_file)
-
-    # Neither exists, return XDG location as default (will be created if
-    # needed). Create the directory if it doesn't exist.
     xdg_config_dir.mkdir(parents=True, exist_ok=True)
     return str(xdg_settings_file)
 

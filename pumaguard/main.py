@@ -16,6 +16,7 @@ from pumaguard import (
 )
 from pumaguard.presets import (
     Preset,
+    get_default_settings_file,
 )
 from pumaguard.utils import (
     print_bash_completion,
@@ -88,7 +89,7 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
 
     if args.settings is None:
         logger.info("loading default settings")
-        settings = os.path.join(model_path, "settings.yaml")
+        settings = get_default_settings_file()
     else:
         settings = args.settings
     presets.load(settings)

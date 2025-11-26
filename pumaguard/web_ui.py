@@ -15,10 +15,17 @@ from pathlib import (
     Path,
 )
 from typing import (
+    TYPE_CHECKING,
     TypedDict,
 )
 
 import yaml
+
+if TYPE_CHECKING:
+    from pumaguard.server import (
+        FolderManager,
+    )
+
 from flask import (
     Flask,
     jsonify,
@@ -68,6 +75,8 @@ class WebUI:
         debug: bool = False,
         mdns_enabled: bool = True,
         mdns_name: str = "pumaguard",
+        folder_manager: "FolderManager | None" = None,
+        watch_method: str = "os",
     ):
         """
         Initialize the WebUI server.
@@ -80,12 +89,16 @@ class WebUI:
             mdns_enabled: Enable mDNS/Zeroconf service advertisement
                           (default: True)
             mdns_name: mDNS service name (default: pumaguard)
+            folder_manager: FolderManager instance to register new folders
+            watch_method: Watch method for new folders (default: os)
         """
         self.host: str = host
         self.port: int = port
         self.debug: bool = debug
         self.mdns_enabled: bool = mdns_enabled
         self.mdns_name: str = mdns_name
+        self.folder_manager = folder_manager
+        self.watch_method: str = watch_method
         self.app: Flask = Flask(__name__)
 
         # Configure CORS to allow all origins (for development and container
@@ -442,8 +455,13 @@ class WebUI:
             for filename in os.listdir(abs_folder):
                 filepath = os.path.join(abs_folder, filename)
                 # Security: resolve and ensure file is in allowed folder
-                resolved_filepath = os.path.realpath(os.path.normpath(filepath))
-                if os.path.commonpath([resolved_filepath, abs_folder]) != abs_folder:
+                resolved_filepath = os.path.realpath(
+                    os.path.normpath(filepath)
+                )
+                if (
+                    os.path.commonpath([resolved_filepath, abs_folder])
+                    != abs_folder
+                ):
                     continue
                 if os.path.isfile(resolved_filepath):
                     ext = os.path.splitext(filename)[1].lower()
@@ -596,6 +614,17 @@ class WebUI:
             if directory not in self.image_directories:
                 self.image_directories.append(directory)
                 logger.info("Added image directory: %s", directory)
+
+                # Register with FolderManager to start watching
+                if self.folder_manager is not None:
+                    self.folder_manager.register_folder(
+                        directory, self.watch_method
+                    )
+                    logger.info(
+                        "Registered folder with manager: %s (method: %s)",
+                        directory,
+                        self.watch_method,
+                    )
 
             return jsonify(
                 {"success": True, "directories": self.image_directories}

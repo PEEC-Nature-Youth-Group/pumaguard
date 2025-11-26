@@ -8,7 +8,7 @@ TEST_NAME ?= pumaguard-test
 
 .venv:
 	uv venv
-	uv pip install --upgrade pip
+	uv pip install --native-tls --upgrade pip
 
 .PHONY: apidoc
 apidoc: .venv
@@ -18,7 +18,7 @@ apidoc: .venv
 .PHONY: docs
 docs: .venv
 	@echo "building documentation webpage"
-	uv sync --extra docs --frozen
+	uv sync --native-tls --extra docs --frozen
 	. .venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
@@ -35,15 +35,15 @@ assemble:
 
 .PHONY: install
 install: assemble .venv
-	uv pip install --editable .
+	uv pip install --native-tls --editable .
 
 .PHONY: install-dev
 install-dev: .venv
-	uv sync --extra dev --frozen
+	uv sync --native-tls --extra dev --frozen
 
 .PHONY: test
 test: install-dev
-	uv run --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
+	uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: test-ui
 test-ui:
@@ -61,15 +61,15 @@ lint: black pylint isort mypy bashate
 
 .PHONY: black
 black: install-dev
-	uv run --frozen black --check pumaguard
+	uv run --native-tls --frozen black --check pumaguard
 
 .PHONY: pylint
 pylint: install-dev
-	uv run --frozen pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+	uv run --native-tls --frozen pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	uv run --frozen isort pumaguard tests scripts
+	uv run --native-tls --frozen isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
@@ -77,7 +77,7 @@ mypy: install-dev
 
 .PHONY: bashate
 bashate: install-dev
-	uv run --frozen bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	uv run --native-tls --frozen bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
@@ -131,7 +131,7 @@ check-functional:
 
 .PHONY: functional-poetry
 functional-poetry: install
-	$(MAKE) EXE="uv run pumaguard" run-functional
+	$(MAKE) EXE="uv run --native-tls pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: functional-snap
@@ -161,7 +161,7 @@ configure-laptop: install-dev
 
 .PHONY: verify-poetry
 verify-poetry: install
-	$(MAKE) EXE="uv run --frozen pumaguard" verify
+	$(MAKE) EXE="uv run --native-tls --frozen pumaguard" verify
 
 .PHONY: verify-snap
 verify-snap:
@@ -196,7 +196,7 @@ build-ui: install
 
 .PHONY: run-server
 run-server: install build-ui
-	uv run --frozen pumaguard server
+	uv run --native-tls --frozen pumaguard server
 
 .PHONY: server-container-test
 server-container-test:

@@ -40,6 +40,7 @@ from yaml.representer import (
     YAMLError,
 )
 from zeroconf import (
+    NonUniqueNameException,
     ServiceInfo,
     Zeroconf,
 )
@@ -800,7 +801,28 @@ class WebUI:
             )
 
             # Register service
-            self.zeroconf.register_service(self.service_info)
+            try:
+                self.zeroconf.register_service(self.service_info)
+            except NonUniqueNameException:
+                logger.warning(
+                    "mDNS service name '%s' already in use, "
+                    + "attempting to unregister and re-register",
+                    service_name,
+                )
+                # Try to unregister the existing service
+                try:
+                    self.zeroconf.unregister_service(self.service_info)
+                    # Wait briefly for unregistration to complete
+                    time.sleep(0.5)
+                    # Try registering again
+                    self.zeroconf.register_service(self.service_info)
+                except Exception as e:
+                    logger.error(
+                        "Failed to re-register mDNS service after "
+                        + "conflict: %s",
+                        e,
+                    )
+                    raise
 
             logger.info(
                 "mDNS service registered: %s at %s:%d",
@@ -813,8 +835,13 @@ class WebUI:
                 self.mdns_name,
                 self.port,
             )
-        except OSError as e:
+        except (OSError, NonUniqueNameException) as e:
             logger.error("Failed to start mDNS service: %s", e)
+            if self.zeroconf:
+                try:
+                    self.zeroconf.close()
+                except OSError:
+                    pass
             self.zeroconf = None
             self.service_info = None
 

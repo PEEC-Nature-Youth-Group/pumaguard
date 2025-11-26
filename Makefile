@@ -172,10 +172,6 @@ verify:
 	$(EXE) verify --debug --settings pumaguard-models/model_settings_6_pre-trained_512_512.yaml --verification-path training-data/verification 2>&1 | tee verify.output
 	if [ "$$(awk '/^accuracy/ {print $$3}' verify.output)" != 92.75% ]; then echo "ignoring"; fi
 
-.PHONY: train
-train:
-	pumaguard train --debug --epochs 1 --model-output . --lion training-data/Stables/lion --no-lion training-data/Stables/no-lion/ --no-load-previous-session
-
 .PHONY: test-server
 test-server: install
 	./scripts/test-server.sh

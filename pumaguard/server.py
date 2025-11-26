@@ -330,12 +330,18 @@ def main(options: argparse.Namespace, presets: Preset):
         logger.debug("Will not print out download progress")
         presets.print_download_progress = False
 
-    logger.debug("Starting web UI")
-    webui = WebUI(presets=presets, host="0.0.0.0")
-    webui.start()
-
     logger.debug("Getting folder manager")
     manager = FolderManager(presets)
+
+    logger.debug("Starting web UI")
+    webui = WebUI(
+        presets=presets,
+        host="0.0.0.0",
+        folder_manager=manager,
+        watch_method=options.watch_method,
+    )
+    webui.start()
+
     for folder in options.FOLDER:
         manager.register_folder(folder, options.watch_method)
         webui.add_image_directory(folder)

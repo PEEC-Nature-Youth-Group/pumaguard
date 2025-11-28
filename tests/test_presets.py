@@ -125,7 +125,7 @@ class TestSettingsFileLocation(unittest.TestCase):
             with patch.dict(os.environ, env_patch, clear=False):
                 settings_file = get_default_settings_file()
                 expected_path = str(
-                    Path(tmpdir) / "pumaguard" / "settings.yaml"
+                    Path(tmpdir) / "pumaguard" / "pumaguard-settings.yaml"
                 )
                 self.assertEqual(settings_file, expected_path)
                 # Verify directory was created
@@ -139,7 +139,7 @@ class TestSettingsFileLocation(unittest.TestCase):
             # Create the snap settings file
             snap_config_dir = Path(tmpdir) / "pumaguard"
             snap_config_dir.mkdir(parents=True, exist_ok=True)
-            snap_settings_file = snap_config_dir / "settings.yaml"
+            snap_settings_file = snap_config_dir / "pumaguard-settings.yaml"
             snap_settings_file.touch()
 
             env_patch = {"SNAP_USER_DATA": tmpdir}
@@ -159,7 +159,7 @@ class TestSettingsFileLocation(unittest.TestCase):
             with patch.dict(os.environ, env_vars, clear=True):
                 settings_file = get_default_settings_file()
                 expected_path = str(
-                    Path(tmpdir) / "pumaguard" / "settings.yaml"
+                    Path(tmpdir) / "pumaguard" / "pumaguard-settings.yaml"
                 )
                 self.assertEqual(settings_file, expected_path)
 
@@ -178,7 +178,9 @@ class TestSettingsFileLocation(unittest.TestCase):
                     settings_file = get_default_settings_file()
                     # Should use snap directory, not XDG
                     expected_snap_path = str(
-                        Path(snap_dir) / "pumaguard" / "settings.yaml"
+                        Path(snap_dir)
+                        / "pumaguard"
+                        / "pumaguard-settings.yaml"
                     )
                     self.assertEqual(settings_file, expected_snap_path)
                     self.assertNotIn(xdg_dir, settings_file)

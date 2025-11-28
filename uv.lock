@@ -78,11 +78,11 @@ name = "ansible-compat"
 version = "25.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansible-core" },
-    { name = "jsonschema" },
-    { name = "packaging" },
-    { name = "pyyaml" },
-    { name = "subprocess-tee" },
+    { name = "ansible-core", marker = "sys_platform != 'win32'" },
+    { name = "jsonschema", marker = "sys_platform != 'win32'" },
+    { name = "packaging", marker = "sys_platform != 'win32'" },
+    { name = "pyyaml", marker = "sys_platform != 'win32'" },
+    { name = "subprocess-tee", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/de/95/2f361bedf7513b2ab558599a4cc9d5dd84d9d85b49c1dd994d0f5603f952/ansible_compat-25.11.0.tar.gz", hash = "sha256:b9e6655d8f4942c427a39fa1df6697830d987fe5d311bc7be2b2f81c1edd48f5", size = 193024, upload-time = "2025-11-10T13:26:31.15Z" }
 wheels = [
@@ -110,24 +110,24 @@ name = "ansible-lint"
 version = "25.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ansible-compat" },
-    { name = "ansible-core" },
-    { name = "black" },
-    { name = "cffi" },
-    { name = "cryptography" },
-    { name = "distro" },
-    { name = "filelock" },
-    { name = "importlib-metadata" },
-    { name = "jsonschema" },
-    { name = "packaging" },
-    { name = "pathspec" },
-    { name = "pyyaml" },
-    { name = "referencing" },
-    { name = "ruamel-yaml" },
-    { name = "ruamel-yaml-clib", marker = "python_full_version < '3.14'" },
-    { name = "subprocess-tee" },
-    { name = "wcmatch" },
-    { name = "yamllint" },
+    { name = "ansible-compat", marker = "sys_platform != 'win32'" },
+    { name = "ansible-core", marker = "sys_platform != 'win32'" },
+    { name = "black", marker = "sys_platform != 'win32'" },
+    { name = "cffi", marker = "sys_platform != 'win32'" },
+    { name = "cryptography", marker = "sys_platform != 'win32'" },
+    { name = "distro", marker = "sys_platform != 'win32'" },
+    { name = "filelock", marker = "sys_platform != 'win32'" },
+    { name = "importlib-metadata", marker = "sys_platform != 'win32'" },
+    { name = "jsonschema", marker = "sys_platform != 'win32'" },
+    { name = "packaging", marker = "sys_platform != 'win32'" },
+    { name = "pathspec", marker = "sys_platform != 'win32'" },
+    { name = "pyyaml", marker = "sys_platform != 'win32'" },
+    { name = "referencing", marker = "sys_platform != 'win32'" },
+    { name = "ruamel-yaml", marker = "sys_platform != 'win32'" },
+    { name = "ruamel-yaml-clib", marker = "python_full_version < '3.14' and sys_platform != 'win32'" },
+    { name = "subprocess-tee", marker = "sys_platform != 'win32'" },
+    { name = "wcmatch", marker = "sys_platform != 'win32'" },
+    { name = "yamllint", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ea/5a/ca084c650abd30f10d58c8727f9f64ed7e36f9c26f064559d22473cb9a33/ansible_lint-25.11.0.tar.gz", hash = "sha256:79e35246c8bdaacdbe37aa30a6ea471177482ac58fbcf1868f765bdafca3427e", size = 717176, upload-time = "2025-11-10T13:32:09.724Z" }
 wheels = [
@@ -1257,7 +1257,7 @@ name = "importlib-metadata"
 version = "8.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "zipp" },
+    { name = "zipp", marker = "python_full_version < '3.11' or sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/66/650a33bd90f786193e4de4b3ad86ea60b53c89b669a5c7be931fac31cdb0/importlib_metadata-8.7.0.tar.gz", hash = "sha256:d13b81ad223b890aa16c5471f2ac3056cf76c5f10f82d6f9292f0b415f389000", size = 56641, upload-time = "2025-04-27T15:29:01.736Z" }
 wheels = [
@@ -1420,10 +1420,10 @@ name = "jsonschema"
 version = "4.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "jsonschema-specifications" },
-    { name = "referencing" },
-    { name = "rpds-py" },
+    { name = "attrs", marker = "sys_platform != 'win32'" },
+    { name = "jsonschema-specifications", marker = "sys_platform != 'win32'" },
+    { name = "referencing", marker = "sys_platform != 'win32'" },
+    { name = "rpds-py", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/74/69/f7185de793a29082a9f3c7728268ffb31cb5095131a9c139a74078e27336/jsonschema-4.25.1.tar.gz", hash = "sha256:e4a9655ce0da0c0b67a085847e00a3a51449e1157f4f75e9fb5aa545e122eb85", size = 357342, upload-time = "2025-08-18T17:03:50.038Z" }
 wheels = [
@@ -1435,7 +1435,7 @@ name = "jsonschema-specifications"
 version = "2025.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "referencing" },
+    { name = "referencing", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/19/74/a633ee74eb36c44aa6d1095e7cc5569bebf04342ee146178e2d36600708b/jsonschema_specifications-2025.9.1.tar.gz", hash = "sha256:b540987f239e745613c7a9176f3edb72b832a4ac465cf02712288397832b5e8d", size = 32855, upload-time = "2025-09-08T01:34:59.186Z" }
 wheels = [
@@ -2527,6 +2527,7 @@ dependencies = [
     { name = "requests" },
     { name = "tensorflow", marker = "platform_machine == 'aarch64' or platform_machine == 'arm64'" },
     { name = "tensorflow-cpu", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64'" },
+    { name = "tf-keras" },
     { name = "torch", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.9.1+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
     { name = "ultralytics" },
@@ -2603,6 +2604,7 @@ requires-dist = [
     { name = "tensorflow", marker = "platform_machine == 'aarch64' or platform_machine == 'arm64'", specifier = ">=2.18,<2.20" },
     { name = "tensorflow", marker = "extra == 'docs'", specifier = ">=2.18,<2.20" },
     { name = "tensorflow-cpu", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64'", specifier = ">=2.18,<2.20" },
+    { name = "tf-keras", specifier = ">=2.18,<2.21" },
     { name = "torch", specifier = "~=2.9", index = "https://download.pytorch.org/whl/cpu" },
     { name = "ultralytics", specifier = "~=8.3" },
     { name = "ultralytics", marker = "extra == 'docs'", specifier = "~=8.3" },
@@ -2934,9 +2936,9 @@ name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "attrs" },
-    { name = "rpds-py" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "attrs", marker = "sys_platform != 'win32'" },
+    { name = "rpds-py", marker = "sys_platform != 'win32'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -3098,7 +3100,7 @@ name = "ruamel-yaml"
 version = "0.18.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ruamel-yaml-clib", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython'" },
+    { name = "ruamel-yaml-clib", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython' and sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/c7/ee630b29e04a672ecfc9b63227c87fd7a37eb67c1bf30fe95376437f897c/ruamel.yaml-0.18.16.tar.gz", hash = "sha256:a6e587512f3c998b2225d68aa1f35111c29fad14aed561a26e73fab729ec5e5a", size = 147269, upload-time = "2025-10-22T17:54:02.346Z" }
 wheels = [
@@ -3683,28 +3685,28 @@ name = "tensorflow-intel"
 version = "2.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "absl-py" },
-    { name = "astunparse" },
-    { name = "flatbuffers" },
-    { name = "gast" },
-    { name = "google-pasta" },
-    { name = "grpcio" },
-    { name = "h5py" },
-    { name = "keras" },
-    { name = "libclang" },
-    { name = "ml-dtypes" },
-    { name = "numpy" },
-    { name = "opt-einsum" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "requests" },
-    { name = "setuptools" },
-    { name = "six" },
-    { name = "tensorboard" },
-    { name = "tensorflow-io-gcs-filesystem", marker = "python_full_version < '3.12'" },
-    { name = "termcolor" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
+    { name = "absl-py", marker = "sys_platform == 'win32'" },
+    { name = "astunparse", marker = "sys_platform == 'win32'" },
+    { name = "flatbuffers", marker = "sys_platform == 'win32'" },
+    { name = "gast", marker = "sys_platform == 'win32'" },
+    { name = "google-pasta", marker = "sys_platform == 'win32'" },
+    { name = "grpcio", marker = "sys_platform == 'win32'" },
+    { name = "h5py", marker = "sys_platform == 'win32'" },
+    { name = "keras", marker = "sys_platform == 'win32'" },
+    { name = "libclang", marker = "sys_platform == 'win32'" },
+    { name = "ml-dtypes", marker = "sys_platform == 'win32'" },
+    { name = "numpy", marker = "sys_platform == 'win32'" },
+    { name = "opt-einsum", marker = "sys_platform == 'win32'" },
+    { name = "packaging", marker = "sys_platform == 'win32'" },
+    { name = "protobuf", marker = "sys_platform == 'win32'" },
+    { name = "requests", marker = "sys_platform == 'win32'" },
+    { name = "setuptools", marker = "sys_platform == 'win32'" },
+    { name = "six", marker = "sys_platform == 'win32'" },
+    { name = "tensorboard", marker = "sys_platform == 'win32'" },
+    { name = "tensorflow-io-gcs-filesystem", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
+    { name = "termcolor", marker = "sys_platform == 'win32'" },
+    { name = "typing-extensions", marker = "sys_platform == 'win32'" },
+    { name = "wrapt", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b2/47/e1a7cc95eccaaa52f47c3de8fd81abcfce105979790892f52e745339f929/tensorflow_intel-2.18.0-cp310-cp310-win_amd64.whl", hash = "sha256:34701c988f3e20415a8e450a1384339e9f013950db70fa0361b79cddd1e8431b", size = 390026830, upload-time = "2024-10-25T04:46:05.615Z" },
@@ -3738,6 +3740,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/87/56/ab275c2b56a5e2342568838f0d5e3e66a32354adcc159b495e374cda43f5/termcolor-3.2.0.tar.gz", hash = "sha256:610e6456feec42c4bcd28934a8c87a06c3fa28b01561d46aa09a9881b8622c58", size = 14423, upload-time = "2025-10-25T19:11:42.586Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f9/d5/141f53d7c1eb2a80e6d3e9a390228c3222c27705cbe7f048d3623053f3ca/termcolor-3.2.0-py3-none-any.whl", hash = "sha256:a10343879eba4da819353c55cb8049b0933890c2ebf9ad5d3ecd2bb32ea96ea6", size = 7698, upload-time = "2025-10-25T19:11:41.536Z" },
+]
+
+[[package]]
+name = "tf-keras"
+version = "2.18.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tensorflow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/a4/7d0acc28cde2b29b8114552ce3258dafdc6b2186d24bf8e912de713dd74f/tf_keras-2.18.0.tar.gz", hash = "sha256:ebf744519b322afead33086a2aba872245473294affd40973694f3eb7c7ad77d", size = 1260765, upload-time = "2024-10-24T22:58:06.652Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8a/ed/e08afca471299b04a34cd548e64e89d0153eda0e6cf9b715356777e24774/tf_keras-2.18.0-py3-none-any.whl", hash = "sha256:c431d04027eef790fcd3261cf7fdf93eb74f3cb32e05078b57b7f5a54bd53262", size = 1725427, upload-time = "2024-10-24T22:58:03.918Z" },
 ]
 
 [[package]]
@@ -4022,7 +4036,7 @@ name = "wcmatch"
 version = "10.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "bracex" },
+    { name = "bracex", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/79/3e/c0bdc27cf06f4e47680bd5803a07cb3dfd17de84cde92dd217dcb9e05253/wcmatch-10.1.tar.gz", hash = "sha256:f11f94208c8c8484a16f4f48638a85d771d9513f4ab3f37595978801cb9465af", size = 117421, upload-time = "2025-06-22T19:14:02.49Z" }
 wheels = [
@@ -4216,8 +4230,8 @@ name = "yamllint"
 version = "1.37.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pathspec" },
-    { name = "pyyaml" },
+    { name = "pathspec", marker = "sys_platform != 'win32'" },
+    { name = "pyyaml", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/46/f2/cd8b7584a48ee83f0bc94f8a32fea38734cefcdc6f7324c4d3bfc699457b/yamllint-1.37.1.tar.gz", hash = "sha256:81f7c0c5559becc8049470d86046b36e96113637bcbe4753ecef06977c00245d", size = 141613, upload-time = "2025-05-04T08:25:54.355Z" }
 wheels = [

@@ -315,7 +315,7 @@ class TestFolderManager(unittest.TestCase):
         Test the start_all method.
         """
         folder = "test_folder"
-        self.manager.register_folder(folder, "inotify")
+        self.manager.register_folder(folder, "inotify", start=False)
         self.manager.start_all()
         mock_start.assert_called_once()
 

@@ -1,6 +1,4 @@
 [MAIN]
-suggestion-mode = yes
-
 disable =
     R0801,
     R0902,

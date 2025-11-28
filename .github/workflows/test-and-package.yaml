@@ -145,6 +145,8 @@ jobs:
         uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: sudo apt-get install --yes --no-install-recommends inotify-tools
       - name: Run tests
         run: make test
 

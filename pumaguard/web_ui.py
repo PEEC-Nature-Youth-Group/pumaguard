@@ -20,12 +20,6 @@ from typing import (
 )
 
 import yaml
-
-if TYPE_CHECKING:
-    from pumaguard.server import (
-        FolderManager,
-    )
-
 from flask import (
     Flask,
     jsonify,
@@ -48,6 +42,11 @@ from zeroconf import (
 from pumaguard.presets import (
     Preset,
 )
+
+if TYPE_CHECKING:
+    from pumaguard.server import (
+        FolderManager,
+    )
 
 logger = logging.getLogger(__name__)
 

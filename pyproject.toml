@@ -89,12 +89,8 @@ include-package-data = true
 pumaguard = ["pumaguard-ui/**/*"]
 
 [tool.isort]
-ensure_newline_before_comments = true
-force_grid_wrap = true
-include_trailing_comma = true
-multi_line_output = "VERTICAL_HANGING_INDENT"
-py_version = 310
-split_on_trailing_comma = true
+profile = "black"
+line_length = 79
 
 [tool.black]
 line-length = 79

@@ -11,43 +11,19 @@ import socket
 import threading
 import time
 import zipfile
-from pathlib import (
-    Path,
-)
-from typing import (
-    TYPE_CHECKING,
-    TypedDict,
-)
+from pathlib import Path
+from typing import TYPE_CHECKING, TypedDict
 
 import yaml
+from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask_cors import CORS
+from yaml.representer import YAMLError
+from zeroconf import NonUniqueNameException, ServiceInfo, Zeroconf
+
+from pumaguard.presets import Preset
 
 if TYPE_CHECKING:
-    from pumaguard.server import (
-        FolderManager,
-    )
-
-from flask import (
-    Flask,
-    jsonify,
-    request,
-    send_file,
-    send_from_directory,
-)
-from flask_cors import (
-    CORS,
-)
-from yaml.representer import (
-    YAMLError,
-)
-from zeroconf import (
-    NonUniqueNameException,
-    ServiceInfo,
-    Zeroconf,
-)
-
-from pumaguard.presets import (
-    Preset,
-)
+    from pumaguard.server import FolderManager
 
 logger = logging.getLogger(__name__)
 

@@ -34,6 +34,19 @@ def get_xdg_config_home() -> Path:
     return Path.home() / ".config"
 
 
+def get_xdg_data_home() -> Path:
+    """
+    Get the XDG data home directory according to XDG Base Directory spec.
+
+    Returns:
+        Path to XDG_DATA_HOME (defaults to ~/.local/share if not set)
+    """
+    xdg_data = os.environ.get("XDG_DATA_HOME")
+    if xdg_data:
+        return Path(xdg_data)
+    return Path.home() / ".local" / "share"
+
+
 def get_default_settings_file() -> str:
     """
     Get the default settings file path using XDG standards.
@@ -121,6 +134,31 @@ class Preset:
             self.tf_compat = "2.15"
         else:
             self.tf_compat = "2.17"
+
+        # Classification product directories (XDG data location by default)
+        data_root = get_xdg_data_home() / "pumaguard"
+        self.classification_root_dir = str(data_root / "classified")
+        self.classified_puma_dir = str(
+            Path(self.classification_root_dir) / "puma"
+        )
+        self.classified_other_dir = str(
+            Path(self.classification_root_dir) / "other"
+        )
+        self.intermediate_dir = str(
+            Path(self.classification_root_dir) / "intermediate"
+        )
+
+        # Ensure directories exist
+        for d in [
+            self.classification_root_dir,
+            self.classified_puma_dir,
+            self.classified_other_dir,
+            self.intermediate_dir,
+        ]:
+            try:
+                Path(d).mkdir(parents=True, exist_ok=True)
+            except OSError as exc:  # pragma: no cover (rare failure)
+                logger.error("Could not create directory %s: %s", d, exc)
 
     def load(self, filename: str):
         """

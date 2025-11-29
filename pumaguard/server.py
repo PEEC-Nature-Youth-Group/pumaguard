@@ -6,11 +6,15 @@ that the new images show pumas.
 import argparse
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import time
+from pathlib import (
+    Path,
+)
 
 from PIL import (
     Image,
@@ -257,7 +261,9 @@ class FolderObserver:
             return
         logger.debug("Classifying: %s", filepath)
         prediction = classify_image_two_stage(
-            presets=self.presets, image_path=filepath
+            presets=self.presets,
+            image_path=filepath,
+            intermediate_dir=self.presets.intermediate_dir,
         )
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
         if prediction > 0.5:
@@ -267,6 +273,25 @@ class FolderObserver:
                     self.presets.sound_path, self.presets.deterrent_sound_file
                 )
                 playsound(sound_file_path)
+        # Move original file into classification folder
+        try:
+            dest_root = (
+                self.presets.classified_puma_dir
+                if prediction > 0.5
+                else self.presets.classified_other_dir
+            )
+            Path(dest_root).mkdir(parents=True, exist_ok=True)
+            dest_path = Path(dest_root) / Path(filepath).name
+            shutil.move(filepath, dest_path)
+            logger.info(
+                "Moved %s to classification folder %s", filepath, dest_path
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error(
+                "Failed to move %s into classification folder: %s",
+                filepath,
+                exc,
+            )
         lock.release()
         logger.debug("Exiting (%s)", me.name)
 

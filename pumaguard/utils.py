@@ -410,7 +410,10 @@ def cache_model_two_stage(
 
 
 def classify_image_two_stage(
-    presets: Preset, image_path: str, print_progress: bool = True
+    presets: Preset,
+    image_path: str,
+    print_progress: bool = True,
+    intermediate_dir: str | None = None,
 ) -> float:
     """
     Classify the image using two-stage approach: YOLO detection + EfficientNet
@@ -420,9 +423,16 @@ def classify_image_two_stage(
         presets (Preset): An instance of the Preset class containing settings.
         image_path (str): The file path to the image to be classified.
 
+    Args:
+        presets (Preset): Settings preset.
+        image_path (str): Path to image file.
+        print_progress (bool): Whether to print model download progress.
+        intermediate_dir (str | None): If provided, store visualization and
+        CSV summaries inside this directory instead of CWD.
+
     Returns:
-        float: Maximum puma probability from all detections (0.0 if no
-        detections)
+        float: Maximum puma probability from all detections
+        (0.0 if no detections)
     """
 
     def expand_box(xyxy, crop_expand, width, height):
@@ -577,7 +587,10 @@ def classify_image_two_stage(
             axc.set_title(f"det {idx} — {det_probs[idx]:.3f} → {lbl}")
             idx += 1
 
+    # Determine output paths
     out_png = f"{image_file.stem}_viz.png"
+    if intermediate_dir:
+        out_png = str(Path(intermediate_dir) / out_png)
     plt.tight_layout()
     plt.savefig(out_png, dpi=160)
     plt.close(fig)
@@ -616,8 +629,17 @@ def classify_image_two_stage(
         )
 
     # Write CSV outputs
+    # Per-image CSV names (avoid overwriting)
     det_csv = "test_detections_predictions.csv"
     img_csv = "test_image_summary.csv"
+    if intermediate_dir:
+        det_csv = str(
+            Path(intermediate_dir)
+            / f"{image_file.stem}_detections_predictions.csv"
+        )
+        img_csv = str(
+            Path(intermediate_dir) / f"{image_file.stem}_image_summary.csv"
+        )
 
     # Write detection predictions CSV
     if all_rows:

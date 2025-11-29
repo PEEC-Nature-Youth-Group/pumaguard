@@ -16,6 +16,7 @@ from pumaguard import (
 )
 from pumaguard.presets import (
     Preset,
+    PresetError,
     get_default_settings_file,
 )
 from pumaguard.utils import (
@@ -92,7 +93,11 @@ def configure_presets(args: argparse.Namespace, presets: Preset):
         settings = get_default_settings_file()
     else:
         settings = args.settings
-    presets.load(settings)
+    try:
+        presets.load(settings)
+    except PresetError as e:
+        logger.error("Cannot load settings: %s", e)
+        sys.exit(1)
 
     presets.image_dimensions = (299, 299)
     logger.warning("hardcoding image dimension: %s", presets.image_dimensions)

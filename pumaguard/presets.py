@@ -74,6 +74,12 @@ def get_default_settings_file() -> str:
     return str(xdg_settings_file)
 
 
+class PresetError(Exception):
+    """
+    Docstring for PresetError
+    """
+
+
 # pylint: disable=too-many-public-methods
 class Preset:
     """
@@ -135,6 +141,8 @@ class Preset:
                 "Could not open settings (%s), using defaults", filename
             )
             return
+        except yaml.constructor.ConstructorError as e:
+            raise PresetError(str(e)) from e
 
         self.yolo_min_size = settings.get("YOLO-min-size", 0.02)
         self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.25)

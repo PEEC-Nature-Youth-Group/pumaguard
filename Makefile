@@ -204,12 +204,20 @@ server-container-test:
 	lxc init ubuntu:noble $(TEST_NAME)
 	[ -d dist ] && gio trash dist || echo "no dist, ignoring"
 	$(MAKE) build
+	[ -d wheelhouse ] && gio trash wheelhouse || echo "no wheelhouse, ignoring"
+	mkdir --parents wheelhouse
+	. .venv/bin/activate && python -m pip download --dest wheelhouse $$(ls dist/*.whl)
 	lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
+	lxc config device add $(TEST_NAME) wheelhouse disk source=$${PWD}/wheelhouse path=/wheelhouse
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
 	lxc start $(TEST_NAME)
 	lxc exec $(TEST_NAME) -- cloud-init status --wait || echo "ignoring error"
 	lxc exec $(TEST_NAME) -- apt-get update
 	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install --verbose --pip-args="--verbose" /$$(ls dist/*whl)
+	# Install from local wheelhouse without hitting the network
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install \
+		--verbose \
+		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
+		/$$(ls dist/*whl)
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug

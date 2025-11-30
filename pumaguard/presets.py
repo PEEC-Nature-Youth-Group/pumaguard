@@ -153,6 +153,8 @@ class Preset:
         self.intermediate_dir = str(
             Path(self.classification_root_dir) / "intermediate"
         )
+        # Default watch directory (incoming images)
+        self.default_watch_dir = str(data_root / "watch")
 
         # Ensure directories exist
         for d in [
@@ -160,6 +162,7 @@ class Preset:
             self.classified_puma_dir,
             self.classified_other_dir,
             self.intermediate_dir,
+            self.default_watch_dir,
         ]:
             try:
                 Path(d).mkdir(parents=True, exist_ok=True)

@@ -372,7 +372,20 @@ def main(options: argparse.Namespace, presets: Preset):
     )
     webui.start()
 
-    for folder in options.FOLDER:
+    # Determine folders to watch: user-specified or default
+    if options.FOLDER and len(options.FOLDER) > 0:
+        folders_to_watch = list(options.FOLDER)
+    else:
+        folders_to_watch = [presets.default_watch_dir]
+
+    # Ensure default exists if used
+    for f in folders_to_watch:
+        try:
+            Path(f).mkdir(parents=True, exist_ok=True)
+        except OSError as exc:  # pragma: no cover
+            logger.error("Could not create watch folder %s: %s", f, exc)
+
+    for folder in folders_to_watch:
         manager.register_folder(folder, options.watch_method, start=False)
         webui.add_image_directory(folder)
 

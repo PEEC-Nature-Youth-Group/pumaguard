@@ -114,7 +114,33 @@ def download_file(
     try:
         logger.info("Downloading %s to %s", url, destination)
 
-        response = requests.get(url, stream=True, timeout=60)
+        # Respect custom CA bundle if provided via environment or system path
+        ca_bundle: Optional[str] = None
+        # Priority:
+        # 1. explicit PumaGuard var
+        # 2. then common envs
+        # 3. then system bundle
+        for var in (
+            "PUMAGUARD_CA_BUNDLE",
+            "REQUESTS_CA_BUNDLE",
+            "SSL_CERT_FILE",
+        ):
+            val = os.environ.get(var)
+            if val and Path(val).exists():
+                ca_bundle = val
+                break
+        if ca_bundle is None:
+            # Debian/Ubuntu system bundle
+            sys_bundle = "/etc/ssl/certs/ca-certificates.crt"
+            if Path(sys_bundle).exists():
+                ca_bundle = sys_bundle
+
+        response = requests.get(
+            url,
+            stream=True,
+            timeout=60,
+            verify=ca_bundle if ca_bundle else True,
+        )
         logger.debug("response: %s", response)
         response.raise_for_status()
 

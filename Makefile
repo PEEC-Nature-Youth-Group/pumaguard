@@ -207,7 +207,7 @@ server-container-test:
 	lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
 	lxc start $(TEST_NAME)
-	lxc exec $(TEST_NAME) -- cloud-init status --wait
+	lxc exec $(TEST_NAME) -- cloud-init status --wait || echo "ignoring error"
 	lxc exec $(TEST_NAME) -- apt-get update
 	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install --verbose --pip-args="--verbose" /$$(ls dist/*whl)

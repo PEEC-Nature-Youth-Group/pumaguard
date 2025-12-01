@@ -1,4 +1,6 @@
-"""Folders routes for browsing and listing images."""
+"""
+Folders routes for browsing and listing images.
+"""
 
 from __future__ import (
     annotations,
@@ -7,6 +9,7 @@ from __future__ import (
 import os
 from typing import (
     TYPE_CHECKING,
+    cast,
 )
 
 from flask import (
@@ -52,17 +55,28 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/folders/<path:folder_path>/images", methods=["GET"])
     def get_folder_images(folder_path: str):
-        abs_folder = os.path.realpath(os.path.normpath(folder_path))
-        allowed = False
+        # Try to resolve folder_path relative to each allowed image directory
+        abs_folder = None
+        resolved_base = None
         for directory in webui.image_directories:
             abs_directory = os.path.realpath(os.path.normpath(directory))
-            common = os.path.commonpath([abs_folder, abs_directory])
-            if common == abs_directory:
-                allowed = True
-                break
-        if not allowed:
+            # Always join user input to base, then normalize
+            candidate_folder = os.path.realpath(
+                os.path.join(abs_directory, folder_path)
+            )
+            try:
+                common = os.path.commonpath([candidate_folder, abs_directory])
+                if common == abs_directory:
+                    abs_folder = candidate_folder
+                    resolved_base = abs_directory
+                    break
+            except ValueError:
+                # Different drives on Windows
+                continue
+        if abs_folder is None:
+            # Ensure file is within the allowed folder
             return jsonify({"error": "Access denied"}), 403
-        if not os.path.exists(abs_folder):
+        if not os.path.exists(abs_folder) or not os.path.isdir(abs_folder):
             return jsonify({"error": "Folder not found"}), 404
         images = []
         for filename in os.listdir(abs_folder):
@@ -77,14 +91,31 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                 ext = os.path.splitext(filename)[1].lower()
                 if ext in IMAGE_EXTS:
                     stat = os.stat(resolved_filepath)
+                    rel_file_path = os.path.relpath(
+                        resolved_filepath, resolved_base
+                    )
                     images.append(
                         {
                             "filename": filename,
-                            "path": resolved_filepath,
+                            "path": rel_file_path,
                             "size": stat.st_size,
                             "modified": stat.st_mtime,
                             "created": stat.st_ctime,
                         }
                     )
-        images.sort(key=lambda x: x["modified"], reverse=True)
-        return jsonify({"images": images, "folder": abs_folder})
+
+        images.sort(key=lambda x: cast(float, x["modified"]), reverse=True)
+        # Return only relative folder path to root and the root directory name
+        if resolved_base is not None:
+            rel_folder_path = os.path.relpath(abs_folder, resolved_base)
+            folder_name = os.path.basename(resolved_base)
+        else:
+            rel_folder_path = ""
+            folder_name = ""
+        return jsonify(
+            {
+                "images": images,
+                "folder": rel_folder_path,
+                "base": folder_name,
+            }
+        )

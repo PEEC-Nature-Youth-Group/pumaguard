@@ -56,33 +56,57 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/photos/<path:filepath>", methods=["GET"])
     def get_photo(filepath: str):
-        abs_filepath = os.path.abspath(filepath)
-        allowed = False
+        # Safely resolve user provided path against allowed directories
+        abs_filepath = None
         for directory in webui.image_directories:
-            abs_directory = os.path.abspath(directory)
-            if abs_filepath.startswith(abs_directory):
-                allowed = True
-                break
-        if not allowed:
+            abs_directory = os.path.realpath(directory)
+            joined_path = os.path.join(abs_directory, filepath)
+            candidate = os.path.realpath(joined_path)
+            try:
+                common = os.path.commonpath([candidate, abs_directory])
+                if common == abs_directory:
+                    abs_filepath = candidate
+                    break
+            except ValueError:
+                # Different drives on Windows
+                continue
+        if abs_filepath is None:
             return jsonify({"error": "Access denied"}), 403
-        if not os.path.exists(abs_filepath):
+        if not os.path.exists(abs_filepath) or not os.path.isfile(
+            abs_filepath
+        ):
             return jsonify({"error": "File not found"}), 404
+        ext = os.path.splitext(abs_filepath)[1].lower()
+        if ext not in IMAGE_EXTS:
+            return jsonify({"error": "Access denied"}), 403
         directory = os.path.dirname(abs_filepath)
         filename = os.path.basename(abs_filepath)
         return send_from_directory(directory, filename)
 
     @app.route("/api/photos/<path:filepath>", methods=["DELETE"])
     def delete_photo(filepath: str):
-        abs_filepath = os.path.abspath(filepath)
-        allowed = False
+        # Safely resolve user provided path against allowed directories
+        abs_filepath = None
         for directory in webui.image_directories:
-            abs_directory = os.path.abspath(directory)
-            if abs_filepath.startswith(abs_directory):
-                allowed = True
-                break
-        if not allowed:
+            abs_directory = os.path.realpath(directory)
+            joined_path = os.path.join(abs_directory, filepath)
+            candidate = os.path.realpath(joined_path)
+            try:
+                common = os.path.commonpath([candidate, abs_directory])
+                if common == abs_directory:
+                    abs_filepath = candidate
+                    break
+            except ValueError:
+                # Different drives on Windows
+                continue
+        if abs_filepath is None:
             return jsonify({"error": "Access denied"}), 403
-        if not os.path.exists(abs_filepath):
+        if not os.path.exists(abs_filepath) or not os.path.isfile(
+            abs_filepath
+        ):
             return jsonify({"error": "File not found"}), 404
+        ext = os.path.splitext(abs_filepath)[1].lower()
+        if ext not in IMAGE_EXTS:
+            return jsonify({"error": "Access denied"}), 403
         os.remove(abs_filepath)
         return jsonify({"success": True, "message": "Photo deleted"})

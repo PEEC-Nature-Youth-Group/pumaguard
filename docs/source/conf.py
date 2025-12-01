@@ -96,3 +96,10 @@ html_theme_options = {
 # https://www.sphinx-doc.org/en/master/usage/extensions/todo.html#configuration
 
 todo_include_todos = True
+
+# -- Options for linkcheck builder -------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-the-linkcheck-builder
+
+# Path to CA certificate bundle (e.g., for self-signed proxy certificates)
+# Uncomment and set to your CA bundle path:
+tls_cacerts = '/etc/ssl/certs/ca-certificates.crt'  # System bundle

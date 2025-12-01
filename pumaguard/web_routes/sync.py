@@ -49,13 +49,19 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
         client_files = data["files"]
         files_to_download = []
         for filepath, client_checksum in client_files.items():
-            abs_filepath = os.path.abspath(filepath)
+            # Resolve and validate within allowed directories
+            abs_filepath = os.path.realpath(os.path.normpath(filepath))
             allowed = False
             for directory in webui.image_directories:
-                abs_directory = os.path.abspath(directory)
-                if abs_filepath.startswith(abs_directory):
-                    allowed = True
-                    break
+                abs_directory = os.path.realpath(os.path.normpath(directory))
+                try:
+                    common = os.path.commonpath([abs_filepath, abs_directory])
+                    if common == abs_directory:
+                        allowed = True
+                        break
+                except ValueError:
+                    # Different drives on Windows
+                    continue
             if not allowed:
                 continue
             if not os.path.exists(abs_filepath):
@@ -86,13 +92,22 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
         file_paths = data["files"]
         validated_files = []
         for filepath in file_paths:
-            abs_filepath = os.path.abspath(filepath)
+            # Resolve and validate within allowed directories
+            abs_filepath = os.path.realpath(os.path.normpath(filepath))
             allowed = False
             for directory in webui.image_directories:
-                abs_directory = os.path.abspath(directory)
-                if abs_filepath.startswith(abs_directory):
-                    allowed = True
-                    break
+                # Ensure allowed directories are normalized and real paths
+                abs_directory = os.path.realpath(os.path.normpath(directory))
+                try:
+                    common = os.path.commonpath([abs_filepath, abs_directory])
+                    if common == abs_directory and os.path.isfile(
+                        abs_filepath
+                    ):
+                        allowed = True
+                        break
+                except ValueError:
+                    # Different drives on Windows
+                    continue
             if allowed and os.path.exists(abs_filepath):
                 validated_files.append(abs_filepath)
         if not validated_files:

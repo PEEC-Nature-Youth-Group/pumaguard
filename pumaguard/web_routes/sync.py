@@ -53,7 +53,7 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
             abs_filepath = os.path.realpath(os.path.normpath(filepath))
             allowed = False
             for directory in webui.image_directories:
-                abs_directory = os.path.realpath(directory)
+                abs_directory = os.path.realpath(os.path.normpath(directory))
                 try:
                     common = os.path.commonpath([abs_filepath, abs_directory])
                     if common == abs_directory:
@@ -96,7 +96,8 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
             abs_filepath = os.path.realpath(os.path.normpath(filepath))
             allowed = False
             for directory in webui.image_directories:
-                abs_directory = os.path.realpath(directory)
+                # Ensure allowed directories are normalized and real paths
+                abs_directory = os.path.realpath(os.path.normpath(directory))
                 try:
                     common = os.path.commonpath([abs_filepath, abs_directory])
                     if common == abs_directory and os.path.isfile(

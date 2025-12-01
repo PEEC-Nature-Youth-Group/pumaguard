@@ -9,6 +9,7 @@ from __future__ import (
 import os
 from typing import (
     TYPE_CHECKING,
+    cast,
 )
 
 from flask import (
@@ -102,10 +103,15 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                             "created": stat.st_ctime,
                         }
                     )
-        images.sort(key=lambda x: x["modified"], reverse=True)
+
+        images.sort(key=lambda x: cast(float, x["modified"]), reverse=True)
         # Return only relative folder path to root and the root directory name
-        rel_folder_path = os.path.relpath(abs_folder, resolved_base)
-        folder_name = os.path.basename(resolved_base)
+        if resolved_base is not None:
+            rel_folder_path = os.path.relpath(abs_folder, resolved_base)
+            folder_name = os.path.basename(resolved_base)
+        else:
+            rel_folder_path = ""
+            folder_name = ""
         return jsonify(
             {
                 "images": images,

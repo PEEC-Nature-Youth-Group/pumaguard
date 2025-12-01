@@ -200,24 +200,45 @@ run-server: install build-ui
 
 .PHONY: server-container-test
 server-container-test:
-	lxc delete --force $(TEST_NAME) || echo "no existing $(TEST_NAME) instance"
-	lxc init ubuntu:noble $(TEST_NAME)
+	# Check if container exists
+	@if lxc info $(TEST_NAME) >/dev/null 2>&1; then \
+		echo "Container $(TEST_NAME) exists, updating..."; \
+	else \
+		echo "Container $(TEST_NAME) does not exist, creating..."; \
+		lxc init ubuntu:noble $(TEST_NAME); \
+	fi
+	$(MAKE) server-container-update
+
+.PHONY: server-container-update
+server-container-update:
+	lxc stop $(TEST_NAME) || echo "ignoring"
 	[ -d dist ] && gio trash dist || echo "no dist, ignoring"
 	$(MAKE) build
 	[ -d wheelhouse ] && gio trash wheelhouse || echo "no wheelhouse, ignoring"
 	mkdir --parents wheelhouse
 	. .venv/bin/activate && python -m pip download --dest wheelhouse $$(ls dist/*.whl)
-	lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
-	lxc config device add $(TEST_NAME) wheelhouse disk source=$${PWD}/wheelhouse path=/wheelhouse
+	lxc config device show $(TEST_NAME) | grep -q "^dist:" || \
+		lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
+	lxc config device show $(TEST_NAME) | grep -q "^wheelhouse:" || \
+		lxc config device add $(TEST_NAME) wheelhouse disk source=$${PWD}/wheelhouse path=/wheelhouse
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
-	lxc start $(TEST_NAME)
+	lxc start $(TEST_NAME) 2>/dev/null || echo "Container already running"
 	lxc exec $(TEST_NAME) -- cloud-init status --wait || echo "ignoring error"
 	lxc exec $(TEST_NAME) -- apt-get update
 	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
-	# Install from local wheelhouse without hitting the network
+
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx upgrade \
+		--verbose \
+		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
+		pumaguard || \
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install \
+		--force \
 		--verbose \
 		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
 		/$$(ls dist/*whl)
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug
+
+.PHONY: server-container-delete
+server-container-delete:
+	lxc delete --force $(TEST_NAME) || echo "no existing $(TEST_NAME) instance"

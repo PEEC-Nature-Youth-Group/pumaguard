@@ -1,4 +1,6 @@
-"""Folders routes for browsing and listing images."""
+"""
+Folders routes for browsing and listing images.
+"""
 
 from __future__ import (
     annotations,
@@ -58,7 +60,9 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
         for directory in webui.image_directories:
             abs_directory = os.path.realpath(os.path.normpath(directory))
             # Always join user input to base, then normalize
-            candidate_folder = os.path.realpath(os.path.join(abs_directory, folder_path))
+            candidate_folder = os.path.realpath(
+                os.path.join(abs_directory, folder_path)
+            )
             try:
                 common = os.path.commonpath([candidate_folder, abs_directory])
                 if common == abs_directory:
@@ -78,7 +82,6 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
             filepath = os.path.join(abs_folder, filename)
             resolved_filepath = os.path.realpath(os.path.normpath(filepath))
             if (
-                    rel_file_path = os.path.relpath(resolved_filepath, resolved_base)
                 os.path.commonpath([resolved_filepath, abs_folder])
                 != abs_folder
             ):
@@ -87,6 +90,9 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                 ext = os.path.splitext(filename)[1].lower()
                 if ext in IMAGE_EXTS:
                     stat = os.stat(resolved_filepath)
+                    rel_file_path = os.path.relpath(
+                        resolved_filepath, resolved_base
+                    )
                     images.append(
                         {
                             "filename": filename,
@@ -97,7 +103,13 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                         }
                     )
         images.sort(key=lambda x: x["modified"], reverse=True)
-       # Return only relative folder path to root and the root directory name
-       rel_folder_path = os.path.relpath(abs_folder, resolved_base)
-       folder_name = os.path.basename(resolved_base)
-       return jsonify({"images": images, "folder": rel_folder_path, "base": folder_name})
+        # Return only relative folder path to root and the root directory name
+        rel_folder_path = os.path.relpath(abs_folder, resolved_base)
+        folder_name = os.path.basename(resolved_base)
+        return jsonify(
+            {
+                "images": images,
+                "folder": rel_folder_path,
+                "base": folder_name,
+            }
+        )

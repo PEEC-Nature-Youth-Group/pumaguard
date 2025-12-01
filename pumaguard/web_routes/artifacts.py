@@ -88,11 +88,17 @@ def register_artifacts_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/artifacts/<path:filepath>", methods=["GET"])
     def get_artifact(filepath: str):
+        # Resolve to absolute path and validate within intermediate
         base_dir = os.path.realpath(
             os.path.normpath(webui.presets.intermediate_dir)
         )
         abs_filepath = os.path.realpath(os.path.normpath(filepath))
-        if os.path.commonpath([abs_filepath, base_dir]) != base_dir:
+        try:
+            common = os.path.commonpath([abs_filepath, base_dir])
+            if common != base_dir:
+                return jsonify({"error": "Access denied"}), 403
+        except ValueError:
+            # Different drives on Windows
             return jsonify({"error": "Access denied"}), 403
         if not os.path.exists(abs_filepath) or not os.path.isfile(
             abs_filepath

@@ -36,7 +36,7 @@ def get_xdg_config_home() -> Path:
 
 def get_xdg_data_home() -> Path:
     """
-    Get the XDG data home directory according to XDG Base Directory spec.
+    Get the XDG data home directory.
 
     Returns:
         Path to XDG_DATA_HOME (defaults to ~/.local/share if not set)
@@ -45,6 +45,19 @@ def get_xdg_data_home() -> Path:
     if xdg_data:
         return Path(xdg_data)
     return Path.home() / ".local" / "share"
+
+
+def get_xdg_cache_home() -> Path:
+    """
+    Get the XDG cache home directory.
+
+    Returns:
+        Path to XDG_CACHE_HOME (defaults to ~/.cache if not set)
+    """
+    xdg_cache = os.environ.get("XDG_CACHE_HOME")
+    if xdg_cache:
+        return Path(xdg_cache)
+    return Path.home() / ".cache"
 
 
 def get_default_settings_file() -> str:

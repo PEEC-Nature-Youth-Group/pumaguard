@@ -18,6 +18,7 @@ from pumaguard.presets import (
     Preset,
     PresetError,
     get_default_settings_file,
+    get_xdg_cache_home,
 )
 from pumaguard.utils import (
     print_bash_completion,
@@ -182,7 +183,12 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("PumaGuard")
 
-    file_handler = logging.FileHandler("pumaguard.log")
+    # Store logs in XDG cache directory
+    log_dir = get_xdg_cache_home() / "pumaguard"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "pumaguard.log"
+
+    file_handler = logging.FileHandler(str(log_file))
     file_handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

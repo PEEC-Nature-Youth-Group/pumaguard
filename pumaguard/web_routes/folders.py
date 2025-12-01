@@ -52,17 +52,22 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/folders/<path:folder_path>/images", methods=["GET"])
     def get_folder_images(folder_path: str):
+        # Resolve to absolute path and validate it's within allowed directories
         abs_folder = os.path.realpath(os.path.normpath(folder_path))
         allowed = False
         for directory in webui.image_directories:
             abs_directory = os.path.realpath(os.path.normpath(directory))
-            common = os.path.commonpath([abs_folder, abs_directory])
-            if common == abs_directory:
-                allowed = True
-                break
+            try:
+                common = os.path.commonpath([abs_folder, abs_directory])
+                if common == abs_directory:
+                    allowed = True
+                    break
+            except ValueError:
+                # Different drives on Windows
+                continue
         if not allowed:
             return jsonify({"error": "Access denied"}), 403
-        if not os.path.exists(abs_folder):
+        if not os.path.exists(abs_folder) or not os.path.isdir(abs_folder):
             return jsonify({"error": "Folder not found"}), 404
         images = []
         for filename in os.listdir(abs_folder):

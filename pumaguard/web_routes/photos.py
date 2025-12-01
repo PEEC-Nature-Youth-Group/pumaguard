@@ -72,9 +72,8 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
                 continue
         if abs_filepath is None:
             return jsonify({"error": "Access denied"}), 403
-        if (
-            not os.path.exists(abs_filepath)
-            or not os.path.isfile(abs_filepath)
+        if not os.path.exists(abs_filepath) or not os.path.isfile(
+            abs_filepath
         ):
             return jsonify({"error": "File not found"}), 404
         directory = os.path.dirname(abs_filepath)
@@ -99,9 +98,8 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
                 continue
         if abs_filepath is None:
             return jsonify({"error": "Access denied"}), 403
-        if (
-            not os.path.exists(abs_filepath)
-            or not os.path.isfile(abs_filepath)
+        if not os.path.exists(abs_filepath) or not os.path.isfile(
+            abs_filepath
         ):
             return jsonify({"error": "File not found"}), 404
         os.remove(abs_filepath)

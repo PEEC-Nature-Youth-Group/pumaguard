@@ -4,13 +4,10 @@ Web-UI for Pumaguard.
 
 import argparse
 import hashlib
-import io
 import logging
-import os
 import socket
 import threading
 import time
-import zipfile
 from pathlib import (
     Path,
 )
@@ -19,20 +16,17 @@ from typing import (
     TypedDict,
 )
 
-import yaml
 from flask import (
     Flask,
     jsonify,
-    request,
     send_file,
     send_from_directory,
 )
 from flask_cors import (
     CORS,
 )
-from yaml.representer import (
-    YAMLError,
-)
+
+# Note: YAMLError and yaml operations are handled in route modules
 from zeroconf import (
     NonUniqueNameException,
     ServiceInfo,
@@ -41,6 +35,27 @@ from zeroconf import (
 
 from pumaguard.presets import (
     Preset,
+)
+from pumaguard.web_routes.artifacts import (
+    register_artifacts_routes,
+)
+from pumaguard.web_routes.diagnostics import (
+    register_diagnostics_routes,
+)
+from pumaguard.web_routes.directories import (
+    register_directories_routes,
+)
+from pumaguard.web_routes.folders import (
+    register_folders_routes,
+)
+from pumaguard.web_routes.photos import (
+    register_photos_routes,
+)
+from pumaguard.web_routes.settings import (
+    register_settings_routes,
+)
+from pumaguard.web_routes.sync import (
+    register_sync_routes,
 )
 
 if TYPE_CHECKING:
@@ -57,6 +72,18 @@ class PhotoDict(TypedDict):
     filename: str
     path: str
     directory: str
+    size: int
+    modified: float
+    created: float
+
+
+class ArtifactDict(TypedDict):
+    """Type definition for artifact metadata dictionary."""
+
+    filename: str
+    path: str
+    ext: str
+    kind: str
     size: int
     modified: float
     created: float
@@ -182,9 +209,7 @@ class WebUI:
         return sha256_hash.hexdigest()
 
     def _setup_routes(self):
-        """
-        Set up Flask routes to serve the Flutter web app and API.
-        """
+        """Set up Flask routes for the Flutter web app and API."""
 
         @self.app.route("/")
         def index():
@@ -200,522 +225,23 @@ class WebUI:
                 )
             return send_file(self.build_dir / "index.html")
 
-        @self.app.route("/api/settings", methods=["GET"])
-        def get_settings():
-            """
-            Get current settings.
-            """
-            return jsonify(dict(self.presets))
+        # Register modular route groups
+        register_settings_routes(self.app, self)
 
-        @self.app.route("/api/settings", methods=["PUT"])
-        def update_settings():
-            """Update settings."""
-            try:
-                data = request.json
-                if not data:
-                    return jsonify({"error": "No data provided"}), 400
+        register_photos_routes(self.app, self)
 
-                allowed_settings = [
-                    "YOLO-min-size",
-                    "YOLO-conf-thresh",
-                    "YOLO-max-dets",
-                    "YOLO-model-filename",
-                    "classifier-model-filename",
-                    "deterrent-sound-file",
-                    "file-stabilization-extra-wait",
-                    "play-sound",
-                ]
+        register_folders_routes(self.app, self)
 
-                if len(data) == 0:
-                    raise ValueError("Did not receive any settings")
+        register_sync_routes(self.app, self)
 
-                for key, value in data.items():
-                    if key in allowed_settings:
-                        logger.debug("Updating %s with %s", key, value)
-                        # Convert hyphenated names to underscored attribute
-                        # names
-                        attr_name = key.replace("-", "_").replace(
-                            "YOLO_", "yolo_"
-                        )
-                        setattr(self.presets, attr_name, value)
-                    else:
-                        logger.debug(
-                            "Skipping unknown/read-only setting: %s", key
-                        )
+        # Routes delegated to web_routes.artifacts
 
-                # Auto-save settings to disk after updating
-                try:
-                    filepath = self.presets.settings_file
-                    settings_dict = {}
-                    for key, value in self.presets:
-                        settings_dict[key] = value
+        register_directories_routes(self.app, self)
 
-                    with open(filepath, "w", encoding="utf-8") as f:
-                        yaml.dump(settings_dict, f, default_flow_style=False)
-
-                    logger.info("Settings updated and saved to %s", filepath)
-                except YAMLError:
-                    logger.exception(
-                        "Error saving settings"
-                    )  # logs stack trace too
-                    return (
-                        jsonify(
-                            {
-                                "error": "Settings updated but failed to save due to an internal error"  # pylint: disable=line-too-long
-                            }
-                        ),
-                        500,
-                    )
-
-                return jsonify(
-                    {"success": True, "message": "Settings updated and saved"}
-                )
-            except ValueError as e:
-                logger.error("Error updating settings: %s", e)
-                return jsonify({"error": str(e)}), 500
-
-        @self.app.route("/api/settings/save", methods=["POST"])
-        def save_settings():
-            """Save current settings to a YAML file."""
-            data = request.json
-            filepath = data.get("filepath") if data else None
-
-            if not filepath:
-                # Use default settings file
-                filepath = self.presets.settings_file
-
-            settings_dict = {}
-            for key, value in self.presets:
-                settings_dict[key] = value
-
-            with open(filepath, "w", encoding="utf-8") as f:
-                yaml.dump(settings_dict, f, default_flow_style=False)
-
-            logger.info("Settings saved to %s", filepath)
-            return jsonify({"success": True, "filepath": filepath})
-
-        @self.app.route("/api/settings/load", methods=["POST"])
-        def load_settings():
-            """Load settings from a YAML file."""
-            data = request.json
-            filepath = data.get("filepath") if data else None
-
-            if not filepath:
-                return jsonify({"error": "No filepath provided"}), 400
-
-            self.presets.load(filepath)
-            logger.info("Settings loaded from %s", filepath)
-            return jsonify({"success": True, "message": "Settings loaded"})
-
-        # Photos/Images API
-        @self.app.route("/api/photos", methods=["GET"])
-        def get_photos():
-            """Get list of captured photos."""
-            photos: list[PhotoDict] = []
-            for directory in self.image_directories:
-                if not os.path.exists(directory):
-                    continue
-
-                for filename in os.listdir(directory):
-                    filepath = os.path.join(directory, filename)
-                    if os.path.isfile(filepath):
-                        # Check if it's an image file
-                        ext = os.path.splitext(filename)[1].lower()
-                        if ext in [
-                            ".jpg",
-                            ".jpeg",
-                            ".png",
-                            ".gif",
-                            ".bmp",
-                            ".webp",
-                        ]:
-                            stat = os.stat(filepath)
-                            photos.append(
-                                {
-                                    "filename": filename,
-                                    "path": filepath,
-                                    "directory": directory,
-                                    "size": stat.st_size,
-                                    "modified": stat.st_mtime,
-                                    "created": stat.st_ctime,
-                                }
-                            )
-
-            # Sort by modified time, newest first
-            photos.sort(key=lambda x: x["modified"], reverse=True)
-
-            return jsonify({"photos": photos, "total": len(photos)})
-
-        @self.app.route("/api/photos/<path:filepath>", methods=["GET"])
-        def get_photo(filepath):
-            """Get a specific photo."""
-            # Security check: ensure the file is in one of the allowed
-            # directories
-            abs_filepath = os.path.abspath(filepath)
-            allowed = False
-            for directory in self.image_directories:
-                abs_directory = os.path.abspath(directory)
-                if abs_filepath.startswith(abs_directory):
-                    allowed = True
-                    break
-
-            if not allowed:
-                return jsonify({"error": "Access denied"}), 403
-
-            if not os.path.exists(abs_filepath):
-                return jsonify({"error": "File not found"}), 404
-
-            directory = os.path.dirname(abs_filepath)
-            filename = os.path.basename(abs_filepath)
-            return send_from_directory(directory, filename)
-
-        @self.app.route("/api/photos/<path:filepath>", methods=["DELETE"])
-        def delete_photo(filepath):
-            """Delete a photo."""
-            # Security check: ensure the file is in one of the allowed
-            # directories
-            abs_filepath = os.path.abspath(filepath)
-            allowed = False
-            for directory in self.image_directories:
-                abs_directory = os.path.abspath(directory)
-                if abs_filepath.startswith(abs_directory):
-                    allowed = True
-                    break
-
-            if not allowed:
-                return jsonify({"error": "Access denied"}), 403
-
-            if not os.path.exists(abs_filepath):
-                return jsonify({"error": "File not found"}), 404
-
-            os.remove(abs_filepath)
-            logger.info("Deleted photo: %s", abs_filepath)
-            return jsonify({"success": True, "message": "Photo deleted"})
-
-        # Folder Browser API
-        @self.app.route("/api/folders", methods=["GET"])
-        def get_folders():
-            """Get list of watched folders with image counts."""
-            folders = []
-            for directory in self.image_directories:
-                if not os.path.exists(directory):
-                    continue
-
-                # Count images in folder
-                image_count = 0
-                for filename in os.listdir(directory):
-                    filepath = os.path.join(directory, filename)
-                    if os.path.isfile(filepath):
-                        ext = os.path.splitext(filename)[1].lower()
-                        if ext in [
-                            ".jpg",
-                            ".jpeg",
-                            ".png",
-                            ".gif",
-                            ".bmp",
-                            ".webp",
-                        ]:
-                            image_count += 1
-
-                folders.append(
-                    {
-                        "path": directory,
-                        "name": os.path.basename(directory),
-                        "image_count": image_count,
-                    }
-                )
-
-            return jsonify({"folders": folders})
-
-        @self.app.route(
-            "/api/folders/<path:folder_path>/images", methods=["GET"]
-        )
-        def get_folder_images(folder_path):
-            """Get list of images in a specific folder."""
-            # Security check: ensure the folder is in allowed directories
-            # Normalize and resolve symlinks for both folder_path and allowed
-            # directories
-            abs_folder = os.path.realpath(os.path.normpath(folder_path))
-            allowed = False
-            for directory in self.image_directories:
-                abs_directory = os.path.realpath(os.path.normpath(directory))
-                # Ensure abs_folder is contained in abs_directory
-                common = os.path.commonpath([abs_folder, abs_directory])
-                if common == abs_directory:
-                    allowed = True
-                    break
-
-            if not allowed:
-                return jsonify({"error": "Access denied"}), 403
-
-            if not os.path.exists(abs_folder):
-                return jsonify({"error": "Folder not found"}), 404
-
-            images = []
-            for filename in os.listdir(abs_folder):
-                filepath = os.path.join(abs_folder, filename)
-                # Security: resolve and ensure file is in allowed folder
-                resolved_filepath = os.path.realpath(
-                    os.path.normpath(filepath)
-                )
-                if (
-                    os.path.commonpath([resolved_filepath, abs_folder])
-                    != abs_folder
-                ):
-                    continue
-                if os.path.isfile(resolved_filepath):
-                    ext = os.path.splitext(filename)[1].lower()
-                    if ext in [
-                        ".jpg",
-                        ".jpeg",
-                        ".png",
-                        ".gif",
-                        ".bmp",
-                        ".webp",
-                    ]:
-                        stat = os.stat(resolved_filepath)
-                        images.append(
-                            {
-                                "filename": filename,
-                                "path": resolved_filepath,
-                                "size": stat.st_size,
-                                "modified": stat.st_mtime,
-                                "created": stat.st_ctime,
-                            }
-                        )
-
-            # Sort by modified time, newest first
-            images.sort(key=lambda x: x["modified"], reverse=True)
-
-            return jsonify({"images": images, "folder": abs_folder})
-
-        @self.app.route("/api/sync/checksums", methods=["POST"])
-        def calculate_checksums():
-            """
-            Calculate checksums for requested files.
-            Client sends list of files with their checksums,
-            server returns which files need to be downloaded.
-            """
-            data = request.json
-            if not data or "files" not in data:
-                return jsonify({"error": "No files provided"}), 400
-
-            client_files = data["files"]  # Dict of {filepath: checksum}
-            files_to_download = []
-
-            for filepath, client_checksum in client_files.items():
-                # Security check
-                abs_filepath = os.path.abspath(filepath)
-                allowed = False
-                for directory in self.image_directories:
-                    abs_directory = os.path.abspath(directory)
-                    if abs_filepath.startswith(abs_directory):
-                        allowed = True
-                        break
-
-                if not allowed:
-                    continue
-
-                if not os.path.exists(abs_filepath):
-                    continue
-
-                # Calculate server-side checksum
-                server_checksum = self._calculate_file_checksum(abs_filepath)
-
-                # If checksums don't match or client doesn't have it, mark for
-                # download
-                if server_checksum != client_checksum:
-                    stat = os.stat(abs_filepath)
-                    files_to_download.append(
-                        {
-                            "path": filepath,
-                            "checksum": server_checksum,
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime,
-                        }
-                    )
-
-            return jsonify(
-                {
-                    "files_to_download": files_to_download,
-                    "total": len(files_to_download),
-                }
-            )
-
-        @self.app.route("/api/sync/download", methods=["POST"])
-        def download_files():
-            """
-            Download multiple files as a ZIP archive.
-            """
-            data = request.json
-            if not data or "files" not in data:
-                return jsonify({"error": "No files provided"}), 400
-
-            file_paths = data["files"]
-
-            # Validate all files
-            validated_files = []
-            for filepath in file_paths:
-                abs_filepath = os.path.abspath(filepath)
-                allowed = False
-                for directory in self.image_directories:
-                    abs_directory = os.path.abspath(directory)
-                    if abs_filepath.startswith(abs_directory):
-                        allowed = True
-                        break
-
-                if allowed and os.path.exists(abs_filepath):
-                    validated_files.append(abs_filepath)
-
-            if not validated_files:
-                return jsonify({"error": "No valid files to download"}), 400
-
-            # For single file, return it directly
-            if len(validated_files) == 1:
-                directory = os.path.dirname(validated_files[0])
-                filename = os.path.basename(validated_files[0])
-                return send_from_directory(
-                    directory, filename, as_attachment=True
-                )
-
-            memory_file = io.BytesIO()
-            with zipfile.ZipFile(memory_file, "w", zipfile.ZIP_DEFLATED) as zf:
-                for filepath in validated_files:
-                    # Use relative path in zip to maintain folder structure
-                    arcname = os.path.basename(filepath)
-                    zf.write(filepath, arcname)
-
-            memory_file.seek(0)
-            return send_file(
-                memory_file,
-                mimetype="application/zip",
-                as_attachment=True,
-                download_name="pumaguard_images.zip",
-            )
-
-        # Directories API
-        @self.app.route("/api/directories", methods=["GET"])
-        def get_directories():
-            """Get list of image directories being monitored."""
-            return jsonify({"directories": self.image_directories})
-
-        @self.app.route("/api/directories", methods=["POST"])
-        def add_directory():
-            """Add a directory to monitor for images."""
-            data = request.json
-            directory = data.get("directory") if data else None
-
-            if not directory:
-                return jsonify({"error": "No directory provided"}), 400
-
-            if not os.path.exists(directory):
-                return jsonify({"error": "Directory does not exist"}), 400
-
-            if directory not in self.image_directories:
-                self.image_directories.append(directory)
-                logger.info("Added image directory: %s", directory)
-
-                # Register with FolderManager to start watching
-                if self.folder_manager is not None:
-                    self.folder_manager.register_folder(
-                        directory, self.watch_method
-                    )
-                    logger.info(
-                        "Registered folder with manager: %s (method: %s)",
-                        directory,
-                        self.watch_method,
-                    )
-
-            return jsonify(
-                {"success": True, "directories": self.image_directories}
-            )
-
-        @self.app.route("/api/directories/<int:index>", methods=["DELETE"])
-        def remove_directory(index):
-            """Remove a directory from watch list."""
-            if 0 <= index < len(self.image_directories):
-                removed = self.image_directories.pop(index)
-                logger.info("Removed image directory: %s", removed)
-                return jsonify(
-                    {
-                        "success": True,
-                        "directories": self.image_directories,
-                    }
-                )
-            return jsonify({"error": "Invalid index"}), 400
-
-        # System/Status API
-        @self.app.route("/api/status", methods=["GET"])
-        def get_status():
-            """Get server status."""
-            # Add request info to help debug CORS and origin issues
-            origin = request.headers.get("Origin", "No Origin header")
-            host = request.headers.get("Host", "No Host header")
-
-            logger.debug(
-                "API status called - Origin: %s, Host: %s", origin, host
-            )
-
-            return jsonify(
-                {
-                    "status": "running",
-                    "version": "1.0.0",
-                    "directories_count": len(self.image_directories),
-                    "host": self.host,
-                    "port": self.port,
-                    "request_origin": origin,
-                    "request_host": host,
-                }
-            )
-
-        @self.app.route("/api/diagnostic", methods=["GET"])
-        def get_diagnostic():
-            """
-            Get diagnostic information to help debug URL detection issues.
-            """
-            # Get all relevant request information
-            diagnostic_info = {
-                "server": {
-                    "host": self.host,
-                    "port": self.port,
-                    "flutter_dir": str(self.flutter_dir),
-                    "build_dir": str(self.build_dir),
-                    "build_exists": self.build_dir.exists(),
-                    "mdns_enabled": self.mdns_enabled,
-                    "mdns_name": self.mdns_name if self.mdns_enabled else None,
-                    "mdns_url": (
-                        f"http://{self.mdns_name}.local:{self.port}"
-                        if self.mdns_enabled
-                        else None
-                    ),
-                    "local_ip": self._get_local_ip(),
-                },
-                "request": {
-                    "url": request.url,
-                    "base_url": request.base_url,
-                    "host": request.headers.get("Host", "N/A"),
-                    "origin": request.headers.get("Origin", "N/A"),
-                    "referer": request.headers.get("Referer", "N/A"),
-                    "user_agent": request.headers.get("User-Agent", "N/A"),
-                },
-                "expected_behavior": {
-                    "flutter_app_should_detect": f"{request.scheme}://{request.host}",  # pylint: disable=line-too-long
-                    "api_calls_should_go_to": f"{request.scheme}://{request.host}/api/...",  # pylint: disable=line-too-long
-                },
-                "troubleshooting": {
-                    "if_api_calls_go_to_localhost": "Browser is using cached old JavaScript - clear cache",  # pylint: disable=line-too-long
-                    "if_page_doesnt_load": "Check that Flutter app is built: make build-ui",  # pylint: disable=line-too-long
-                    "if_cors_errors": "Check browser console for details",
-                },
-            }
-
-            logger.info(
-                "Diagnostic endpoint called from: %s", request.remote_addr
-            )
-            return jsonify(diagnostic_info)
+        register_diagnostics_routes(self.app, self)
 
         @self.app.route("/<path:path>")
-        def serve_static(path):
+        def serve_static(path: str):
             """
             Serve static files (JS, CSS, assets, etc.).
             """
@@ -734,6 +260,9 @@ class WebUI:
             if file_path.exists() and file_path.is_file():
                 return send_from_directory(self.build_dir, path)
             return send_file(self.build_dir / "index.html")
+
+        # Register artifacts after core routes
+        register_artifacts_routes(self.app, self)
 
     def add_image_directory(self, directory: str):
         """

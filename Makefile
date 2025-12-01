@@ -197,9 +197,13 @@ build-ui: install
 run-server: install build-ui
 	uv run --native-tls --frozen pumaguard server
 
+.PHONY: dev-backend
+dev-backend: install-dev
+	@echo "Starting PumaGuard backend in debug mode..."
+	uv run --native-tls --frozen pumaguard server --debug
+
 .PHONY: server-container-test
 server-container-test:
-	# Check if container exists
 	@if lxc info $(TEST_NAME) >/dev/null 2>&1; then \
 		echo "Container $(TEST_NAME) exists, updating..."; \
 	else \

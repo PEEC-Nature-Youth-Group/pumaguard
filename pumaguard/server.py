@@ -377,6 +377,10 @@ def main(options: argparse.Namespace, presets: Preset):
         folders_to_watch = list(options.FOLDER)
     else:
         folders_to_watch = [presets.default_watch_dir]
+        logger.info(
+            "No folders specified, using default watch directory: %s",
+            presets.default_watch_dir,
+        )
 
     # Ensure default exists if used
     for f in folders_to_watch:
@@ -388,6 +392,7 @@ def main(options: argparse.Namespace, presets: Preset):
     for folder in folders_to_watch:
         manager.register_folder(folder, options.watch_method, start=False)
         webui.add_image_directory(folder)
+        logger.info("Watching folder: %s", folder)
 
     manager.start_all()
 

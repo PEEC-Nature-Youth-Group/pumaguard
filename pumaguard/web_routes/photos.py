@@ -76,6 +76,9 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
             abs_filepath
         ):
             return jsonify({"error": "File not found"}), 404
+        ext = os.path.splitext(abs_filepath)[1].lower()
+        if ext not in IMAGE_EXTS:
+            return jsonify({"error": "Access denied"}), 403
         directory = os.path.dirname(abs_filepath)
         filename = os.path.basename(abs_filepath)
         return send_from_directory(directory, filename)
@@ -102,5 +105,8 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
             abs_filepath
         ):
             return jsonify({"error": "File not found"}), 404
+        ext = os.path.splitext(abs_filepath)[1].lower()
+        if ext not in IMAGE_EXTS:
+            return jsonify({"error": "Access denied"}), 403
         os.remove(abs_filepath)
         return jsonify({"success": True, "message": "Photo deleted"})

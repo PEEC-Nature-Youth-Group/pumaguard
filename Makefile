@@ -217,16 +217,19 @@ server-container-update:
 	[ -d wheelhouse ] && gio trash wheelhouse || echo "no wheelhouse, ignoring"
 	mkdir --parents wheelhouse
 	. .venv/bin/activate && python -m pip download --dest wheelhouse $$(ls dist/*.whl)
+	[ -d watch ] && gio trash watch || echo "no watch folder, ignoring"
+	mkdir --parents watch
 	lxc config device show $(TEST_NAME) | grep -q "^dist:" || \
 		lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
 	lxc config device show $(TEST_NAME) | grep -q "^wheelhouse:" || \
 		lxc config device add $(TEST_NAME) wheelhouse disk source=$${PWD}/wheelhouse path=/wheelhouse
+	lxc config device show $(TEST_NAME) | grep -q "^watch:" || \
+		lxc config device add $(TEST_NAME) watch disk source=$${PWD}/watch path=/watch
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
 	lxc start $(TEST_NAME) 2>/dev/null || echo "Container already running"
 	lxc exec $(TEST_NAME) -- cloud-init status --wait || echo "ignoring error"
 	lxc exec $(TEST_NAME) -- apt-get update
 	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
-
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx upgrade \
 		--verbose \
 		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
@@ -237,7 +240,7 @@ server-container-update:
 		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
 		/$$(ls dist/*whl)
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug /watch
 
 .PHONY: server-container-delete
 server-container-delete:

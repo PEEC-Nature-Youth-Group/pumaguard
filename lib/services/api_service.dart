@@ -9,7 +9,8 @@ import '../models/settings.dart';
 class ApiService {
   String? _baseUrl;
 
-  ApiService({String? baseUrl}) : _baseUrl = baseUrl;
+  ApiService({String? baseUrl})
+      : _baseUrl = baseUrl?.replaceAll(RegExp(r'/$'), '');
 
   /// Update the base URL (useful when connecting to a discovered server)
   void setBaseUrl(String url) {
@@ -149,6 +150,26 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to load directories: $e');
+    }
+  }
+
+  /// Get list of classification output directories
+  Future<List<String>> getClassificationDirectories() async {
+    try {
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/directories/classification')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final dirs = json['directories'] as List<dynamic>;
+        return dirs.map((d) => d.toString()).toList();
+      } else {
+        throw Exception('Failed to load classification directories: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Failed to load classification directories: $e');
     }
   }
 

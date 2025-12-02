@@ -9,6 +9,7 @@ from __future__ import (
 import os
 from typing import (
     TYPE_CHECKING,
+    Any,
     cast,
 )
 
@@ -70,9 +71,9 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
 
         # Flask's <path:> converter strips leading slash, add it back
         # if it looks like an absolute path was intended
-        if not folder_path.startswith(
-            "/"
-        ) and not folder_path.startswith("\\"):
+        if not folder_path.startswith("/") and not folder_path.startswith(
+            "\\"
+        ):
             folder_path = "/" + folder_path
 
         # Normalize the requested path
@@ -103,10 +104,10 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                 # Different drives on Windows
                 continue
         debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}
-        
+
         if abs_folder is None:
             # Ensure file is within the allowed folder
-            error_response = {"error": "Access denied"}
+            error_response: dict[str, Any] = {"error": "Access denied"}
             if debug_paths:
                 error_response["_requested"] = folder_path
                 error_response["_normalized"] = normalized_folder_path
@@ -118,7 +119,11 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                 error_response["_requested"] = folder_path
                 error_response["_resolved"] = abs_folder
                 error_response["_exists"] = os.path.exists(abs_folder)
-                error_response["_is_dir"] = os.path.isdir(abs_folder) if os.path.exists(abs_folder) else None
+                error_response["_is_dir"] = (
+                    os.path.isdir(abs_folder)
+                    if os.path.exists(abs_folder)
+                    else None
+                )
             return jsonify(error_response), 404
         images = []
         debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}

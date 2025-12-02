@@ -7,6 +7,7 @@ from __future__ import (
 import os
 from typing import (
     TYPE_CHECKING,
+    Any,
 )
 
 from flask import (
@@ -79,7 +80,7 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
                 continue
         debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}
         if abs_filepath is None:
-            payload = {"error": "Access denied"}
+            payload: dict[str, Any] = {"error": "Access denied"}
             if debug_paths:
                 payload["_tried_bases"] = all_directories
                 payload["_requested"] = filepath

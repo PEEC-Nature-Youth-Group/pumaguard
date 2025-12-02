@@ -19,6 +19,12 @@ from yaml.representer import (
     YAMLError,
 )
 
+from pumaguard.model_downloader import (
+    MODEL_REGISTRY,
+    get_models_directory,
+    list_available_models,
+    verify_file_checksum,
+)
 from pumaguard.sound import (
     playsound,
 )
@@ -156,4 +162,50 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
             )
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error testing sound")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/models/available", methods=["GET"])
+    def get_available_models():
+        """Get list of available classifier models with cache status."""
+        try:
+            models_dir = get_models_directory()
+            available_models = list_available_models()
+
+            # Filter to only classifier models (*.h5 files)
+            classifier_models = [
+                model for model in available_models if model.endswith(".h5")
+            ]
+
+            model_list = []
+            for model_name in classifier_models:
+                model_path = models_dir / model_name
+                is_cached = False
+
+                # Check if model exists and verify checksum
+                if model_path.exists():
+                    model_info = MODEL_REGISTRY[model_name]
+                    sha256 = model_info.get("sha256")
+                    if isinstance(sha256, str):
+                        is_cached = verify_file_checksum(model_path, sha256)
+
+                # Get model size info
+                size_mb = None
+                if model_path.exists():
+                    size_mb = model_path.stat().st_size / (1024 * 1024)
+
+                model_list.append(
+                    {
+                        "name": model_name,
+                        "cached": is_cached,
+                        "size_mb": size_mb,
+                    }
+                )
+
+            # Sort models: cached first, then by name
+            model_list.sort(key=lambda x: (not x["cached"], x["name"]))
+
+            return jsonify({"models": model_list})
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error getting available models")
             return jsonify({"error": str(e)}), 500

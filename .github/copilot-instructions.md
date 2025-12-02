@@ -84,6 +84,20 @@ The Flutter UI auto-detects the API URL:
 
 See `pumaguard-ui/lib/services/api_service.dart::getApiUrl()` for logic.
 
+**Before committing UI changes**, run pre-commit validation in the submodule:
+
+```bash
+cd pumaguard-ui
+make pre-commit    # Runs version, analyze, format, build
+cd ..
+```
+
+This ensures:
+- Version is generated from git tags
+- Flutter analyze passes with no issues
+- Code is properly formatted with `dart format`
+- Web build succeeds
+
 ### UI Submodule Workflow
 
 The UI is in a **separate Git repository** tracked as a submodule:
@@ -172,11 +186,17 @@ These are **regression tests** - percentages must match exactly to catch model d
 
 ### Unit Tests
 
+**Python Tests:**
 - **Test settings persistence**: `test_presets.py`
 - **Test server routes**: `test_server.py`
 - **Test model loading**: `test_utils.py`
 
 Run with `make test` for coverage reports.
+
+**Flutter Tests:**
+- Run `make test-ui` from root directory, or
+- Run `flutter test` from `pumaguard-ui/` subdirectory
+- **Before committing UI code**: Always run `cd pumaguard-ui && make pre-commit`
 
 ## Critical Files to Review
 
@@ -231,8 +251,11 @@ make dev-ui-web              # Start Flutter with hot reload
 # Testing & Quality
 make test                     # Run Python tests
 make test-ui                  # Run Flutter tests
-make lint                     # All linters
-make pre-commit              # Full validation suite
+make lint                     # All linters (Python)
+make pre-commit              # Full validation suite (Python)
+
+# Flutter UI Quality (run from pumaguard-ui/)
+cd pumaguard-ui && make pre-commit   # UI validation (analyze, format, build)
 
 # Building
 make build-ui                # Build Flutter → copy to pumaguard/

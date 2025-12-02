@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:developer' as developer;
 import '../services/api_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
@@ -63,8 +64,21 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
       final apiService = Provider.of<ApiService>(context, listen: false);
       final result = await apiService.getFolderImages(folderPath);
       final images = result['images'] as List<dynamic>;
+
+      // The backend returns 'path' as relative to the base directory
+      // This is exactly what the /api/photos endpoint expects
+      final imagesWithFullPaths = images.map((img) {
+        final imageMap = img as Map<String, dynamic>;
+        final relativePath = imageMap['path'] as String;
+        return {
+          ...imageMap,
+          'full_path':
+              relativePath, // Use the relative path as-is for API calls
+        };
+      }).toList();
+
       setState(() {
-        _images = images.cast<Map<String, dynamic>>();
+        _images = imagesWithFullPaths.cast<Map<String, dynamic>>();
         _isLoading = false;
       });
     } catch (e) {
@@ -75,13 +89,13 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     }
   }
 
-  void _toggleImageSelection(String imagePath) {
+  void _toggleImageSelection(String imagePath, String fullPath) {
     setState(() {
-      if (_selectedImages.contains(imagePath)) {
-        _selectedImages.remove(imagePath);
+      if (_selectedImages.contains(fullPath)) {
+        _selectedImages.remove(fullPath);
         _selectAll = false;
       } else {
-        _selectedImages.add(imagePath);
+        _selectedImages.add(fullPath);
         if (_selectedImages.length == _images.length) {
           _selectAll = true;
         }
@@ -93,7 +107,9 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     setState(() {
       _selectAll = !_selectAll;
       if (_selectAll) {
-        _selectedImages = _images.map((img) => img['path'] as String).toSet();
+        _selectedImages = _images
+            .map((img) => img['full_path'] as String)
+            .toSet();
       } else {
         _selectedImages.clear();
       }
@@ -265,6 +281,21 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
+                        // Debug overlay shows selected folder
+                        if (_selectedFolder != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Debug: Selected base = $_selectedFolder',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Colors.grey[600]),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
                         const Divider(),
                         Expanded(
                           child: _folders.isEmpty
@@ -363,12 +394,28 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                         final image = _images[index];
                                         final imagePath =
                                             image['path'] as String;
+                                        final fullPath =
+                                            image['full_path'] as String;
                                         final isSelected = _selectedImages
-                                            .contains(imagePath);
+                                            .contains(fullPath);
+
+                                        // Debug: log constructed photo URL
+                                        final photoUrl = apiService.getPhotoUrl(
+                                          fullPath,
+                                          thumbnail: true,
+                                          maxWidth: 400,
+                                          maxHeight: 400,
+                                        );
+                                        developer.log(
+                                          'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
+                                          name: 'ImageBrowser',
+                                        );
 
                                         return GestureDetector(
-                                          onTap: () =>
-                                              _toggleImageSelection(imagePath),
+                                          onTap: () => _toggleImageSelection(
+                                            imagePath,
+                                            fullPath,
+                                          ),
                                           child: Card(
                                             elevation: isSelected ? 8 : 2,
                                             color: isSelected
@@ -393,13 +440,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                                                   ),
                                                             ),
                                                         child: Image.network(
-                                                          apiService
-                                                              .getPhotoUrl(
-                                                                imagePath,
-                                                                thumbnail: true,
-                                                                maxWidth: 400,
-                                                                maxHeight: 400,
-                                                              ),
+                                                          photoUrl,
                                                           fit: BoxFit.cover,
                                                           cacheWidth: 400,
                                                           cacheHeight: 400,
@@ -512,6 +553,21 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                                         style: Theme.of(
                                                           context,
                                                         ).textTheme.bodySmall,
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      // Debug: show relative path used for API
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'rel: $fullPath',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              color: Colors
+                                                                  .grey[600],
+                                                            ),
                                                         maxLines: 1,
                                                         overflow: TextOverflow
                                                             .ellipsis,

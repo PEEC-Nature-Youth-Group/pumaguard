@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import '../models/status.dart';
@@ -10,7 +10,7 @@ class ApiService {
   String? _baseUrl;
 
   ApiService({String? baseUrl})
-      : _baseUrl = baseUrl?.replaceAll(RegExp(r'/$'), '');
+    : _baseUrl = baseUrl?.replaceAll(RegExp(r'/$'), '');
 
   /// Update the base URL (useful when connecting to a discovered server)
   void setBaseUrl(String url) {
@@ -166,7 +166,9 @@ class ApiService {
         final dirs = json['directories'] as List<dynamic>;
         return dirs.map((d) => d.toString()).toList();
       } else {
-        throw Exception('Failed to load classification directories: ${response.statusCode}');
+        throw Exception(
+          'Failed to load classification directories: ${response.statusCode}',
+        );
       }
     } catch (e) {
       throw Exception('Failed to load classification directories: $e');
@@ -238,21 +240,54 @@ class ApiService {
 
   /// Get list of images in a specific folder
   Future<Map<String, dynamic>> getFolderImages(String folderPath) async {
+    debugPrint('[ApiService.getFolderImages] START');
+    debugPrint('[ApiService.getFolderImages] Input folderPath: $folderPath');
+
     try {
-      // Encode the entire path as a single component (e.g., /path/to/folder -> %2Fpath%2Fto%2Ffolder)
-      final encodedPath = Uri.encodeComponent(folderPath);
+      // Don't encode absolute paths - Flask's <path:> converter handles them directly
+      // Only encode individual path components if needed
+      String pathForUrl;
+      if (folderPath.startsWith('/') || folderPath.startsWith('\\')) {
+        // Absolute path - remove leading slash since Flask's <path:> adds it back
+        pathForUrl = folderPath.substring(1);
+      } else {
+        // Relative path - use as-is
+        pathForUrl = folderPath;
+      }
+      debugPrint('[ApiService.getFolderImages] Path for URL: $pathForUrl');
+
+      final url = getApiUrl('/api/folders/$pathForUrl/images');
+      debugPrint('[ApiService.getFolderImages] Full URL: $url');
+
       final response = await http.get(
-        Uri.parse(getApiUrl('/api/folders/$encodedPath/images')),
+        Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getFolderImages] Response status: ${response.statusCode}',
+      );
+      debugPrint(
+        '[ApiService.getFolderImages] Response body length: ${response.body.length} chars',
       );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint(
+          '[ApiService.getFolderImages] SUCCESS - Images count: ${(json['images'] as List?)?.length ?? 0}',
+        );
         return json;
       } else {
+        debugPrint(
+          '[ApiService.getFolderImages] ERROR - Status ${response.statusCode}',
+        );
+        debugPrint(
+          '[ApiService.getFolderImages] ERROR - Body: ${response.body}',
+        );
         throw Exception('Failed to load folder images: ${response.statusCode}');
       }
     } catch (e) {
+      debugPrint('[ApiService.getFolderImages] EXCEPTION: $e');
       throw Exception('Failed to load folder images: $e');
     }
   }

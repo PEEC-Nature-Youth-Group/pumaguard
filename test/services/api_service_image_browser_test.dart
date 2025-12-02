@@ -153,35 +153,31 @@ void main() {
         final mockResponse = {
           'images': [
             {
-              'path': '/home/user/.local/share/pumaguard/classified/puma/img1.jpg',
-              'name': 'img1.jpg',
+              'path': 'img1.jpg',  // Relative to base directory
+              'filename': 'img1.jpg',
               'size': 102400,
               'modified': 1701504000.0,
             },
             {
-              'path': '/home/user/.local/share/pumaguard/classified/puma/img2.jpg',
-              'name': 'img2.jpg',
+              'path': 'img2.jpg',  // Relative to base directory
+              'filename': 'img2.jpg',
               'size': 204800,
               'modified': 1701504060.0,
             },
           ],
-          'total': 42,
-          'page': 1,
-          'per_page': 20,
-          'total_pages': 3,
+          'folder': '.',
+          'base': 'puma',
         };
 
         expect(mockResponse['images'], isList);
         expect((mockResponse['images'] as List).length, 2);
-        expect(mockResponse['total'], 42);
-        expect(mockResponse['page'], 1);
-        expect(mockResponse['per_page'], 20);
-        expect(mockResponse['total_pages'], 3);
+        expect(mockResponse['folder'], '.');
+        expect(mockResponse['base'], 'puma');
 
         final firstImage =
             (mockResponse['images'] as List)[0] as Map<String, dynamic>;
-        expect(firstImage['name'], 'img1.jpg');
-        expect(firstImage['path'], contains('puma'));
+        expect(firstImage['filename'], 'img1.jpg');
+        expect(firstImage['path'], 'img1.jpg');  // Path is relative to base
         expect(firstImage['size'], 102400);
         expect(firstImage['modified'], 1701504000.0);
       });

@@ -386,4 +386,25 @@ class ApiService {
       throw Exception('Failed to test sound: $e');
     }
   }
+
+  /// Get list of available classifier models with cache status
+  Future<List<Map<String, dynamic>>> getAvailableModels() async {
+    try {
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/models/available')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final models = json['models'] as List<dynamic>;
+        return models.map((m) => m as Map<String, dynamic>).toList();
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to get available models');
+      }
+    } catch (e) {
+      throw Exception('Failed to get available models: $e');
+    }
+  }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
 import '../services/api_service.dart';
+import 'dart:developer' as developer;
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -26,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _soundFileController;
   late TextEditingController _fileStabilizationController;
   bool _playSound = false;
+  List<Map<String, dynamic>> _availableModels = [];
 
   @override
   void initState() {
@@ -168,6 +170,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() {
           _isTestingSound = false;
         });
+      }
+    }
+  }
+
+  Future<void> _showModelPicker() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final apiService = context.read<ApiService>();
+      final models = await apiService.getAvailableModels();
+
+      setState(() {
+        _availableModels = models;
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      final selectedModel = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Classifier Model'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _availableModels.length,
+                itemBuilder: (context, index) {
+                  final model = _availableModels[index];
+                  final isCached = model['cached'] as bool;
+                  final modelName = model['name'] as String;
+                  final sizeMb = model['size_mb'] as double?;
+
+                  return ListTile(
+                    title: Text(modelName),
+                    subtitle: Text(
+                      isCached
+                          ? 'Cached${sizeMb != null ? " (${sizeMb.toStringAsFixed(1)} MB)" : ""}'
+                          : 'Requires download',
+                      style: TextStyle(
+                        color: isCached ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                    leading: Icon(
+                      isCached ? Icons.check_circle : Icons.cloud_download,
+                      color: isCached ? Colors.green : Colors.orange,
+                    ),
+                    trailing: modelName == _classifierModelController.text
+                        ? const Icon(Icons.check, color: Colors.blue)
+                        : null,
+                    onTap: () {
+                      Navigator.of(context).pop(modelName);
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (selectedModel != null) {
+        setState(() {
+          _classifierModelController.text = selectedModel;
+        });
+      }
+    } catch (e) {
+      developer.log('Error loading models: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load models: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -374,11 +463,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _classifierModelController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Classifier Model Filename',
                 hintText: 'classifier_model.h5',
                 helperText: 'Path to classifier model file',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  onPressed: _showModelPicker,
+                  tooltip: 'Browse available models',
+                ),
+              ),
+              readOnly: false,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _showModelPicker,
+              icon: const Icon(Icons.list),
+              label: const Text('Choose from Available Models'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(12),
               ),
             ),
           ],

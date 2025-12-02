@@ -84,7 +84,7 @@ The Flutter UI auto-detects the API URL:
 
 See `pumaguard-ui/lib/services/api_service.dart::getApiUrl()` for logic.
 
-**Before committing UI changes**, run pre-commit validation in the submodule:
+**CRITICAL: Before committing UI changes**, ALWAYS run pre-commit validation in the submodule:
 
 ```bash
 cd pumaguard-ui
@@ -92,11 +92,17 @@ make pre-commit    # Runs version, analyze, format, build
 cd ..
 ```
 
+**⚠️ MANDATORY:** This step is REQUIRED for ALL UI changes. Do not skip it.
+
 This ensures:
 - Version is generated from git tags
-- Flutter analyze passes with no issues
+- Flutter analyze passes with no issues (zero warnings/errors)
 - Code is properly formatted with `dart format`
-- Web build succeeds
+- Web build succeeds without errors
+
+**Note:** If `flutter analyze` reports warnings about unused elements, either:
+1. Remove the unused code, OR
+2. Add `// ignore: unused_element` comment if the code is intentionally reserved for future use
 
 ### UI Submodule Workflow
 
@@ -253,6 +259,9 @@ make test                     # Run Python tests
 make test-ui                  # Run Flutter tests
 make lint                     # All linters (Python)
 make pre-commit              # Full validation suite (Python)
+
+# Flutter UI Quality (ALWAYS run after UI changes)
+cd pumaguard-ui && make pre-commit   # UI validation (version, analyze, format, build)
 
 # Flutter UI Quality (run from pumaguard-ui/)
 cd pumaguard-ui && make pre-commit   # UI validation (analyze, format, build)

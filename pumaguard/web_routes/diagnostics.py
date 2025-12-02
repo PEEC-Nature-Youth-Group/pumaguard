@@ -37,7 +37,7 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
                 "status": "running",
                 "version": pumaguard.__version__,
                 "directories_count": len(webui.image_directories),
-                "host": webui.host,
+                "host": webui._get_local_ip(),  # pylint: disable=protected-access
                 "port": webui.port,
                 "request_origin": origin,
                 "request_host": host,

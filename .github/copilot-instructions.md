@@ -260,9 +260,6 @@ make test-ui                  # Run Flutter tests
 make lint                     # All linters (Python)
 make pre-commit              # Full validation suite (Python)
 
-# Flutter UI Quality (ALWAYS run after UI changes)
-cd pumaguard-ui && make pre-commit   # UI validation (version, analyze, format, build)
-
 # Flutter UI Quality (run from pumaguard-ui/)
 cd pumaguard-ui && make pre-commit   # UI validation (analyze, format, build)
 

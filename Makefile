@@ -202,6 +202,13 @@ dev-backend: build install
 	@echo "Starting PumaGuard backend in debug mode..."
 	uv run --native-tls --frozen pumaguard server --debug
 
+API_BASE_URL ?= http://localhost:5000
+
+.PHONY: dev-ui-web
+dev-ui-web:
+	@echo "Starting Flutter web dev server (run 'make dev-backend' in another terminal)..."
+	$(MAKE) -C pumaguard-ui dev-ui-web API_BASE_URL=$(API_BASE_URL)
+
 .PHONY: server-container-test
 server-container-test:
 	@if lxc info $(TEST_NAME) >/dev/null 2>&1; then \

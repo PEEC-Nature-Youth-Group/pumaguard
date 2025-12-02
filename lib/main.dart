@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'services/api_service.dart';
+import 'version.dart';
 
 void main() {
   runApp(const PumaGuardApp());
@@ -15,7 +16,7 @@ class PumaGuardApp extends StatelessWidget {
     return Provider<ApiService>(
       create: (_) => ApiService(),
       child: MaterialApp(
-        title: 'PumaGuard',
+        title: 'PumaGuard $appVersion',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,

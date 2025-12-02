@@ -53,11 +53,24 @@ A modern Flutter web interface for monitoring and configuring the PumaGuard wild
 
 ## Development
 
+### Version Management
+
+The UI version is automatically generated from git tags. The version file `lib/version.dart` is auto-generated and should not be edited manually.
+
+To generate/update the version:
+
+```bash
+make version
+```
+
+This will read the current git tag (from `git describe --tags`) and update `lib/version.dart`.
+
 ### Run in Development Mode
 
 Start the Flutter development server:
 
 ```bash
+make version  # Generate version first
 flutter run -d chrome
 ```
 
@@ -74,6 +87,14 @@ When running in development mode, press `r` to hot reload or `R` to hot restart.
 ## Building for Production
 
 ### Build Web App
+
+The build process automatically generates the version from git tags:
+
+```bash
+make build  # This runs 'make version' then 'flutter build web --wasm'
+```
+
+Or manually:
 
 ```bash
 flutter build web --release
@@ -94,6 +115,18 @@ flutter build web --web-renderer html
 
 # Build with auto-selection
 flutter build web --web-renderer auto
+```
+
+### Makefile Targets
+
+The project includes a Makefile for common development tasks:
+
+```bash
+make version      # Generate version.dart from git tags
+make analyze      # Run Flutter analyzer
+make format       # Format Dart code
+make build        # Build for production (includes version generation)
+make pre-commit   # Run all checks (analyze, format, build)
 ```
 
 ## Configuration

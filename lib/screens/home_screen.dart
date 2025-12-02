@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/status.dart';
 import '../services/api_service.dart';
+import '../version.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
 import 'image_browser_screen.dart';
@@ -278,7 +279,9 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Version', _status?.version ?? 'Unknown'),
+            _buildInfoRow('Backend Version', _status?.version ?? 'Unknown'),
+            const SizedBox(height: 12),
+            _buildInfoRow('UI Version', appVersion),
             const SizedBox(height: 12),
             _buildInfoRow(
               'Host',

@@ -16,10 +16,14 @@ List<Map<String, dynamic>> groupImages(
   final Map<String, List<Map<String, dynamic>>> grouped = {};
 
   for (final image in images) {
-    final timestamp = image['modified'] as int?;
+    final timestamp = image['modified'];
     if (timestamp == null) continue;
 
-    final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+    // Handle both int and double (st_mtime is a float)
+    final timestampInt = (timestamp is int)
+        ? timestamp
+        : (timestamp as num).round();
+    final date = DateTime.fromMillisecondsSinceEpoch(timestampInt * 1000);
     String groupKey;
 
     if (grouping == ImageGrouping.day) {
@@ -43,12 +47,18 @@ List<Map<String, dynamic>> groupImages(
   final sortedKeys = grouped.keys.toList()
     ..sort((a, b) {
       // Get the first image from each group to compare dates
-      final aDate = DateTime.fromMillisecondsSinceEpoch(
-        (grouped[a]!.first['modified'] as int) * 1000,
-      );
-      final bDate = DateTime.fromMillisecondsSinceEpoch(
-        (grouped[b]!.first['modified'] as int) * 1000,
-      );
+      final aTimestamp = grouped[a]!.first['modified'];
+      final aTimestampInt = (aTimestamp is int)
+          ? aTimestamp
+          : (aTimestamp as num).round();
+      final aDate = DateTime.fromMillisecondsSinceEpoch(aTimestampInt * 1000);
+
+      final bTimestamp = grouped[b]!.first['modified'];
+      final bTimestampInt = (bTimestamp is int)
+          ? bTimestamp
+          : (bTimestamp as num).round();
+      final bDate = DateTime.fromMillisecondsSinceEpoch(bTimestampInt * 1000);
+
       return bDate.compareTo(aDate); // Descending order
     });
 
@@ -427,6 +437,79 @@ void main() {
       // First header should contain the most recent date range
       final firstHeaderText = weekHeaders[0]['header_text'] as String;
       expect(firstHeaderText, contains('Jan'));
+    });
+
+    test('Handles float timestamps from backend (st_mtime)', () {
+      // Backend returns st_mtime as float, not int
+      final imagesWithFloatTimestamps = [
+        {
+          'path': 'img1.jpg',
+          'filename': 'img1.jpg',
+          'modified': 1705320600.5, // Float with fractional seconds
+          'size': 1024,
+        },
+        {
+          'path': 'img2.jpg',
+          'filename': 'img2.jpg',
+          'modified': 1705320650.123, // Float with more precision
+          'size': 2048,
+        },
+        {
+          'path': 'img3.jpg',
+          'filename': 'img3.jpg',
+          'modified': 1705407000.0, // Float that's a whole number
+          'size': 1536,
+        },
+      ];
+
+      // Should group successfully without errors
+      final resultDay = groupImages(
+        imagesWithFloatTimestamps,
+        ImageGrouping.day,
+      );
+      expect(resultDay.length, greaterThan(0));
+
+      final headersDay = resultDay
+          .where((item) => item['is_header'] == true)
+          .toList();
+      expect(headersDay.length, greaterThan(0));
+
+      // Should also work with week grouping
+      final resultWeek = groupImages(
+        imagesWithFloatTimestamps,
+        ImageGrouping.week,
+      );
+      expect(resultWeek.length, greaterThan(0));
+
+      final headersWeek = resultWeek
+          .where((item) => item['is_header'] == true)
+          .toList();
+      expect(headersWeek.length, greaterThan(0));
+    });
+
+    test('Handles mixed int and float timestamps', () {
+      final mixedImages = [
+        {
+          'path': 'int_timestamp.jpg',
+          'filename': 'int_timestamp.jpg',
+          'modified': 1705320600, // Integer timestamp
+          'size': 1024,
+        },
+        {
+          'path': 'float_timestamp.jpg',
+          'filename': 'float_timestamp.jpg',
+          'modified': 1705320650.5, // Float timestamp
+          'size': 2048,
+        },
+      ];
+
+      // Should handle both types without errors
+      final result = groupImages(mixedImages, ImageGrouping.day);
+      expect(result.length, greaterThan(0));
+
+      // Both images should be included
+      final images = result.where((item) => item['is_header'] != true).toList();
+      expect(images.length, equals(2));
     });
   });
 }

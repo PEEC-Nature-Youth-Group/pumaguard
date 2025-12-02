@@ -60,10 +60,14 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     final Map<String, List<Map<String, dynamic>>> grouped = {};
 
     for (final image in images) {
-      final timestamp = image['modified'] as int?;
+      final timestamp = image['modified'];
       if (timestamp == null) continue;
 
-      final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      // Handle both int and double (st_mtime is a float)
+      final timestampInt = (timestamp is int)
+          ? timestamp
+          : (timestamp as num).round();
+      final date = DateTime.fromMillisecondsSinceEpoch(timestampInt * 1000);
       String groupKey;
 
       if (_grouping == ImageGrouping.day) {
@@ -87,12 +91,18 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     final sortedKeys = grouped.keys.toList()
       ..sort((a, b) {
         // Get the first image from each group to compare dates
-        final aDate = DateTime.fromMillisecondsSinceEpoch(
-          (grouped[a]!.first['modified'] as int) * 1000,
-        );
-        final bDate = DateTime.fromMillisecondsSinceEpoch(
-          (grouped[b]!.first['modified'] as int) * 1000,
-        );
+        final aTimestamp = grouped[a]!.first['modified'];
+        final aTimestampInt = (aTimestamp is int)
+            ? aTimestamp
+            : (aTimestamp as num).round();
+        final aDate = DateTime.fromMillisecondsSinceEpoch(aTimestampInt * 1000);
+
+        final bTimestamp = grouped[b]!.first['modified'];
+        final bTimestampInt = (bTimestamp is int)
+            ? bTimestamp
+            : (bTimestamp as num).round();
+        final bDate = DateTime.fromMillisecondsSinceEpoch(bTimestampInt * 1000);
+
         return bDate.compareTo(aDate); // Descending order
       });
 

@@ -410,4 +410,25 @@ class ApiService {
       throw Exception('Failed to get available models: $e');
     }
   }
+
+  /// Get list of available sound files
+  Future<List<Map<String, dynamic>>> getAvailableSounds() async {
+    try {
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/sounds/available')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final sounds = json['sounds'] as List<dynamic>;
+        return sounds.map((s) => s as Map<String, dynamic>).toList();
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to get available sounds');
+      }
+    } catch (e) {
+      throw Exception('Failed to get available sounds: $e');
+    }
+  }
 }

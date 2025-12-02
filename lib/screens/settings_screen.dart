@@ -28,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _fileStabilizationController;
   bool _playSound = false;
   List<Map<String, dynamic>> _availableModels = [];
+  List<Map<String, dynamic>> _availableSounds = [];
 
   @override
   void initState() {
@@ -252,6 +253,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _classifierModelController.text = selectedModel;
           }
         });
+        // Persist the change immediately
+        await _saveSettings();
       }
     } catch (e) {
       developer.log('Error loading models: $e');
@@ -262,6 +265,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load models: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showSoundPicker() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final apiService = context.read<ApiService>();
+      final sounds = await apiService.getAvailableSounds();
+
+      setState(() {
+        _availableSounds = sounds;
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      final selectedSound = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Sound File'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _availableSounds.length,
+                itemBuilder: (context, index) {
+                  final sound = _availableSounds[index];
+                  final soundName = sound['name'] as String;
+                  final sizeMb = sound['size_mb'] as double?;
+
+                  return ListTile(
+                    title: Text(soundName),
+                    subtitle: Text(
+                      sizeMb != null ? '${sizeMb.toStringAsFixed(2)} MB' : '',
+                      style: const TextStyle(color: Colors.blue),
+                    ),
+                    leading: const Icon(Icons.music_note, color: Colors.blue),
+                    trailing: soundName == _soundFileController.text
+                        ? const Icon(Icons.check, color: Colors.blue)
+                        : null,
+                    onTap: () {
+                      Navigator.of(context).pop(soundName);
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (selectedSound != null) {
+        setState(() {
+          _soundFileController.text = selectedSound;
+        });
+        // Persist the change immediately
+        await _saveSettings();
+      }
+    } catch (e) {
+      developer.log('Error loading sounds: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load sounds: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -544,11 +628,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _soundFileController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Deterrent Sound File',
                 hintText: 'deterrent.wav',
                 helperText: 'Path to sound file to play when puma detected',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  onPressed: _showSoundPicker,
+                  tooltip: 'Browse available sounds',
+                ),
+              ),
+              readOnly: false,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _showSoundPicker,
+              icon: const Icon(Icons.list),
+              label: const Text('Choose from Available Sounds'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(12),
               ),
             ),
             const SizedBox(height: 16),

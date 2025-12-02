@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _playSound = false;
   List<Map<String, dynamic>> _availableModels = [];
   List<Map<String, dynamic>> _availableSounds = [];
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -45,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _yoloMinSizeController.dispose();
     _yoloConfThreshController.dispose();
     _yoloMaxDetsController.dispose();
@@ -83,6 +86,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  void _onTextFieldChanged() {
+    // Cancel any existing timer
+    _debounceTimer?.cancel();
+
+    // Create a new timer that will save after 1 second of no changes
+    _debounceTimer = Timer(const Duration(seconds: 1), () {
+      _saveSettings();
+    });
   }
 
   Future<void> _saveSettings() async {
@@ -359,17 +372,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         title: const Text('Settings'),
         actions: [
-          if (!_isLoading && _settings != null)
-            IconButton(
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save),
-              onPressed: _isSaving ? null : _saveSettings,
-              tooltip: 'Save Settings',
+          if (_isSaving)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
         ],
       ),
@@ -479,6 +489,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _yoloMinSizeController,
+              onChanged: (_) => _onTextFieldChanged(),
               decoration: const InputDecoration(
                 labelText: 'Minimum Size',
                 hintText: '0.01',
@@ -490,6 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _yoloConfThreshController,
+              onChanged: (_) => _onTextFieldChanged(),
               decoration: const InputDecoration(
                 labelText: 'Confidence Threshold',
                 hintText: '0.25',
@@ -501,6 +513,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _yoloMaxDetsController,
+              onChanged: (_) => _onTextFieldChanged(),
               decoration: const InputDecoration(
                 labelText: 'Maximum Detections',
                 hintText: '10',
@@ -659,6 +672,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() {
                   _playSound = value;
                 });
+                // Persist the change immediately
+                _saveSettings();
               },
             ),
             const SizedBox(height: 16),
@@ -712,6 +727,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _fileStabilizationController,
+              onChanged: (_) => _onTextFieldChanged(),
               decoration: const InputDecoration(
                 labelText: 'File Stabilization Wait (seconds)',
                 hintText: '2.0',

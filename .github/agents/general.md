@@ -100,6 +100,55 @@ make build             # Build Python package and UI
 make build-ui          # Build Flutter web UI only
 ```
 
+### Working with the Flutter UI Submodule
+
+The `pumaguard-ui/` directory is a git submodule containing the Flutter-based web interface. When making changes to the UI:
+
+1. **Navigate to the submodule**:
+   ```bash
+   cd pumaguard-ui
+   ```
+
+2. **Run pre-commit checks** (REQUIRED before submitting UI changes):
+   ```bash
+   make pre-commit
+   ```
+   This target runs:
+   - `make version`: Generates version from git tags
+   - `make analyze`: Runs `flutter analyze` to check for errors
+   - `make format`: Runs `dart format` to format code
+   - `make build`: Builds the web app with WASM
+
+3. **Individual Flutter linting commands**:
+   ```bash
+   flutter analyze        # Check for errors and warnings
+   dart format lib        # Format Dart code
+   flutter test          # Run all tests
+   ```
+
+4. **Return to parent repository**:
+   ```bash
+   cd ..
+   ```
+
+**Important**: Always run `make pre-commit` in the `pumaguard-ui/` directory before committing UI changes. This ensures the Flutter code is properly analyzed, formatted, and builds successfully.
+
+### Backend Debugging: Path Resolution
+
+When debugging image browser 404s related to path resolution, enable backend path debug to include helpful metadata in API responses:
+
+```bash
+# Enable debug paths for backend (temporary, non-production)
+export PG_DEBUG_PATHS=1
+make dev-backend
+```
+
+With `PG_DEBUG_PATHS=1`, the server will:
+- Add `"_abs"`, `"_base"`, and `"_folder_abs"` to `/api/folders/{folder}/images` items
+- Include `"_requested"`, `"_tried_bases"`, `"_resolved"`, and `"_ext"` in error responses from `/api/photos/<filepath>`
+
+Turn off by unsetting `PG_DEBUG_PATHS`.
+
 ### Documentation
 ```bash
 make docs              # Build Sphinx documentation
@@ -172,11 +221,17 @@ The project uses GitHub Actions for CI/CD:
 3. **Make minimal changes**: Only modify what's necessary
 4. **Run linters frequently**: Check your work as you go
    ```bash
+   # For Python code
    make lint
+   
+   # For Flutter UI code
+   cd pumaguard-ui && make pre-commit && cd ..
    ```
 5. **Run tests**: Ensure nothing breaks
    ```bash
-   make test
+   make test              # Python tests
+   make test-ui           # Flutter tests (from parent dir)
+   cd pumaguard-ui && flutter test && cd ..  # Flutter tests (from submodule)
    ```
 6. **Update documentation**: If needed
 7. **Commit with clear messages**: Describe what and why
@@ -229,4 +284,9 @@ uv run isort pumaguard tests scripts
 
 ## Summary
 
-**Remember**: The most important rule is that **all changes must pass the linters**. Run `make lint` before submitting any pull request. The CI system will automatically verify this, and PRs with linting failures cannot be merged.
+**Remember**: The most important rule is that **all changes must pass the linters**. 
+
+- For **Python changes**: Run `make lint` before submitting
+- For **Flutter UI changes**: Run `cd pumaguard-ui && make pre-commit && cd ..` before submitting
+
+The CI system will automatically verify this, and PRs with linting failures cannot be merged.

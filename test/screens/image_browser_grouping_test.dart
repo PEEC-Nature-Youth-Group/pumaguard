@@ -65,11 +65,12 @@ List<Map<String, dynamic>> groupImages(
   // Flatten the grouped images back into a list with headers
   final List<Map<String, dynamic>> result = [];
   for (final key in sortedKeys) {
-    // Add a header item
+    // Add a header item with reference to group images
     result.add({
       'is_header': true,
       'header_text': key,
       'image_count': grouped[key]!.length,
+      'group_images': grouped[key]!, // Include images for group operations
     });
     // Add all images in this group
     result.addAll(grouped[key]!);
@@ -510,6 +511,45 @@ void main() {
       // Both images should be included
       final images = result.where((item) => item['is_header'] != true).toList();
       expect(images.length, equals(2));
+    });
+
+    test('Group headers include group_images field', () {
+      final result = groupImages(sampleImages, ImageGrouping.day);
+
+      // Find all headers
+      final headers = result
+          .where((item) => item['is_header'] == true)
+          .toList();
+
+      // Each header should have group_images field
+      for (final header in headers) {
+        expect(header.containsKey('group_images'), isTrue);
+        expect(header['group_images'], isNotNull);
+        expect(header['group_images'], isA<List<Map<String, dynamic>>>());
+
+        // Verify group_images contains the right number of images
+        final groupImages =
+            header['group_images'] as List<Map<String, dynamic>>;
+        expect(groupImages.length, equals(header['image_count']));
+      }
+    });
+
+    test('Group images can be used for selection operations', () {
+      final result = groupImages(sampleImages, ImageGrouping.day);
+
+      // Get first group header
+      final firstHeader = result.firstWhere(
+        (item) => item['is_header'] == true,
+      );
+      final imagesInGroup =
+          firstHeader['group_images'] as List<Map<String, dynamic>>;
+
+      // Verify all images in group_images are actual image objects (not headers)
+      for (final image in imagesInGroup) {
+        expect(image['is_header'], isNot(true));
+        expect(image.containsKey('filename'), isTrue);
+        expect(image.containsKey('path'), isTrue);
+      }
     });
   });
 }

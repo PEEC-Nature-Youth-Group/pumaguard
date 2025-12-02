@@ -109,11 +109,12 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     // Flatten the grouped images back into a list with headers
     final List<Map<String, dynamic>> result = [];
     for (final key in sortedKeys) {
-      // Add a header item
+      // Add a header item with reference to group images
       result.add({
         'is_header': true,
         'header_text': key,
         'image_count': grouped[key]!.length,
+        'group_images': grouped[key]!, // Include images for group operations
       });
       // Add all images in this group
       result.addAll(grouped[key]!);
@@ -207,6 +208,47 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         _selectedImages.clear();
       }
     });
+  }
+
+  void _selectAllInGroup(List<Map<String, dynamic>> groupImages) {
+    setState(() {
+      // Add all images in this group to selected images
+      for (final image in groupImages) {
+        if (image['is_header'] != true) {
+          final fullPath = image['full_path'] as String;
+          _selectedImages.add(fullPath);
+        }
+      }
+      // Update select all checkbox state
+      if (_selectedImages.length == _images.length) {
+        _selectAll = true;
+      }
+    });
+  }
+
+  void _deselectAllInGroup(List<Map<String, dynamic>> groupImages) {
+    setState(() {
+      // Remove all images in this group from selected images
+      for (final image in groupImages) {
+        if (image['is_header'] != true) {
+          final fullPath = image['full_path'] as String;
+          _selectedImages.remove(fullPath);
+        }
+      }
+      _selectAll = false;
+    });
+  }
+
+  bool _areAllImagesInGroupSelected(List<Map<String, dynamic>> groupImages) {
+    for (final image in groupImages) {
+      if (image['is_header'] != true) {
+        final fullPath = image['full_path'] as String;
+        if (!_selectedImages.contains(fullPath)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   Future<void> _downloadSelectedImages() async {
@@ -656,6 +698,16 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
                                               // Check if this is a header
                                               if (item['is_header'] == true) {
+                                                final groupImages =
+                                                    item['group_images']
+                                                        as List<
+                                                          Map<String, dynamic>
+                                                        >;
+                                                final allSelected =
+                                                    _areAllImagesInGroupSelected(
+                                                      groupImages,
+                                                    );
+
                                                 return Padding(
                                                   padding:
                                                       const EdgeInsets.only(
@@ -703,6 +755,42 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                                                     .colorScheme
                                                                     .onPrimaryContainer,
                                                               ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      OutlinedButton.icon(
+                                                        onPressed: () {
+                                                          if (allSelected) {
+                                                            _deselectAllInGroup(
+                                                              groupImages,
+                                                            );
+                                                          } else {
+                                                            _selectAllInGroup(
+                                                              groupImages,
+                                                            );
+                                                          }
+                                                        },
+                                                        icon: Icon(
+                                                          allSelected
+                                                              ? Icons.check_box
+                                                              : Icons
+                                                                    .check_box_outline_blank,
+                                                          size: 18,
+                                                        ),
+                                                        label: Text(
+                                                          allSelected
+                                                              ? 'Deselect All'
+                                                              : 'Select All',
+                                                        ),
+                                                        style: OutlinedButton.styleFrom(
+                                                          padding:
+                                                              const EdgeInsets.symmetric(
+                                                                horizontal: 12,
+                                                                vertical: 8,
+                                                              ),
+                                                          visualDensity:
+                                                              VisualDensity
+                                                                  .compact,
                                                         ),
                                                       ),
                                                     ],

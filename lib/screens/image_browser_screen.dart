@@ -5,6 +5,8 @@ import '../services/api_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import '../utils/download_helper.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ImageBrowserScreen extends StatefulWidget {
   const ImageBrowserScreen({super.key});
@@ -12,6 +14,8 @@ class ImageBrowserScreen extends StatefulWidget {
   @override
   State<ImageBrowserScreen> createState() => _ImageBrowserScreenState();
 }
+
+enum ImageGrouping { none, day, week }
 
 class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   List<Map<String, dynamic>> _folders = [];
@@ -22,11 +26,55 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   bool _isDownloading = false;
   String? _error;
   bool _selectAll = false;
+  ImageGrouping _grouping = ImageGrouping.none;
 
   @override
   void initState() {
     super.initState();
+    _loadGroupingPreference();
     _loadFolders();
+  }
+
+  Future<void> _loadGroupingPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final groupingString = prefs.getString('image_grouping') ?? 'none';
+    setState(() {
+      _grouping = ImageGrouping.values.firstWhere(
+        (e) => e.name == groupingString,
+        orElse: () => ImageGrouping.none,
+      );
+    });
+  }
+
+  Future<void> _saveGroupingPreference(ImageGrouping grouping) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('image_grouping', grouping.name);
+  }
+
+  // TODO: Will be used when implementing group headers in the grid
+  // ignore: unused_element
+  String _formatGroupDate(double timestamp) {
+    final date = DateTime.fromMillisecondsSinceEpoch(
+      (timestamp * 1000).toInt(),
+    );
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final dateOnly = DateTime(date.year, date.month, date.day);
+
+    if (_grouping == ImageGrouping.day) {
+      if (dateOnly == today) {
+        return 'Today - ${DateFormat('EEEE, MMMM d, yyyy').format(date)}';
+      } else if (dateOnly == yesterday) {
+        return 'Yesterday - ${DateFormat('EEEE, MMMM d, yyyy').format(date)}';
+      }
+      return DateFormat('EEEE, MMMM d, yyyy').format(date);
+    } else if (_grouping == ImageGrouping.week) {
+      final weekStart = date.subtract(Duration(days: date.weekday - 1));
+      final weekEnd = weekStart.add(const Duration(days: 6));
+      return 'Week of ${DateFormat('MMM d').format(weekStart)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
+    }
+    return '';
   }
 
   Future<void> _loadFolders() async {
@@ -366,6 +414,35 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                     _selectAll ? 'Deselect All' : 'Select All',
                                   ),
                                   const Spacer(),
+                                  const Text('Group by:'),
+                                  const SizedBox(width: 8),
+                                  DropdownButton<ImageGrouping>(
+                                    value: _grouping,
+                                    underline: Container(),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: ImageGrouping.none,
+                                        child: Text('None'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: ImageGrouping.day,
+                                        child: Text('Day'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: ImageGrouping.week,
+                                        child: Text('Week'),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          _grouping = value;
+                                        });
+                                        _saveGroupingPreference(value);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 16),
                                   Text('${_images.length} images'),
                                 ],
                               ),

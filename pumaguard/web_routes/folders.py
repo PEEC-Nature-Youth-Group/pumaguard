@@ -102,12 +102,26 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
             except ValueError:
                 # Different drives on Windows
                 continue
+        debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}
+        
         if abs_folder is None:
             # Ensure file is within the allowed folder
-            return jsonify({"error": "Access denied"}), 403
+            error_response = {"error": "Access denied"}
+            if debug_paths:
+                error_response["_requested"] = folder_path
+                error_response["_normalized"] = normalized_folder_path
+                error_response["_allowed_dirs"] = all_directories
+            return jsonify(error_response), 403
         if not os.path.exists(abs_folder) or not os.path.isdir(abs_folder):
-            return jsonify({"error": "Folder not found"}), 404
+            error_response = {"error": "Folder not found"}
+            if debug_paths:
+                error_response["_requested"] = folder_path
+                error_response["_resolved"] = abs_folder
+                error_response["_exists"] = os.path.exists(abs_folder)
+                error_response["_is_dir"] = os.path.isdir(abs_folder) if os.path.exists(abs_folder) else None
+            return jsonify(error_response), 404
         images = []
+        debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}
         for filename in os.listdir(abs_folder):
             filepath = os.path.join(abs_folder, filename)
             resolved_filepath = os.path.realpath(os.path.normpath(filepath))
@@ -123,15 +137,18 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
                     rel_file_path = os.path.relpath(
                         resolved_filepath, resolved_base
                     )
-                    images.append(
-                        {
-                            "filename": filename,
-                            "path": rel_file_path,
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime,
-                            "created": stat.st_ctime,
-                        }
-                    )
+                    item = {
+                        "filename": filename,
+                        "path": rel_file_path,
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime,
+                        "created": stat.st_ctime,
+                    }
+                    if debug_paths:
+                        item["_abs"] = resolved_filepath
+                        item["_base"] = resolved_base
+                        item["_folder_abs"] = abs_folder
+                    images.append(item)
 
         images.sort(key=lambda x: cast(float, x["modified"]), reverse=True)
         # Return only relative folder path to root and the root directory name

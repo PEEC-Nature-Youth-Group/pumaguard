@@ -71,21 +71,32 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
             candidate = os.path.realpath(joined_path)
             try:
                 common = os.path.commonpath([candidate, abs_directory])
-                if common == abs_directory:
+                if common == abs_directory and os.path.exists(candidate):
                     abs_filepath = candidate
                     break
             except ValueError:
                 # Different drives on Windows
                 continue
+        debug_paths = os.environ.get("PG_DEBUG_PATHS") in {"1", "true", "True"}
         if abs_filepath is None:
-            return jsonify({"error": "Access denied"}), 403
+            payload = {"error": "Access denied"}
+            if debug_paths:
+                payload["_tried_bases"] = all_directories
+                payload["_requested"] = filepath
+            return jsonify(payload), 403
         if not os.path.exists(abs_filepath) or not os.path.isfile(
             abs_filepath
         ):
-            return jsonify({"error": "File not found"}), 404
+            payload = {"error": "File not found"}
+            if debug_paths:
+                payload["_resolved"] = abs_filepath
+            return jsonify(payload), 404
         ext = os.path.splitext(abs_filepath)[1].lower()
         if ext not in IMAGE_EXTS:
-            return jsonify({"error": "Access denied"}), 403
+            payload = {"error": "Access denied"}
+            if debug_paths:
+                payload["_ext"] = ext
+            return jsonify(payload), 403
         directory = os.path.dirname(abs_filepath)
         filename = os.path.basename(abs_filepath)
         return send_from_directory(directory, filename)
@@ -103,7 +114,7 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
             candidate = os.path.realpath(joined_path)
             try:
                 common = os.path.commonpath([candidate, abs_directory])
-                if common == abs_directory:
+                if common == abs_directory and os.path.exists(candidate):
                     abs_filepath = candidate
                     break
             except ValueError:

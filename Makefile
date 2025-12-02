@@ -21,3 +21,11 @@ version:
 .PHONY: build
 build: version
 	flutter build web --wasm
+
+API_BASE_URL ?= http://localhost:5000
+
+.PHONY: dev-ui-web
+dev-ui-web: version
+	@echo "Starting Flutter web dev server..."
+	@echo "API Base URL: $(API_BASE_URL)"
+	flutter run -d web-server --web-port=8080 --web-hostname=0.0.0.0

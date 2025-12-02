@@ -27,7 +27,7 @@ void main() {
           'directories': [
             '/home/user/watched/folder1',
             '/home/user/watched/folder2',
-          ]
+          ],
         };
 
         // We'll test using the actual HTTP client with mocked responses
@@ -47,27 +47,29 @@ void main() {
         expect(url, 'http://localhost:5000/api/directories');
       });
 
-      test('getClassificationDirectories returns list of classification directories',
-          () async {
-        // Mock the response for classification directories
-        final mockResponse = {
-          'directories': [
-            '/home/user/.local/share/pumaguard/classified/puma',
-            '/home/user/.local/share/pumaguard/classified/other',
-            '/home/user/.local/share/pumaguard/classified/intermediate',
-          ]
-        };
+      test(
+        'getClassificationDirectories returns list of classification directories',
+        () async {
+          // Mock the response for classification directories
+          final mockResponse = {
+            'directories': [
+              '/home/user/.local/share/pumaguard/classified/puma',
+              '/home/user/.local/share/pumaguard/classified/other',
+              '/home/user/.local/share/pumaguard/classified/intermediate',
+            ],
+          };
 
-        final json = mockResponse;
-        final dirs = (json['directories'] as List<dynamic>)
-            .map((d) => d.toString())
-            .toList();
+          final json = mockResponse;
+          final dirs = (json['directories'] as List<dynamic>)
+              .map((d) => d.toString())
+              .toList();
 
-        expect(dirs.length, 3);
-        expect(dirs[0], contains('classified/puma'));
-        expect(dirs[1], contains('classified/other'));
-        expect(dirs[2], contains('classified/intermediate'));
-      });
+          expect(dirs.length, 3);
+          expect(dirs[0], contains('classified/puma'));
+          expect(dirs[1], contains('classified/other'));
+          expect(dirs[2], contains('classified/intermediate'));
+        },
+      );
 
       test('getClassificationDirectories constructs correct API URL', () {
         final url = apiService.getApiUrl('/api/directories/classification');
@@ -90,47 +92,49 @@ void main() {
     });
 
     group('Folders API', () {
-      test('getFolders parses response with watched and classification folders',
-          () {
-        final mockResponse = {
-          'folders': [
-            {
-              'path': '/home/user/watched/folder1',
-              'name': 'folder1',
-              'image_count': 42
-            },
-            {
-              'path': '/home/user/.local/share/pumaguard/classified/puma',
-              'name': 'puma',
-              'image_count': 15
-            },
-            {
-              'path': '/home/user/.local/share/pumaguard/classified/other',
-              'name': 'other',
-              'image_count': 8
-            },
-            {
-              'path':
-                  '/home/user/.local/share/pumaguard/classified/intermediate',
-              'name': 'intermediate',
-              'image_count': 3
-            },
-          ]
-        };
+      test(
+        'getFolders parses response with watched and classification folders',
+        () {
+          final mockResponse = {
+            'folders': [
+              {
+                'path': '/home/user/watched/folder1',
+                'name': 'folder1',
+                'image_count': 42,
+              },
+              {
+                'path': '/home/user/.local/share/pumaguard/classified/puma',
+                'name': 'puma',
+                'image_count': 15,
+              },
+              {
+                'path': '/home/user/.local/share/pumaguard/classified/other',
+                'name': 'other',
+                'image_count': 8,
+              },
+              {
+                'path':
+                    '/home/user/.local/share/pumaguard/classified/intermediate',
+                'name': 'intermediate',
+                'image_count': 3,
+              },
+            ],
+          };
 
-        final folders = (mockResponse['folders'] as List<dynamic>)
-            .map((f) => f as Map<String, dynamic>)
-            .toList();
+          final folders = (mockResponse['folders'] as List<dynamic>)
+              .map((f) => f as Map<String, dynamic>)
+              .toList();
 
-        expect(folders.length, 4);
-        expect(folders[0]['path'], '/home/user/watched/folder1');
-        expect(folders[0]['name'], 'folder1');
-        expect(folders[0]['image_count'], 42);
+          expect(folders.length, 4);
+          expect(folders[0]['path'], '/home/user/watched/folder1');
+          expect(folders[0]['name'], 'folder1');
+          expect(folders[0]['image_count'], 42);
 
-        expect(folders[1]['name'], 'puma');
-        expect(folders[2]['name'], 'other');
-        expect(folders[3]['name'], 'intermediate');
-      });
+          expect(folders[1]['name'], 'puma');
+          expect(folders[2]['name'], 'other');
+          expect(folders[3]['name'], 'intermediate');
+        },
+      );
 
       test('getFolders constructs correct API URL', () {
         final url = apiService.getApiUrl('/api/folders');
@@ -153,13 +157,13 @@ void main() {
         final mockResponse = {
           'images': [
             {
-              'path': 'img1.jpg',  // Relative to base directory
+              'path': 'img1.jpg', // Relative to base directory
               'filename': 'img1.jpg',
               'size': 102400,
               'modified': 1701504000.0,
             },
             {
-              'path': 'img2.jpg',  // Relative to base directory
+              'path': 'img2.jpg', // Relative to base directory
               'filename': 'img2.jpg',
               'size': 204800,
               'modified': 1701504060.0,
@@ -177,7 +181,7 @@ void main() {
         final firstImage =
             (mockResponse['images'] as List)[0] as Map<String, dynamic>;
         expect(firstImage['filename'], 'img1.jpg');
-        expect(firstImage['path'], 'img1.jpg');  // Path is relative to base
+        expect(firstImage['path'], 'img1.jpg'); // Path is relative to base
         expect(firstImage['size'], 102400);
         expect(firstImage['modified'], 1701504000.0);
       });
@@ -271,7 +275,7 @@ void main() {
               'checksum': 'xyz789uvw012',
               'size': 153600,
             },
-          ]
+          ],
         };
 
         final files = (mockResponse['files_to_download'] as List<dynamic>)
@@ -323,23 +327,35 @@ void main() {
         expect(url, 'http://192.168.1.100:5000/api/status');
       });
 
-      test('getApiUrl constructs correct URLs for all image browser endpoints',
-          () {
-        final service = ApiService(baseUrl: 'http://localhost:5000');
+      test(
+        'getApiUrl constructs correct URLs for all image browser endpoints',
+        () {
+          final service = ApiService(baseUrl: 'http://localhost:5000');
 
-        expect(service.getApiUrl('/api/directories'),
-            'http://localhost:5000/api/directories');
-        expect(service.getApiUrl('/api/directories/classification'),
-            'http://localhost:5000/api/directories/classification');
-        expect(service.getApiUrl('/api/folders'),
-            'http://localhost:5000/api/folders');
+          expect(
+            service.getApiUrl('/api/directories'),
+            'http://localhost:5000/api/directories',
+          );
+          expect(
+            service.getApiUrl('/api/directories/classification'),
+            'http://localhost:5000/api/directories/classification',
+          );
+          expect(
+            service.getApiUrl('/api/folders'),
+            'http://localhost:5000/api/folders',
+          );
 
-        final encodedPath = Uri.encodeComponent('/path/to/folder');
-        expect(service.getApiUrl('/api/folders/$encodedPath/images'),
-            'http://localhost:5000/api/folders/$encodedPath/images');
-        expect(service.getApiUrl('/api/photos/$encodedPath'),
-            'http://localhost:5000/api/photos/$encodedPath');
-      });
+          final encodedPath = Uri.encodeComponent('/path/to/folder');
+          expect(
+            service.getApiUrl('/api/folders/$encodedPath/images'),
+            'http://localhost:5000/api/folders/$encodedPath/images',
+          );
+          expect(
+            service.getApiUrl('/api/photos/$encodedPath'),
+            'http://localhost:5000/api/photos/$encodedPath',
+          );
+        },
+      );
     });
 
     group('Path Encoding', () {
@@ -371,77 +387,85 @@ void main() {
         for (final entry in testPaths.entries) {
           final encoded = Uri.encodeComponent(entry.key);
           final decoded = Uri.decodeComponent(encoded);
-          expect(decoded, entry.key,
-              reason: 'Round-trip encoding failed for ${entry.key}');
+          expect(
+            decoded,
+            entry.key,
+            reason: 'Round-trip encoding failed for ${entry.key}',
+          );
         }
       });
     });
 
     group('Classification Directory Integration', () {
-      test('classification directories can be distinguished from watched directories',
-          () {
-        final watchedDirs = [
-          '/home/user/watched/folder1',
-          '/home/user/watched/folder2',
-        ];
+      test(
+        'classification directories can be distinguished from watched directories',
+        () {
+          final watchedDirs = [
+            '/home/user/watched/folder1',
+            '/home/user/watched/folder2',
+          ];
 
-        final classificationDirs = [
-          '/home/user/.local/share/pumaguard/classified/puma',
-          '/home/user/.local/share/pumaguard/classified/other',
-          '/home/user/.local/share/pumaguard/classified/intermediate',
-        ];
+          final classificationDirs = [
+            '/home/user/.local/share/pumaguard/classified/puma',
+            '/home/user/.local/share/pumaguard/classified/other',
+            '/home/user/.local/share/pumaguard/classified/intermediate',
+          ];
 
-        // Verify they are distinct lists
-        expect(watchedDirs.length, 2);
-        expect(classificationDirs.length, 3);
+          // Verify they are distinct lists
+          expect(watchedDirs.length, 2);
+          expect(classificationDirs.length, 3);
 
-        // Verify classification dirs have expected structure
-        for (final dir in classificationDirs) {
-          expect(dir, contains('classified/'));
-          expect(
+          // Verify classification dirs have expected structure
+          for (final dir in classificationDirs) {
+            expect(dir, contains('classified/'));
+            expect(
               dir.endsWith('puma') ||
                   dir.endsWith('other') ||
                   dir.endsWith('intermediate'),
-              true);
-        }
-
-        // Verify watched dirs don't overlap with classification
-        for (final dir in watchedDirs) {
-          expect(dir, isNot(contains('classified/')));
-        }
-      });
-
-      test('folders API combines both watched and classification directories',
-          () {
-        final allFolders = [
-          {'path': '/home/user/watched/folder1', 'name': 'folder1'},
-          {
-            'path': '/home/user/.local/share/pumaguard/classified/puma',
-            'name': 'puma'
-          },
-          {
-            'path': '/home/user/.local/share/pumaguard/classified/other',
-            'name': 'other'
-          },
-        ];
-
-        // Count each type
-        var watchedCount = 0;
-        var classificationCount = 0;
-
-        for (final folder in allFolders) {
-          final path = folder['path'] as String;
-          if (path.contains('classified/')) {
-            classificationCount++;
-          } else {
-            watchedCount++;
+              true,
+            );
           }
-        }
 
-        expect(watchedCount, 1);
-        expect(classificationCount, 2);
-        expect(watchedCount + classificationCount, allFolders.length);
-      });
+          // Verify watched dirs don't overlap with classification
+          for (final dir in watchedDirs) {
+            expect(dir, isNot(contains('classified/')));
+          }
+        },
+      );
+
+      test(
+        'folders API combines both watched and classification directories',
+        () {
+          final allFolders = [
+            {'path': '/home/user/watched/folder1', 'name': 'folder1'},
+            {
+              'path': '/home/user/.local/share/pumaguard/classified/puma',
+              'name': 'puma',
+            },
+            {
+              'path': '/home/user/.local/share/pumaguard/classified/other',
+              'name': 'other',
+            },
+          ];
+
+          // Count each type
+          var watchedCount = 0;
+          var classificationCount = 0;
+
+          for (final folder in allFolders) {
+            final path = folder['path'] as String;
+            if (path.contains('classified/')) {
+              classificationCount++;
+            } else {
+              watchedCount++;
+            }
+          }
+
+          expect(watchedCount, 1);
+          expect(classificationCount, 2);
+          expect(watchedCount + classificationCount, allFolders.length);
+        },
+      );
     });
 
     group('Error Handling', () {
@@ -449,26 +473,38 @@ void main() {
         // Test error message format
         expect(
           () => throw Exception('Failed to load directories: 404'),
-          throwsA(predicate(
-              (e) => e.toString().contains('Failed to load directories'))),
+          throwsA(
+            predicate(
+              (e) => e.toString().contains('Failed to load directories'),
+            ),
+          ),
         );
       });
 
-      test('getClassificationDirectories throws exception on non-200 status',
-          () {
-        expect(
-          () =>
-              throw Exception('Failed to load classification directories: 500'),
-          throwsA(predicate((e) =>
-              e.toString().contains('Failed to load classification'))),
-        );
-      });
+      test(
+        'getClassificationDirectories throws exception on non-200 status',
+        () {
+          expect(
+            () => throw Exception(
+              'Failed to load classification directories: 500',
+            ),
+            throwsA(
+              predicate(
+                (e) => e.toString().contains('Failed to load classification'),
+              ),
+            ),
+          );
+        },
+      );
 
       test('getFolderImages throws exception on non-200 status', () {
         expect(
           () => throw Exception('Failed to load folder images: 404'),
-          throwsA(predicate(
-              (e) => e.toString().contains('Failed to load folder images'))),
+          throwsA(
+            predicate(
+              (e) => e.toString().contains('Failed to load folder images'),
+            ),
+          ),
         );
       });
     });

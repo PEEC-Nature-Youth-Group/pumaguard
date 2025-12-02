@@ -8,14 +8,14 @@ import '../utils/download_helper.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum ImageGrouping { none, day, week }
+
 class ImageBrowserScreen extends StatefulWidget {
   const ImageBrowserScreen({super.key});
 
   @override
   State<ImageBrowserScreen> createState() => _ImageBrowserScreenState();
 }
-
-enum ImageGrouping { none, day, week }
 
 class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   List<Map<String, dynamic>> _folders = [];
@@ -51,30 +51,65 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     await prefs.setString('image_grouping', grouping.name);
   }
 
-  // TODO: Will be used when implementing group headers in the grid
-  // ignore: unused_element
-  String _formatGroupDate(double timestamp) {
-    final date = DateTime.fromMillisecondsSinceEpoch(
-      (timestamp * 1000).toInt(),
-    );
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final dateOnly = DateTime(date.year, date.month, date.day);
-
-    if (_grouping == ImageGrouping.day) {
-      if (dateOnly == today) {
-        return 'Today - ${DateFormat('EEEE, MMMM d, yyyy').format(date)}';
-      } else if (dateOnly == yesterday) {
-        return 'Yesterday - ${DateFormat('EEEE, MMMM d, yyyy').format(date)}';
-      }
-      return DateFormat('EEEE, MMMM d, yyyy').format(date);
-    } else if (_grouping == ImageGrouping.week) {
-      final weekStart = date.subtract(Duration(days: date.weekday - 1));
-      final weekEnd = weekStart.add(const Duration(days: 6));
-      return 'Week of ${DateFormat('MMM d').format(weekStart)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
+  List<Map<String, dynamic>> _groupImages(List<Map<String, dynamic>> images) {
+    if (_grouping == ImageGrouping.none) {
+      return images;
     }
-    return '';
+
+    // Group images by date
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+
+    for (final image in images) {
+      final timestamp = image['modified'] as int?;
+      if (timestamp == null) continue;
+
+      final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+      String groupKey;
+
+      if (_grouping == ImageGrouping.day) {
+        // Group by day
+        groupKey = DateFormat('yyyy-MM-dd EEEE').format(date);
+      } else {
+        // Group by week
+        final weekStart = date.subtract(Duration(days: date.weekday - 1));
+        final weekEnd = weekStart.add(const Duration(days: 6));
+        groupKey =
+            '${DateFormat('MMM d').format(weekStart)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
+      }
+
+      if (!grouped.containsKey(groupKey)) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey]!.add(image);
+    }
+
+    // Sort groups by date (most recent first)
+    final sortedKeys = grouped.keys.toList()
+      ..sort((a, b) {
+        // Get the first image from each group to compare dates
+        final aDate = DateTime.fromMillisecondsSinceEpoch(
+          (grouped[a]!.first['modified'] as int) * 1000,
+        );
+        final bDate = DateTime.fromMillisecondsSinceEpoch(
+          (grouped[b]!.first['modified'] as int) * 1000,
+        );
+        return bDate.compareTo(aDate); // Descending order
+      });
+
+    // Flatten the grouped images back into a list with headers
+    final List<Map<String, dynamic>> result = [];
+    for (final key in sortedKeys) {
+      // Add a header item
+      result.add({
+        'is_header': true,
+        'header_text': key,
+        'image_count': grouped[key]!.length,
+      });
+      // Add all images in this group
+      result.addAll(grouped[key]!);
+    }
+
+    return result;
   }
 
   Future<void> _loadFolders() async {
@@ -264,9 +299,150 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
+  Widget _buildImageItem(
+    BuildContext context,
+    ApiService apiService,
+    Map<String, dynamic> image,
+  ) {
+    final imagePath = image['path'] as String;
+    final fullPath = image['full_path'] as String;
+    final isSelected = _selectedImages.contains(fullPath);
+
+    // Debug: log constructed photo URL
+    final photoUrl = apiService.getPhotoUrl(
+      fullPath,
+      thumbnail: true,
+      maxWidth: 400,
+      maxHeight: 400,
+    );
+    developer.log(
+      'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
+      name: 'ImageBrowser',
+    );
+
+    return GestureDetector(
+      onTap: () => _toggleImageSelection(imagePath, fullPath),
+      child: Card(
+        elevation: isSelected ? 8 : 2,
+        color: isSelected
+            ? Theme.of(context).colorScheme.primaryContainer
+            : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    child: Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      cacheWidth: 400,
+                      cacheHeight: 400,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) {
+                          return child;
+                        }
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.broken_image,
+                                size: 48,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Failed to load',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          isSelected
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          color: isSelected ? Colors.white : Colors.grey,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    image['filename'] as String,
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Debug: show relative path used for API
+                  const SizedBox(height: 4),
+                  Text(
+                    'rel: $fullPath',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatFileSize(image['size'] as int),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
+    final displayImages = _groupImages(_images);
 
     return Scaffold(
       appBar: AppBar(
@@ -447,7 +623,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                 ],
                               ),
                             ),
-                            // Image grid
+                            // Image grid with grouping
                             Expanded(
                               child: _isLoading
                                   ? const Center(
@@ -457,219 +633,91 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                   ? const Center(
                                       child: Text('No images in this folder'),
                                     )
-                                  : GridView.builder(
-                                      padding: const EdgeInsets.all(16),
-                                      gridDelegate:
-                                          const SliverGridDelegateWithMaxCrossAxisExtent(
-                                            maxCrossAxisExtent: 200,
-                                            childAspectRatio: 1,
-                                            crossAxisSpacing: 16,
-                                            mainAxisSpacing: 16,
-                                          ),
-                                      itemCount: _images.length,
-                                      itemBuilder: (context, index) {
-                                        final image = _images[index];
-                                        final imagePath =
-                                            image['path'] as String;
-                                        final fullPath =
-                                            image['full_path'] as String;
-                                        final isSelected = _selectedImages
-                                            .contains(fullPath);
+                                  : CustomScrollView(
+                                      slivers: [
+                                        SliverPadding(
+                                          padding: const EdgeInsets.all(16),
+                                          sliver: SliverList(
+                                            delegate: SliverChildBuilderDelegate((
+                                              context,
+                                              index,
+                                            ) {
+                                              final item = displayImages[index];
 
-                                        // Debug: log constructed photo URL
-                                        final photoUrl = apiService.getPhotoUrl(
-                                          fullPath,
-                                          thumbnail: true,
-                                          maxWidth: 400,
-                                          maxHeight: 400,
-                                        );
-                                        developer.log(
-                                          'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
-                                          name: 'ImageBrowser',
-                                        );
+                                              // Check if this is a header
+                                              if (item['is_header'] == true) {
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        top: 16,
+                                                        bottom: 8,
+                                                      ),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          item['header_text']
+                                                              as String,
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .titleMedium
+                                                              ?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 4,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: Theme.of(context)
+                                                              .colorScheme
+                                                              .primaryContainer,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          '${item['image_count']} images',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.copyWith(
+                                                                color: Theme.of(context)
+                                                                    .colorScheme
+                                                                    .onPrimaryContainer,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              }
 
-                                        return GestureDetector(
-                                          onTap: () => _toggleImageSelection(
-                                            imagePath,
-                                            fullPath,
-                                          ),
-                                          child: Card(
-                                            elevation: isSelected ? 8 : 2,
-                                            color: isSelected
-                                                ? Theme.of(
+                                              // Regular image item
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 16,
+                                                ),
+                                                child: SizedBox(
+                                                  height: 200,
+                                                  child: _buildImageItem(
                                                     context,
-                                                  ).colorScheme.primaryContainer
-                                                : null,
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.stretch,
-                                              children: [
-                                                Expanded(
-                                                  child: Stack(
-                                                    fit: StackFit.expand,
-                                                    children: [
-                                                      ClipRRect(
-                                                        borderRadius:
-                                                            const BorderRadius.vertical(
-                                                              top:
-                                                                  Radius.circular(
-                                                                    12,
-                                                                  ),
-                                                            ),
-                                                        child: Image.network(
-                                                          photoUrl,
-                                                          fit: BoxFit.cover,
-                                                          cacheWidth: 400,
-                                                          cacheHeight: 400,
-                                                          loadingBuilder:
-                                                              (
-                                                                context,
-                                                                child,
-                                                                loadingProgress,
-                                                              ) {
-                                                                if (loadingProgress ==
-                                                                    null) {
-                                                                  return child;
-                                                                }
-                                                                return Center(
-                                                                  child: CircularProgressIndicator(
-                                                                    value:
-                                                                        loadingProgress.expectedTotalBytes !=
-                                                                            null
-                                                                        ? loadingProgress.cumulativeBytesLoaded /
-                                                                              loadingProgress.expectedTotalBytes!
-                                                                        : null,
-                                                                  ),
-                                                                );
-                                                              },
-                                                          errorBuilder:
-                                                              (
-                                                                context,
-                                                                error,
-                                                                stackTrace,
-                                                              ) {
-                                                                return Center(
-                                                                  child: Column(
-                                                                    mainAxisAlignment:
-                                                                        MainAxisAlignment
-                                                                            .center,
-                                                                    children: [
-                                                                      const Icon(
-                                                                        Icons
-                                                                            .broken_image,
-                                                                        size:
-                                                                            48,
-                                                                        color: Colors
-                                                                            .grey,
-                                                                      ),
-                                                                      const SizedBox(
-                                                                        height:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        'Failed to load',
-                                                                        style: Theme.of(
-                                                                          context,
-                                                                        ).textTheme.bodySmall,
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                );
-                                                              },
-                                                        ),
-                                                      ),
-                                                      Positioned(
-                                                        top: 8,
-                                                        right: 8,
-                                                        child: Container(
-                                                          decoration: BoxDecoration(
-                                                            color: isSelected
-                                                                ? Theme.of(
-                                                                        context,
-                                                                      )
-                                                                      .colorScheme
-                                                                      .primary
-                                                                : Colors.white,
-                                                            shape:
-                                                                BoxShape.circle,
-                                                          ),
-                                                          child: Padding(
-                                                            padding:
-                                                                const EdgeInsets.all(
-                                                                  4,
-                                                                ),
-                                                            child: Icon(
-                                                              isSelected
-                                                                  ? Icons
-                                                                        .check_circle
-                                                                  : Icons
-                                                                        .circle_outlined,
-                                                              color: isSelected
-                                                                  ? Colors.white
-                                                                  : Colors.grey,
-                                                              size: 24,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
+                                                    apiService,
+                                                    item,
                                                   ),
                                                 ),
-                                                Padding(
-                                                  padding: const EdgeInsets.all(
-                                                    8,
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      Text(
-                                                        image['filename']
-                                                            as String,
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.bodySmall,
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                      // Debug: show relative path used for API
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        'rel: $fullPath',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color: Colors
-                                                                  .grey[600],
-                                                            ),
-                                                        maxLines: 1,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        _formatFileSize(
-                                                          image['size'] as int,
-                                                        ),
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .bodySmall
-                                                            ?.copyWith(
-                                                              color: Colors
-                                                                  .grey[600],
-                                                            ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
+                                              );
+                                            }, childCount: displayImages.length),
                                           ),
-                                        );
-                                      },
+                                        ),
+                                      ],
                                     ),
                             ),
                           ],

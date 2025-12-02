@@ -13,6 +13,8 @@ from flask import (
     request,
 )
 
+import pumaguard
+
 if TYPE_CHECKING:
     from flask import (
         Flask,
@@ -33,7 +35,7 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
         return jsonify(
             {
                 "status": "running",
-                "version": "1.0.0",
+                "version": pumaguard.__version__,
                 "directories_count": len(webui.image_directories),
                 "host": webui.host,
                 "port": webui.port,

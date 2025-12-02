@@ -53,7 +53,7 @@ test-ui:
 	cd pumaguard-ui; flutter test
 
 .PHONY: build
-build: install-dev build-ui
+build: install build-ui
 	uv build
 
 .PHONY: lint
@@ -198,7 +198,7 @@ run-server: install build-ui
 	uv run --native-tls --frozen pumaguard server
 
 .PHONY: dev-backend
-dev-backend: install-dev
+dev-backend: build install
 	@echo "Starting PumaGuard backend in debug mode..."
 	uv run --native-tls --frozen pumaguard server --debug
 

@@ -67,9 +67,29 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
         all_directories = (
             webui.image_directories + webui.classification_directories
         )
+
+        # Flask's <path:> converter strips leading slash, add it back
+        # if it looks like an absolute path was intended
+        if not folder_path.startswith(
+            "/"
+        ) and not folder_path.startswith("\\"):
+            folder_path = "/" + folder_path
+
+        # Normalize the requested path
+        normalized_folder_path = os.path.realpath(
+            os.path.normpath(folder_path)
+        )
+
         for directory in all_directories:
             abs_directory = os.path.realpath(os.path.normpath(directory))
-            # Always join user input to base, then normalize
+
+            # Check if the requested path IS the directory itself
+            if normalized_folder_path == abs_directory:
+                abs_folder = abs_directory
+                resolved_base = abs_directory
+                break
+
+            # Check if requested path is a subdirectory
             candidate_folder = os.path.realpath(
                 os.path.join(abs_directory, folder_path)
             )

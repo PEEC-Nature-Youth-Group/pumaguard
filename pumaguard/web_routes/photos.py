@@ -31,8 +31,12 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/photos", methods=["GET"])
     def get_photos():
+        """List all photos from watched and classification directories."""
         photos: list[dict] = []
-        for directory in webui.image_directories:
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+        for directory in all_directories:
             if not os.path.exists(directory):
                 continue
             for filename in os.listdir(directory):
@@ -58,7 +62,10 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
     def get_photo(filepath: str):
         # Safely resolve user provided path against allowed directories
         abs_filepath = None
-        for directory in webui.image_directories:
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+        for directory in all_directories:
             abs_directory = os.path.realpath(directory)
             joined_path = os.path.join(abs_directory, filepath)
             candidate = os.path.realpath(joined_path)
@@ -87,7 +94,10 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
     def delete_photo(filepath: str):
         # Safely resolve user provided path against allowed directories
         abs_filepath = None
-        for directory in webui.image_directories:
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+        for directory in all_directories:
             abs_directory = os.path.realpath(directory)
             joined_path = os.path.join(abs_directory, filepath)
             candidate = os.path.realpath(joined_path)

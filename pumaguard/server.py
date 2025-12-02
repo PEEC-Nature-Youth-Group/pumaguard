@@ -402,11 +402,11 @@ def main(options: argparse.Namespace, presets: Preset):
     except OSError as exc:  # pragma: no cover
         logger.error("Could not ensure classified folders exist: %s", exc)
 
-    webui.add_image_directory(presets.classified_puma_dir)
-    webui.add_image_directory(presets.classified_other_dir)
-    webui.add_image_directory(presets.intermediate_dir)
+    webui.add_classification_directory(presets.classified_puma_dir)
+    webui.add_classification_directory(presets.classified_other_dir)
+    webui.add_classification_directory(presets.intermediate_dir)
     logger.info(
-        "Classified browsing enabled for: %s, %s; intermediate: %s",
+        "Classification browsing enabled for: %s, %s; intermediate: %s",
         presets.classified_puma_dir,
         presets.classified_other_dir,
         presets.intermediate_dir,

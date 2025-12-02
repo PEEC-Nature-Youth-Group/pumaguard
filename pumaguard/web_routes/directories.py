@@ -31,7 +31,13 @@ def register_directories_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/directories", methods=["GET"])
     def get_directories():
+        """Get watched directories (incoming images to monitor)."""
         return jsonify({"directories": webui.image_directories})
+
+    @app.route("/api/directories/classification", methods=["GET"])
+    def get_classification_directories():
+        """Get classification output directories (products, read-only)."""
+        return jsonify({"directories": webui.classification_directories})
 
     @app.route("/api/directories", methods=["POST"])
     def add_directory():

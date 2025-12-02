@@ -33,8 +33,13 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/folders", methods=["GET"])
     def get_folders():
+        """Get all browsable folders (watched + classification outputs)."""
         folders = []
-        for directory in webui.image_directories:
+        # Combine both watched and classification directories
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+        for directory in all_directories:
             if not os.path.exists(directory):
                 continue
             image_count = 0
@@ -55,10 +60,14 @@ def register_folders_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/folders/<path:folder_path>/images", methods=["GET"])
     def get_folder_images(folder_path: str):
-        # Try to resolve folder_path relative to each allowed image directory
+        """Get images from a folder (watched or classification output)."""
+        # Try to resolve folder_path relative to allowed directories
         abs_folder = None
         resolved_base = None
-        for directory in webui.image_directories:
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+        for directory in all_directories:
             abs_directory = os.path.realpath(os.path.normpath(directory))
             # Always join user input to base, then normalize
             candidate_folder = os.path.realpath(

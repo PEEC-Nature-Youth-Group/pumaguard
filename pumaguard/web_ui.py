@@ -142,6 +142,7 @@ class WebUI:
         self._running: bool = False
         self.presets: Preset = presets
         self.image_directories: list[str] = []
+        self.classification_directories: list[str] = []
 
         # mDNS/Zeroconf support
         self.zeroconf: Zeroconf | None = None
@@ -266,7 +267,7 @@ class WebUI:
 
     def add_image_directory(self, directory: str):
         """
-        Add a directory to scan for images.
+        Add a directory to scan for images (watched folder).
 
         Args:
             directory: Path to the directory containing captured images
@@ -274,6 +275,17 @@ class WebUI:
         if directory not in self.image_directories:
             self.image_directories.append(directory)
             logger.info("Added image directory: %s", directory)
+
+    def add_classification_directory(self, directory: str):
+        """
+        Add a classification output directory (not watched, browse-only).
+
+        Args:
+            directory: Path to classification output directory
+        """
+        if directory not in self.classification_directories:
+            self.classification_directories.append(directory)
+            logger.info("Added classification directory: %s", directory)
 
     def _get_local_ip(self) -> str:
         """

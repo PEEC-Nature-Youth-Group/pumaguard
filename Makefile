@@ -188,9 +188,10 @@ add-model:
 
 .PHONY: build-ui
 build-ui: install
+	$(MAKE) -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; flutter build web --wasm
-	mkdir -p pumaguard/pumaguard-ui
+	mkdir --parents pumaguard/pumaguard-ui
 	rsync -av --delete pumaguard-ui/build/web/ pumaguard/pumaguard-ui/
 
 .PHONY: run-server

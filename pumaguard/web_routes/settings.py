@@ -5,6 +5,7 @@ from __future__ import (
 )
 
 import logging
+import os
 from typing import (
     TYPE_CHECKING,
 )
@@ -16,6 +17,10 @@ from flask import (
 )
 from yaml.representer import (
     YAMLError,
+)
+
+from pumaguard.sound import (
+    playsound,
 )
 
 if TYPE_CHECKING:
@@ -114,3 +119,41 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
         webui.presets.load(filepath)
         logger.info("Settings loaded from %s", filepath)
         return jsonify({"success": True, "message": "Settings loaded"})
+
+    @app.route("/api/settings/test-sound", methods=["POST"])
+    def test_sound():
+        """Test the configured deterrent sound."""
+        try:
+            sound_file = webui.presets.deterrent_sound_file
+            if not sound_file:
+                return (
+                    jsonify({"error": "No sound file configured"}),
+                    400,
+                )
+
+            # Combine sound_path with deterrent_sound_file
+            sound_file_path = os.path.join(
+                webui.presets.sound_path, sound_file
+            )
+
+            # Check if file exists
+            if not os.path.exists(sound_file_path):
+                return (
+                    jsonify(
+                        {"error": (f"Sound file not found: {sound_file_path}")}
+                    ),
+                    404,
+                )
+
+            # Play the sound
+            logger.info("Testing sound playback: %s", sound_file_path)
+            playsound(sound_file_path)
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Sound played: {sound_file}",
+                }
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error testing sound")
+            return jsonify({"error": str(e)}), 500

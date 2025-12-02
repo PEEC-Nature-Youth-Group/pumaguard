@@ -14,6 +14,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Settings? _settings;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isTestingSound = false;
   String? _error;
 
   // Controllers for text fields
@@ -131,6 +132,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _testSound() async {
+    setState(() {
+      _isTestingSound = true;
+      _error = null;
+    });
+
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.testSound();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sound test completed'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to test sound: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTestingSound = false;
+        });
       }
     }
   }
@@ -397,6 +434,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _playSound = value;
                 });
               },
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _isTestingSound ? null : _testSound,
+              icon: _isTestingSound
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.play_arrow),
+              label: const Text('Test Sound'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(12),
+              ),
             ),
           ],
         ),

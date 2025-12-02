@@ -367,4 +367,23 @@ class ApiService {
 
     return url;
   }
+
+  /// Test deterrent sound playback
+  Future<bool> testSound() async {
+    try {
+      final response = await http.post(
+        Uri.parse(getApiUrl('/api/settings/test-sound')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to test sound');
+      }
+    } catch (e) {
+      throw Exception('Failed to test sound: $e');
+    }
+  }
 }

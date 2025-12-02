@@ -224,3 +224,40 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error getting available models")
             return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/sounds/available", methods=["GET"])
+    def get_available_sounds():
+        """Get list of available sound files with file sizes."""
+        try:
+            sound_path = webui.presets.sound_path
+            if not os.path.exists(sound_path):
+                return (
+                    jsonify({"error": f"Sound path not found: {sound_path}"}),
+                    404,
+                )
+
+            # Supported audio formats
+            audio_extensions = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
+
+            sound_files = []
+            for filename in os.listdir(sound_path):
+                filepath = os.path.join(sound_path, filename)
+                if os.path.isfile(filepath):
+                    ext = os.path.splitext(filename)[1].lower()
+                    if ext in audio_extensions:
+                        size_mb = os.path.getsize(filepath) / (1024 * 1024)
+                        sound_files.append(
+                            {
+                                "name": filename,
+                                "size_mb": size_mb,
+                            }
+                        )
+
+            # Sort by name
+            sound_files.sort(key=lambda x: x["name"])
+
+            return jsonify({"sounds": sound_files})
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error getting available sounds")
+            return jsonify({"error": str(e)}), 500

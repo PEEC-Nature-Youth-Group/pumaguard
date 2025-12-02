@@ -166,18 +166,33 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/models/available", methods=["GET"])
     def get_available_models():
-        """Get list of available classifier models with cache status."""
+        """Get list of available models with cache status.
+
+        Query parameters:
+            type: 'classifier' (*.h5 files) or 'yolo' (*.pt files)
+                  Default: 'classifier'
+        """
         try:
+            model_type = request.args.get("type", "classifier")
             models_dir = get_models_directory()
             available_models = list_available_models()
 
-            # Filter to only classifier models (*.h5 files)
-            classifier_models = [
-                model for model in available_models if model.endswith(".h5")
-            ]
+            # Filter based on model type
+            if model_type == "yolo":
+                filtered_models = [
+                    model
+                    for model in available_models
+                    if model.endswith(".pt")
+                ]
+            else:  # Default to classifier
+                filtered_models = [
+                    model
+                    for model in available_models
+                    if model.endswith(".h5")
+                ]
 
             model_list = []
-            for model_name in classifier_models:
+            for model_name in filtered_models:
                 model_path = models_dir / model_name
                 is_cached = False
 

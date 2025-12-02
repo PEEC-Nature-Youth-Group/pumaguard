@@ -196,7 +196,22 @@ class Preset:
             )
             return
         except yaml.constructor.ConstructorError as e:
-            raise PresetError(str(e)) from e
+            error_msg = str(e)
+            if "python/tuple" in error_msg:
+                raise PresetError(
+                    f"{error_msg}\n\n"
+                    "Your settings file contains Python-specific tuple "
+                    "formatting that is no longer supported.\n"
+                    f"Please update {filename} to use YAML list syntax.\n"
+                    "For example, change:\n"
+                    "  image-dimensions: !!python/tuple [512, 512]\n"
+                    "to:\n"
+                    "  image-dimensions:\n"
+                    "    - 512\n"
+                    "    - 512\n"
+                    "Or delete the file to use defaults."
+                ) from e
+            raise PresetError(error_msg) from e
 
         self.yolo_min_size = settings.get("YOLO-min-size", 0.02)
         self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.25)
@@ -308,7 +323,7 @@ class Preset:
             "color-mode": self.color_mode,
             "file-stabilization-extra-wait": self.file_stabilization_extra_wait,
             "epochs": self.epochs,
-            "image-dimensions": self.image_dimensions,
+            "image-dimensions": list(self.image_dimensions),
             "lion-directories": self.lion_directories,
             "validation-lion-directories": self.validation_lion_directories,
             "model-function": self.model_function_name,

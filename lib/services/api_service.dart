@@ -387,11 +387,14 @@ class ApiService {
     }
   }
 
-  /// Get list of available classifier models with cache status
-  Future<List<Map<String, dynamic>>> getAvailableModels() async {
+  /// Get list of available models with cache status
+  /// [modelType] can be 'classifier' (*.h5 files) or 'yolo' (*.pt files)
+  Future<List<Map<String, dynamic>>> getAvailableModels({
+    String modelType = 'classifier',
+  }) async {
     try {
       final response = await http.get(
-        Uri.parse(getApiUrl('/api/models/available')),
+        Uri.parse(getApiUrl('/api/models/available?type=$modelType')),
         headers: {'Content-Type': 'application/json'},
       );
 

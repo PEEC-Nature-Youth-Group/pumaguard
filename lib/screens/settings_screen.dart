@@ -174,14 +174,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showModelPicker() async {
+  Future<void> _showModelPicker({String modelType = 'classifier'}) async {
     setState(() {
       _isLoading = true;
     });
 
     try {
       final apiService = context.read<ApiService>();
-      final models = await apiService.getAvailableModels();
+      final models = await apiService.getAvailableModels(modelType: modelType);
 
       setState(() {
         _availableModels = models;
@@ -194,7 +194,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Select Classifier Model'),
+            title: Text(
+              modelType == 'yolo'
+                  ? 'Select YOLO Model'
+                  : 'Select Classifier Model',
+            ),
             content: SizedBox(
               width: double.maxFinite,
               child: ListView.builder(
@@ -242,7 +246,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (selectedModel != null) {
         setState(() {
-          _classifierModelController.text = selectedModel;
+          if (modelType == 'yolo') {
+            _yoloModelController.text = selectedModel;
+          } else {
+            _classifierModelController.text = selectedModel;
+          }
         });
       }
     } catch (e) {
@@ -420,11 +428,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: _yoloModelController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'YOLO Model Filename',
                 hintText: 'yolo_model.pt',
                 helperText: 'Path to YOLO model file',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  onPressed: () => _showModelPicker(modelType: 'yolo'),
+                  tooltip: 'Browse available models',
+                ),
+              ),
+              readOnly: false,
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () => _showModelPicker(modelType: 'yolo'),
+              icon: const Icon(Icons.list),
+              label: const Text('Choose from Available Models'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.all(12),
               ),
             ),
           ],

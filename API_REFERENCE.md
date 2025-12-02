@@ -5,6 +5,7 @@ This document describes the REST API that the PumaGuard UI communicates with. Us
 ## Base URL
 
 The API is served by the PumaGuard Flask backend:
+
 - **Development**: `http://localhost:5000`
 - **Production**: `http://<server-ip>:5000`
 - **Web UI**: Uses `Uri.base.origin` to automatically detect the current host
@@ -26,6 +27,7 @@ CORS is enabled for all origins to support web UI access from any IP/hostname.
 Get current server status and configuration.
 
 **Response:**
+
 ```json
 {
   "status": "running",
@@ -37,6 +39,7 @@ Get current server status and configuration.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -46,6 +49,7 @@ Get current server status and configuration.
 Get detailed diagnostic information about the server.
 
 **Response:**
+
 ```json
 {
   "python_version": "3.12.0",
@@ -57,6 +61,7 @@ Get detailed diagnostic information about the server.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -68,6 +73,7 @@ Get detailed diagnostic information about the server.
 Get current PumaGuard settings.
 
 **Response:**
+
 ```json
 {
   "YOLO-min-size": 0.02,
@@ -82,6 +88,7 @@ Get current PumaGuard settings.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -91,6 +98,7 @@ Get current PumaGuard settings.
 Update PumaGuard settings.
 
 **Request Body:**
+
 ```json
 {
   "YOLO-min-size": 0.03,
@@ -101,6 +109,7 @@ Update PumaGuard settings.
 ```
 
 **Allowed Settings:**
+
 - `YOLO-min-size` (float): Minimum object size (0.0-1.0)
 - `YOLO-conf-thresh` (float): Confidence threshold (0.0-1.0)
 - `YOLO-max-dets` (int): Maximum detections
@@ -111,6 +120,7 @@ Update PumaGuard settings.
 - `play-sound` (boolean): Enable/disable sound playback
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -119,6 +129,7 @@ Update PumaGuard settings.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `400 Bad Request`: Invalid data
 
@@ -129,6 +140,7 @@ Update PumaGuard settings.
 Save current settings to a YAML file.
 
 **Request Body:**
+
 ```json
 {
   "filepath": "/path/to/settings.yaml"  // Optional, uses default if not provided
@@ -136,6 +148,7 @@ Save current settings to a YAML file.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -144,6 +157,7 @@ Save current settings to a YAML file.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `500 Internal Server Error`: Save failed
 
@@ -154,6 +168,7 @@ Save current settings to a YAML file.
 Load settings from a YAML file.
 
 **Request Body:**
+
 ```json
 {
   "filepath": "/path/to/settings.yaml"
@@ -161,6 +176,7 @@ Load settings from a YAML file.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -169,6 +185,7 @@ Load settings from a YAML file.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `400 Bad Request`: No filepath provided
 - `404 Not Found`: File not found
@@ -182,6 +199,7 @@ Load settings from a YAML file.
 Get list of monitored image directories.
 
 **Response:**
+
 ```json
 {
   "directories": [
@@ -192,6 +210,7 @@ Get list of monitored image directories.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -201,6 +220,7 @@ Get list of monitored image directories.
 Add a directory to the watch list.
 
 **Request Body:**
+
 ```json
 {
   "directory": "/path/to/new/folder"
@@ -208,6 +228,7 @@ Add a directory to the watch list.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -220,6 +241,7 @@ Add a directory to the watch list.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `400 Bad Request`: No directory provided or directory doesn't exist
 
@@ -230,9 +252,11 @@ Add a directory to the watch list.
 Remove a directory from the watch list by index.
 
 **Path Parameters:**
+
 - `index` (integer): Zero-based index of directory to remove
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -243,6 +267,7 @@ Remove a directory from the watch list by index.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `400 Bad Request`: Invalid index
 
@@ -255,6 +280,7 @@ Remove a directory from the watch list by index.
 Get list of all captured photos across all monitored directories.
 
 **Response:**
+
 ```json
 {
   "photos": [
@@ -272,10 +298,12 @@ Get list of all captured photos across all monitored directories.
 ```
 
 **Notes:**
+
 - Photos are sorted by modified time (newest first)
 - Supported formats: .jpg, .jpeg, .png, .gif, .bmp, .webp
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -285,22 +313,27 @@ Get list of all captured photos across all monitored directories.
 Get a specific photo file.
 
 **Path Parameters:**
+
 - `filepath` (string): URL-encoded full path to the image
 
 **Example:**
+
 ```
 GET /api/photos/%2Fpath%2Fto%2Fimage.jpg
 ```
 
 **Response:**
+
 - Binary image data
 
 **Status Codes:**
+
 - `200 OK`: Success, returns image file
 - `403 Forbidden`: File not in allowed directory
 - `404 Not Found`: File doesn't exist
 
 **Security:**
+
 - Only files in monitored directories can be accessed
 - Path traversal attempts are blocked
 
@@ -311,9 +344,11 @@ GET /api/photos/%2Fpath%2Fto%2Fimage.jpg
 Delete a specific photo.
 
 **Path Parameters:**
+
 - `filepath` (string): URL-encoded full path to the image
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -322,6 +357,7 @@ Delete a specific photo.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `403 Forbidden`: File not in allowed directory
 - `404 Not Found`: File doesn't exist
@@ -335,6 +371,7 @@ Delete a specific photo.
 Get list of watched folders with image counts.
 
 **Response:**
+
 ```json
 {
   "folders": [
@@ -353,6 +390,7 @@ Get list of watched folders with image counts.
 ```
 
 **Status Codes:**
+
 - `200 OK`: Success
 
 ---
@@ -362,14 +400,17 @@ Get list of watched folders with image counts.
 Get list of images in a specific folder.
 
 **Path Parameters:**
+
 - `folder_path` (string): URL-encoded folder path
 
 **Example:**
+
 ```
 GET /api/folders/%2Fpath%2Fto%2Ffolder1/images
 ```
 
 **Response:**
+
 ```json
 {
   "images": [
@@ -386,10 +427,12 @@ GET /api/folders/%2Fpath%2Fto%2Ffolder1/images
 ```
 
 **Notes:**
+
 - Images sorted by modified time (newest first)
 - Only images in allowed directories are returned
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `403 Forbidden`: Folder not in allowed directories
 - `404 Not Found`: Folder doesn't exist
@@ -403,6 +446,7 @@ GET /api/folders/%2Fpath%2Fto%2Ffolder1/images
 Compare client-side checksums with server-side files to determine what needs to be downloaded.
 
 **Request Body:**
+
 ```json
 {
   "files": {
@@ -413,11 +457,13 @@ Compare client-side checksums with server-side files to determine what needs to 
 ```
 
 **Notes:**
+
 - Keys are full file paths on server
 - Values are SHA256 checksums (hex string) of local files
 - Empty string for checksum means file doesn't exist locally
 
 **Response:**
+
 ```json
 {
   "files_to_download": [
@@ -433,10 +479,12 @@ Compare client-side checksums with server-side files to determine what needs to 
 ```
 
 **Notes:**
+
 - Returns only files that don't match client checksums
 - Files not in allowed directories are silently skipped
 
 **Status Codes:**
+
 - `200 OK`: Success
 - `400 Bad Request`: No files provided
 
@@ -450,6 +498,7 @@ This implements rsync-like functionality where only changed or new files are dow
 Download one or more files.
 
 **Request Body:**
+
 ```json
 {
   "files": [
@@ -460,20 +509,24 @@ Download one or more files.
 ```
 
 **Response:**
+
 - **Single file**: Binary image data with original filename
 - **Multiple files**: ZIP archive containing all files (filename: `pumaguard_images.zip`)
 
 **Headers:**
+
 - Single file: `Content-Type: image/jpeg` (or appropriate type)
 - Multiple files: `Content-Type: application/zip`
 - `Content-Disposition: attachment; filename="..."`
 
 **Status Codes:**
+
 - `200 OK`: Success, returns file(s)
 - `400 Bad Request`: No files provided or no valid files
 - `403 Forbidden`: Files not in allowed directories
 
 **Notes:**
+
 - Only files in monitored directories can be downloaded
 - Invalid file paths are silently skipped
 - ZIP file contains files with their original filenames
@@ -491,6 +544,7 @@ All error responses follow this format:
 ```
 
 Common HTTP status codes:
+
 - `200 OK`: Request succeeded
 - `400 Bad Request`: Invalid request data
 - `403 Forbidden`: Access denied (path not allowed)
@@ -500,38 +554,46 @@ Common HTTP status codes:
 ## Data Types
 
 ### Timestamp
+
 - Format: Unix timestamp (float)
 - Represents seconds since epoch
 - Example: `1234567890.0` = 2009-02-13 23:31:30 UTC
 
 ### File Size
+
 - Format: Integer (bytes)
 - Example: `1024000` = 1000 KB
 
 ### File Path
+
 - Format: Absolute path string
 - Must be in a monitored directory
 - Example: `/home/user/pumaguard/images/photo.jpg`
 
 ### Checksum
+
 - Format: SHA256 hex string (64 characters)
 - Example: `"abc123def456789..."`
 
 ## Security Considerations
 
 ### Path Validation
+
 All file paths are validated to ensure they are within monitored directories:
+
 ```python
 abs_filepath = os.path.abspath(filepath)
 allowed = abs_filepath.startswith(allowed_directory)
 ```
 
 ### Path Traversal Prevention
+
 - All paths converted to absolute paths
 - Checked against allowed directory list
 - `../` and similar patterns are neutralized
 
 ### CORS
+
 - Enabled for all origins
 - Required for web UI to work from any IP/hostname
 - All methods (GET, POST, PUT, DELETE, OPTIONS) allowed
@@ -539,6 +601,7 @@ allowed = abs_filepath.startswith(allowed_directory)
 ## mDNS Service Discovery
 
 PumaGuard advertises itself via mDNS (Zeroconf):
+
 - Service type: `_pumaguard._tcp.local.`
 - Default port: `5000`
 - Can be disabled with `--no-mdns` flag
@@ -548,6 +611,7 @@ The Flutter UI can discover PumaGuard servers on the local network using the `mu
 ## Image File Types
 
 Supported image extensions:
+
 - `.jpg`, `.jpeg`
 - `.png`
 - `.gif`
@@ -624,6 +688,7 @@ Currently, there is no rate limiting implemented. Consider implementing rate lim
 ## Future API Extensions
 
 Planned but not yet implemented:
+
 - Authentication and authorization
 - WebSocket support for real-time updates
 - Pagination for large image lists
@@ -635,6 +700,7 @@ Planned but not yet implemented:
 ## Changelog
 
 ### Version 1.0
+
 - Initial API implementation
 - Settings management
 - Directory monitoring
@@ -646,5 +712,6 @@ Planned but not yet implemented:
 ## Support
 
 For API issues or questions:
-- GitHub: https://github.com/PEEC-Nature-Youth-Group/pumaguard
-- Documentation: http://pumaguard.rtfd.io/
+
+- GitHub: <https://github.com/PEEC-Nature-Youth-Group/pumaguard>
+- Documentation: <http://pumaguard.rtfd.io/>

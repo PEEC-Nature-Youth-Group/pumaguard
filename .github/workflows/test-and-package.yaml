@@ -158,13 +158,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
-      - uses: actions/download-artifact@v4
-        with:
-          name: ui-data
-      - name: Unpack ui source
-        run: |
-          set -e -u -x
-          tar -C pumaguard-ui -xf pumaguard-ui.tar.gz
+      - name: Sync UI
+        run: git submodule update pumaguard-ui
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
       - name: Test UI

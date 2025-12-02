@@ -47,6 +47,7 @@ test: install-dev
 
 .PHONY: test-ui
 test-ui:
+	$(MAKE) -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; dart format --set-exit-if-changed lib test
 	cd pumaguard-ui; flutter analyze

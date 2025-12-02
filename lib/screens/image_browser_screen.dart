@@ -396,18 +396,66 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                                           apiService
                                                               .getPhotoUrl(
                                                                 imagePath,
+                                                                thumbnail: true,
+                                                                maxWidth: 400,
+                                                                maxHeight: 400,
                                                               ),
                                                           fit: BoxFit.cover,
+                                                          cacheWidth: 400,
+                                                          cacheHeight: 400,
+                                                          loadingBuilder:
+                                                              (
+                                                                context,
+                                                                child,
+                                                                loadingProgress,
+                                                              ) {
+                                                                if (loadingProgress ==
+                                                                    null) {
+                                                                  return child;
+                                                                }
+                                                                return Center(
+                                                                  child: CircularProgressIndicator(
+                                                                    value:
+                                                                        loadingProgress.expectedTotalBytes !=
+                                                                            null
+                                                                        ? loadingProgress.cumulativeBytesLoaded /
+                                                                              loadingProgress.expectedTotalBytes!
+                                                                        : null,
+                                                                  ),
+                                                                );
+                                                              },
                                                           errorBuilder:
                                                               (
                                                                 context,
                                                                 error,
                                                                 stackTrace,
                                                               ) {
-                                                                return const Icon(
-                                                                  Icons
-                                                                      .broken_image,
-                                                                  size: 48,
+                                                                return Center(
+                                                                  child: Column(
+                                                                    mainAxisAlignment:
+                                                                        MainAxisAlignment
+                                                                            .center,
+                                                                    children: [
+                                                                      const Icon(
+                                                                        Icons
+                                                                            .broken_image,
+                                                                        size:
+                                                                            48,
+                                                                        color: Colors
+                                                                            .grey,
+                                                                      ),
+                                                                      const SizedBox(
+                                                                        height:
+                                                                            8,
+                                                                      ),
+                                                                      Text(
+                                                                        'Failed to load',
+                                                                        style: Theme.of(
+                                                                          context,
+                                                                        ).textTheme.bodySmall,
+                                                                      ),
+                                                                    ],
+                                                                  ),
                                                                 );
                                                               },
                                                         ),

@@ -218,9 +218,8 @@ class ApiService {
   /// Get list of images in a specific folder
   Future<Map<String, dynamic>> getFolderImages(String folderPath) async {
     try {
-      // Encode each path segment separately to preserve slashes
-      final segments = folderPath.split('/').map((s) => Uri.encodeComponent(s));
-      final encodedPath = segments.join('/');
+      // Encode the entire path as a single component (e.g., /path/to/folder -> %2Fpath%2Fto%2Ffolder)
+      final encodedPath = Uri.encodeComponent(folderPath);
       final response = await http.get(
         Uri.parse(getApiUrl('/api/folders/$encodedPath/images')),
         headers: {'Content-Type': 'application/json'},
@@ -285,8 +284,31 @@ class ApiService {
   }
 
   /// Get URL for a specific photo/image
-  String getPhotoUrl(String filepath) {
+  /// If [thumbnail] is true, request a thumbnail version (if supported by backend)
+  /// [maxWidth] and [maxHeight] can be used to request specific thumbnail dimensions
+  String getPhotoUrl(
+    String filepath, {
+    bool thumbnail = false,
+    int? maxWidth,
+    int? maxHeight,
+  }) {
     final encodedPath = Uri.encodeComponent(filepath);
-    return getApiUrl('/api/photos/$encodedPath');
+    var url = getApiUrl('/api/photos/$encodedPath');
+
+    // Add query parameters for thumbnail if requested
+    // Note: Backend may not support these yet - they will be gracefully ignored
+    if (thumbnail || maxWidth != null || maxHeight != null) {
+      final queryParams = <String, String>{};
+      if (thumbnail) queryParams['thumbnail'] = 'true';
+      if (maxWidth != null) queryParams['width'] = maxWidth.toString();
+      if (maxHeight != null) queryParams['height'] = maxHeight.toString();
+
+      if (queryParams.isNotEmpty) {
+        url +=
+            '?${queryParams.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      }
+    }
+
+    return url;
   }
 }

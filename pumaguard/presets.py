@@ -120,7 +120,7 @@ class Preset:
         self.settings_file = get_default_settings_file()
         self.yolo_min_size = 0.02
         self.yolo_conf_thresh = 0.25
-        self.yolo_max_dets = 12
+        self.yolo_max_dets = 2
         self.yolo_model_filename = "yolov8s_101425.pt"
         self.classifier_model_filename = "colorbw_111325.h5"
         self.alpha = 1e-5
@@ -130,7 +130,7 @@ class Preset:
         self.sound_path = os.path.join(
             os.path.dirname(__file__), "../pumaguard-sounds"
         )
-        self.deterrent_sound_file = "cougar_call.mp3"
+        self.deterrent_sound_file = "deterrent_puma.mp3"
         self.verification_path = "data/stable/stable_test"
         self.batch_size = 16
         self.notebook_number = 1

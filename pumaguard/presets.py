@@ -135,7 +135,7 @@ class Preset:
         self.batch_size = 16
         self.notebook_number = 1
         self.color_mode = "rgb"
-        self.file_stabilization_extra_wait = 0
+        self.file_stabilization_extra_wait = 1
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []

@@ -48,13 +48,48 @@ Get detailed diagnostic information about the server.
 **Response:**
 ```json
 {
-  "python_version": "3.12.0",
-  "tensorflow_version": "2.20.0",
-  "yolo_version": "8.3.0",
-  "system_info": {...},
-  "gpu_available": false
+  "server": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "flutter_dir": "/path/to/pumaguard-ui",
+    "build_dir": "/path/to/pumaguard-ui/build/web",
+    "build_exists": true,
+    "mdns_enabled": true,
+    "mdns_name": "pumaguard",
+    "mdns_url": "http://pumaguard.local:5000",
+    "local_ip": "192.168.1.100",
+    "log_file": "/home/user/.cache/pumaguard/pumaguard.log",
+    "log_file_exists": true
+  },
+  "request": {
+    "url": "http://localhost:5000/api/diagnostic",
+    "base_url": "http://localhost:5000/api/diagnostic",
+    "host": "localhost:5000",
+    "origin": "http://localhost:3000",
+    "referer": "http://localhost:3000/",
+    "user_agent": "Mozilla/5.0 ..."
+  },
+  "expected_behavior": {
+    "flutter_app_should_detect": "http://localhost:5000",
+    "api_calls_should_go_to": "http://localhost:5000/api/..."
+  },
+  "troubleshooting": {
+    "if_api_calls_go_to_localhost": "Browser is using cached old JavaScript - clear cache",
+    "if_page_doesnt_load": "Check that Flutter app is built: make build-ui",
+    "if_cors_errors": "Check browser console for details"
+  }
 }
 ```
+
+**Response Fields:**
+- `server.log_file`: Path to the server log file (follows XDG Base Directory specification)
+- `server.log_file_exists`: Whether the log file currently exists on disk
+- `server.host`: Server bind address
+- `server.port`: Server port number
+- `server.local_ip`: Detected local IP address
+- `server.mdns_enabled`: Whether mDNS/Zeroconf is enabled
+- `server.mdns_name`: mDNS service name (if enabled)
+- `server.mdns_url`: Full mDNS URL (if enabled)
 
 **Status Codes:**
 - `200 OK`: Success
@@ -606,6 +641,12 @@ curl -X PUT http://localhost:5000/api/settings \
 
 # Get folders
 curl http://localhost:5000/api/folders
+
+# Get diagnostic info including log file path
+curl http://localhost:5000/api/diagnostic
+
+# Get just the log file path using jq
+curl -s http://localhost:5000/api/diagnostic | jq -r '.server.log_file'
 
 # Download image
 curl http://localhost:5000/api/photos/%2Fpath%2Fto%2Fimage.jpg -o image.jpg

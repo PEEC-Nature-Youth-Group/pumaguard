@@ -14,6 +14,9 @@ from flask import (
 )
 
 import pumaguard
+from pumaguard.presets import (
+    get_xdg_cache_home,
+)
 
 if TYPE_CHECKING:
     from flask import (
@@ -46,6 +49,10 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/diagnostic", methods=["GET"])
     def get_diagnostic():
+        # Get log file path
+        log_dir = get_xdg_cache_home() / "pumaguard"
+        log_file = log_dir / "pumaguard.log"
+
         diagnostic_info = {
             "server": {
                 "host": webui.host,
@@ -61,6 +68,8 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
                     else None
                 ),
                 "local_ip": webui._get_local_ip(),  # pylint: disable=protected-access
+                "log_file": str(log_file),
+                "log_file_exists": log_file.exists(),
             },
             "request": {
                 "url": request.url,

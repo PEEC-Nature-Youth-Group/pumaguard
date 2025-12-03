@@ -149,7 +149,9 @@ For detailed mDNS setup instructions including Docker/container configurations, 
 ## Running the server
 
 The `pumaguard-server` watches a folder and classifies new files as they are
-added to that folder. Run with
+added to that folder.
+
+### Basic Usage
 
 **Using uv:**
 
@@ -164,6 +166,31 @@ poetry run pumaguard-server FOLDER
 ```
 
 Where `FOLDER` is the folder to watch.
+
+### Common Command-Line Options
+
+All PumaGuard commands support these global options:
+
+- `--log-file PATH` - Specify a custom log file location (default: `~/.cache/pumaguard/pumaguard.log`)
+- `--settings PATH` - Load settings from a specific YAML file (default: `~/.config/pumaguard/settings.yaml`)
+- `--debug` - Enable debug logging
+- `--model-path PATH` - Specify where models are stored
+- `--version` - Show version information
+
+**Examples:**
+
+```console
+# Use custom log file location
+uv run pumaguard --log-file /var/log/pumaguard.log server FOLDER
+
+# Combine custom settings and log file
+uv run pumaguard --settings my-config.yaml --log-file /tmp/debug.log server FOLDER
+
+# Enable debug logging
+uv run pumaguard --debug server FOLDER
+```
+
+For more details on configuration and XDG directory support, see [docs/XDG_MIGRATION.md](docs/XDG_MIGRATION.md).
 
 ![Server Demo Session](docs/source/_static/server-demo.gif)
 

@@ -51,6 +51,12 @@ def create_global_parser() -> argparse.ArgumentParser:
         help="Print out bash completion script",
     )
     global_parser.add_argument(
+        "--log-file",
+        help="Path to log file (default: ~/.cache/pumaguard/pumaguard.log)",
+        type=str,
+        default=None,
+    )
+    global_parser.add_argument(
         "--model-path",
         help="Where the models are stored (default = %(default)s)",
         type=str,
@@ -183,19 +189,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("PumaGuard")
 
-    # Store logs in XDG cache directory
-    log_dir = get_xdg_cache_home() / "pumaguard"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file = log_dir / "pumaguard.log"
-
-    file_handler = logging.FileHandler(str(log_file))
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-
+    # Parse args early to get log file location
     global_args_parser = create_global_parser()
     parser = argparse.ArgumentParser(
         description="""The goal of this project is to accurately classify
@@ -205,10 +199,30 @@ def main():
                     dataset and validated using a separate set of images.""",
         parents=[global_args_parser],
     )
-
     configure_subparsers(parser, global_args_parser)
-
     args = parser.parse_args()
+
+    # Determine log file location
+    if args.log_file:
+        log_file = args.log_file
+        # Ensure parent directory exists
+        log_dir = os.path.dirname(log_file)
+        if log_dir:
+            os.makedirs(log_dir, exist_ok=True)
+    else:
+        # Store logs in XDG cache directory (default)
+        log_dir = get_xdg_cache_home() / "pumaguard"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_file = str(log_dir / "pumaguard.log")
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    logger.info("Logging to: %s", log_file)
 
     if args.debug:
         logger.setLevel(logging.DEBUG)

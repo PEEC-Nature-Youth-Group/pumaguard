@@ -479,51 +479,6 @@ jobs:
           exit 1
       - run: make verify-snap
 
-  train-snap:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            arch: amd64
-          - os: ubuntu-24.04-arm
-            arch: arm64
-    needs:
-      - build-snap
-
-    if: false
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/clean-runner
-      - uses: actions/download-artifact@v4
-      - name: Unpack models
-        run: |
-          set -e -u -x
-          tar -C pumaguard-models -xf submodule-models/pumaguard-models.tar.gz
-      - name: Unpack training data
-        run: |
-          set -e -u -x
-          tar -C training-data -xf submodule-data/training-data.tar.gz
-      - name: Ensure snapd
-        run: sudo systemctl restart snapd.service
-      - name: Install snap
-        run: |
-          set -e -u -x
-          sudo snap install --dangerous ./snap-*/pumaguard*${{ matrix.arch }}*.snap
-          sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-          for (( i = 0; i < 5; i++ )); do
-            if echo "ls /snap/pumaguard/current/pumaguard-tensorflow/" | sudo snap run --shell pumaguard; then
-              exit 0
-            fi
-            sudo snap disconnect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-            sleep 10
-            sudo snap connect pumaguard:tensorflow pumaguard-tensorflow:tensorflow
-            sleep 10
-          done
-          exit 1
-      - run: make train
-
   publish-to-pypi:
     runs-on: ubuntu-latest
     environment:

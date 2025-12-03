@@ -14,28 +14,17 @@ cleanup() {
 
 trap cleanup EXIT
 
+set -x
+
+LOGFILE=pumaguard.log
+
 rm -rf watchfolder
 mkdir -p watchfolder
-rm -f pumaguard.log
+rm -f ${LOGFILE}
 
-uv run pumaguard server --no-play-sound --no-download-progress watchfolder &
+uv run pumaguard server --debug --no-play-sound --no-download-progress --log-file ${LOGFILE} watchfolder &
 
 SERVER_PID=$!
-server_started=0
-echo -n "Waiting for server to start"
-while true; do
-    if [[ -f pumaguard.log ]]; then
-        server_started=1
-        break
-    fi
-    echo -n .
-    sleep 1
-done
-echo
-if (( server_started != 1 )); then
-    echo "Server failed to start"
-    exit 1
-fi
 
 api_available=0
 echo -n "Waiting for API to report status"
@@ -50,7 +39,7 @@ echo
 observer_started=0
 echo -n "Waiting for server to start observer"
 for i in {1..60}; do
-    if grep "New observer started" pumaguard.log; then
+    if grep "New observer started" ${LOGFILE}; then
         observer_started=1
         break
     fi
@@ -68,7 +57,7 @@ cp training-data/verification/lion/IMG_9177.JPG watchfolder/
 image_found=0
 echo -n "Check whether server identifies image"
 for i in {1..60}; do
-    if grep "Chance of puma in watchfolder/IMG_9177.JPG" pumaguard.log; then
+    if grep "Chance of puma in watchfolder/IMG_9177.JPG" ${LOGFILE}; then
         image_found=1
         break
     fi

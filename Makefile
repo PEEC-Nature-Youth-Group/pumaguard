@@ -47,7 +47,7 @@ test: install-dev
 
 .PHONY: test-ui
 test-ui:
-	$(MAKE) -C pumaguard-ui version
+	make -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; dart format --set-exit-if-changed lib test
 	cd pumaguard-ui; flutter analyze
@@ -189,7 +189,7 @@ add-model:
 
 .PHONY: build-ui
 build-ui: install
-	$(MAKE) -C pumaguard-ui version
+	make -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; flutter build web --wasm
 	mkdir --parents pumaguard/pumaguard-ui

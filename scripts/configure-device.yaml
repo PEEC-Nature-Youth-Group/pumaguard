@@ -8,6 +8,8 @@
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
     wheelhouse_local_base: "{{ playbook_dir }}/.wheelhouse"
+    pumaguard_watch_dir: "/home/{{ ansible_user }}/pumaguard"
+    pumaguard_user: "{{ ansible_user }}"
 
   tasks:
     - name: Check the current size of the swap file
@@ -432,6 +434,44 @@
         group: root
         mode: "0755"
 
+    - name: Add /opt/pumaguard/bin to PATH for all users (profile.d)
+      ansible.builtin.copy:
+        dest: /etc/profile.d/pumaguard.sh
+        content: |
+          # PumaGuard bin in PATH
+          export PATH="/opt/pumaguard/bin:$PATH"
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure pumaguard watch directory exists
+      ansible.builtin.file:
+        path: "{{ pumaguard_watch_dir }}"
+        state: directory
+        owner: "{{ pumaguard_user }}"
+        group: "{{ pumaguard_group | default(pumaguard_user) }}"
+        mode: "0755"
+
+    - name: Install pumaguard systemd service
+      ansible.builtin.template:
+        src: templates/pumaguard.service.j2
+        dest: /etc/systemd/system/pumaguard.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd and restart pumaguard
+
+    - name: Enable pumaguard service
+      ansible.builtin.systemd:
+        name: pumaguard
+        enabled: true
+        daemon_reload: true
+
+    - name: Start pumaguard service
+      ansible.builtin.systemd:
+        name: pumaguard
+        state: started
+
     - name: Reboot the server
       ansible.builtin.reboot:
         msg: "Reboot initiated by Ansible"
@@ -445,3 +485,9 @@
       ansible.builtin.systemd:
         name: dnsmasq
         state: restarted
+
+    - name: Reload systemd and restart pumaguard
+      ansible.builtin.systemd:
+        name: pumaguard
+        state: restarted
+        daemon_reload: true

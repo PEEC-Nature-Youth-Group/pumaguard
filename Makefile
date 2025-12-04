@@ -154,11 +154,11 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev
-	$(VENV)ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
+	uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev
-	$(VENV)ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
+	uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
 verify-poetry: install

@@ -39,6 +39,9 @@ from pumaguard.presets import (
 from pumaguard.web_routes.artifacts import (
     register_artifacts_routes,
 )
+from pumaguard.web_routes.dhcp import (
+    register_dhcp_routes,
+)
 from pumaguard.web_routes.diagnostics import (
     register_diagnostics_routes,
 )
@@ -64,6 +67,16 @@ if TYPE_CHECKING:
     )
 
 logger = logging.getLogger(__name__)
+
+
+class CameraInfo(TypedDict):
+    """Type definition for camera information stored in webui.cameras."""
+
+    hostname: str
+    ip_address: str
+    mac_address: str
+    last_seen: str
+    status: str
 
 
 class PhotoDict(TypedDict):
@@ -143,6 +156,10 @@ class WebUI:
         self.presets: Preset = presets
         self.image_directories: list[str] = []
         self.classification_directories: list[str] = []
+
+        # Camera tracking - stores detected cameras by MAC address
+        # Format: {mac_address: CameraInfo}
+        self.cameras: dict[str, CameraInfo] = {}
 
         # mDNS/Zeroconf support
         self.zeroconf: Zeroconf | None = None
@@ -240,6 +257,8 @@ class WebUI:
         register_directories_routes(self.app, self)
 
         register_diagnostics_routes(self.app, self)
+
+        register_dhcp_routes(self.app, self)
 
         @self.app.route("/<path:path>")
         def serve_static(path: str):

@@ -191,7 +191,7 @@ add-model:
 build-ui: install
 	make -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
-	cd pumaguard-ui; flutter build web --wasm
+	cd pumaguard-ui; flutter build web --release --no-web-resources-cdn
 	mkdir --parents pumaguard/pumaguard-ui
 	rsync -av --delete pumaguard-ui/build/web/ pumaguard/pumaguard-ui/
 

@@ -33,6 +33,28 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <script>
+      // Configure Flutter loader for offline/air-gapped use
+      window.flutterConfiguration = {
+        canvasKitBaseUrl: "/canvaskit/",  // Use local CanvasKit
+        serviceWorkerSettings: {
+          serviceWorkerVersion: null,  // Disable service worker (no HTTPS needed)
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <script>
+      // Override the default loader to disable service worker
+      window.addEventListener('load', function(ev) {
+        // Download main.dart.js
+        _flutter.loader.load({
+          serviceWorkerSettings: {
+            serviceWorkerVersion: null,
+          },
+        });
+      });
+    </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -384,6 +384,26 @@ class ApiService {
     return url;
   }
 
+  /// Delete a photo/image file
+  Future<bool> deletePhoto(String filepath) async {
+    try {
+      final encodedPath = Uri.encodeComponent(filepath);
+      final response = await http.delete(
+        Uri.parse(getApiUrl('/api/photos/$encodedPath')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to delete photo');
+      }
+    } catch (e) {
+      throw Exception('Failed to delete photo: $e');
+    }
+  }
+
   /// Test deterrent sound playback
   Future<bool> testSound() async {
     try {

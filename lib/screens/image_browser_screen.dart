@@ -360,6 +360,119 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     }
   }
 
+  Future<void> _deleteSelectedImages() async {
+    if (_selectedImages.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('No images selected')));
+      }
+      return;
+    }
+
+    // Get apiService before async gap
+    final apiService = Provider.of<ApiService>(context, listen: false);
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Images'),
+          content: Text(
+            'Are you sure you want to delete ${_selectedImages.length} image(s)? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final imagesToDelete = _selectedImages.toList();
+      int successCount = 0;
+      int failCount = 0;
+
+      for (final imagePath in imagesToDelete) {
+        try {
+          await apiService.deletePhoto(imagePath);
+          successCount++;
+
+          // Remove from local state
+          setState(() {
+            _images.removeWhere((img) => img['full_path'] == imagePath);
+            _selectedImages.remove(imagePath);
+          });
+        } catch (e) {
+          failCount++;
+          developer.log(
+            'Failed to delete $imagePath: $e',
+            name: 'ImageBrowser',
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _selectAll = false;
+        });
+
+        if (failCount == 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Successfully deleted $successCount image(s)'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Deleted $successCount image(s), failed to delete $failCount',
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+
+        // Reload folder list to update counts
+        await _loadFolders();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -577,6 +690,12 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
               icon: const Icon(Icons.download),
               onPressed: _isDownloading ? null : _downloadSelectedImages,
               tooltip: 'Download selected images',
+            ),
+          if (_selectedImages.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: _isLoading ? null : _deleteSelectedImages,
+              tooltip: 'Delete selected images',
             ),
           IconButton(
             icon: const Icon(Icons.refresh),

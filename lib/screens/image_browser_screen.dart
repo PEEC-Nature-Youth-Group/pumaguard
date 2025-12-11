@@ -269,6 +269,14 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     return true;
   }
 
+  String _formatFolderName(String folderName) {
+    // Replace "intermediate" with "AI" for display
+    if (folderName.toLowerCase() == 'intermediate') {
+      return 'AI';
+    }
+    return folderName;
+  }
+
   Future<void> _downloadSelectedImages() async {
     if (_selectedImages.isEmpty) {
       if (mounted) {
@@ -734,7 +742,11 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                     return ListTile(
                                       selected: isSelected,
                                       leading: const Icon(Icons.folder),
-                                      title: Text(folder['name'] as String),
+                                      title: Text(
+                                        _formatFolderName(
+                                          folder['name'] as String,
+                                        ),
+                                      ),
                                       subtitle: Text(
                                         '${folder['image_count']} images',
                                       ),

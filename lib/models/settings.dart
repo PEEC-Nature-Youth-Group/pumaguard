@@ -8,6 +8,7 @@ class Settings {
   final double fileStabilizationExtraWait;
   final bool playSound;
   final int volume;
+  final String cameraUrl;
 
   Settings({
     required this.yoloMinSize,
@@ -19,6 +20,7 @@ class Settings {
     required this.fileStabilizationExtraWait,
     required this.playSound,
     required this.volume,
+    required this.cameraUrl,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class Settings {
           (json['file-stabilization-extra-wait'] as num?)?.toDouble() ?? 2.0,
       playSound: json['play-sound'] as bool? ?? false,
       volume: json['volume'] as int? ?? 80,
+      cameraUrl: json['camera-url'] as String? ?? '',
     );
   }
 
@@ -48,6 +51,7 @@ class Settings {
       'file-stabilization-extra-wait': fileStabilizationExtraWait,
       'play-sound': playSound,
       'volume': volume,
+      'camera-url': cameraUrl,
     };
   }
 
@@ -61,6 +65,7 @@ class Settings {
     double? fileStabilizationExtraWait,
     bool? playSound,
     int? volume,
+    String? cameraUrl,
   }) {
     return Settings(
       yoloMinSize: yoloMinSize ?? this.yoloMinSize,
@@ -74,6 +79,7 @@ class Settings {
           fileStabilizationExtraWait ?? this.fileStabilizationExtraWait,
       playSound: playSound ?? this.playSound,
       volume: volume ?? this.volume,
+      cameraUrl: cameraUrl ?? this.cameraUrl,
     );
   }
 }

@@ -62,6 +62,9 @@ dependencies:
   # File picker for selecting download destination
   file_picker: ^8.0.0+1
 
+  # URL launcher for opening camera URL
+  url_launcher: ^6.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

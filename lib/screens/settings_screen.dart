@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _classifierModelController;
   late TextEditingController _soundFileController;
   late TextEditingController _fileStabilizationController;
+  late TextEditingController _cameraUrlController;
   bool _playSound = false;
   double _volume = 80.0;
   List<Map<String, dynamic>> _availableModels = [];
@@ -43,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _classifierModelController = TextEditingController();
     _soundFileController = TextEditingController();
     _fileStabilizationController = TextEditingController();
+    _cameraUrlController = TextEditingController();
     _loadSettings();
   }
 
@@ -56,6 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _classifierModelController.dispose();
     _soundFileController.dispose();
     _fileStabilizationController.dispose();
+    _cameraUrlController.dispose();
     super.dispose();
   }
 
@@ -78,6 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _soundFileController.text = settings.deterrentSoundFile;
         _fileStabilizationController.text = settings.fileStabilizationExtraWait
             .toString();
+        _cameraUrlController.text = settings.cameraUrl;
         _playSound = settings.playSound;
         _volume = settings.volume.toDouble();
         _isLoading = false;
@@ -109,6 +113,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
 
     try {
+      developer.log(
+        '[SettingsScreen._saveSettings] Camera URL from controller: "${_cameraUrlController.text}"',
+      );
+
       final updatedSettings = Settings(
         yoloMinSize: double.tryParse(_yoloMinSizeController.text) ?? 0.01,
         yoloConfThresh: double.tryParse(_yoloConfThreshController.text) ?? 0.25,
@@ -120,10 +128,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             double.tryParse(_fileStabilizationController.text) ?? 2.0,
         playSound: _playSound,
         volume: _volume.round(),
+        cameraUrl: _cameraUrlController.text,
+      );
+
+      developer.log(
+        '[SettingsScreen._saveSettings] Settings object camera URL: "${updatedSettings.cameraUrl}"',
+      );
+      developer.log(
+        '[SettingsScreen._saveSettings] Settings JSON: ${updatedSettings.toJson()}',
       );
 
       final apiService = context.read<ApiService>();
       await apiService.updateSettings(updatedSettings);
+
+      developer.log(
+        '[SettingsScreen._saveSettings] Settings saved successfully',
+      );
 
       setState(() {
         _settings = updatedSettings;
@@ -837,6 +857,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _cameraUrlController,
+              onChanged: (_) => _onTextFieldChanged(),
+              decoration: const InputDecoration(
+                labelText: 'Camera URL',
+                hintText: '192.168.52.96 or http://camera.local',
+                helperText: 'IP address or URL of your security camera',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.videocam),
+              ),
+              keyboardType: TextInputType.url,
             ),
           ],
         ),

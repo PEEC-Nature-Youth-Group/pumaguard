@@ -75,19 +75,35 @@ class ApiService {
   /// Update settings
   Future<bool> updateSettings(Settings settings) async {
     try {
+      final url = getApiUrl('/api/settings');
+      final settingsJson = settings.toJson();
+      final body = jsonEncode(settingsJson);
+
+      debugPrint('[ApiService.updateSettings] URL: $url');
+      debugPrint('[ApiService.updateSettings] Settings JSON: $settingsJson');
+      debugPrint('[ApiService.updateSettings] Body length: ${body.length}');
+
       final response = await http.put(
-        Uri.parse(getApiUrl('/api/settings')),
+        Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(settings.toJson()),
+        body: body,
       );
 
+      debugPrint(
+        '[ApiService.updateSettings] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.updateSettings] Response body: ${response.body}');
+
       if (response.statusCode == 200) {
+        debugPrint('[ApiService.updateSettings] Settings updated successfully');
         return true;
       } else {
         final error = jsonDecode(response.body);
+        debugPrint('[ApiService.updateSettings] Error response: $error');
         throw Exception(error['error'] ?? 'Failed to update settings');
       }
     } catch (e) {
+      debugPrint('[ApiService.updateSettings] Exception: $e');
       throw Exception('Failed to update settings: $e');
     }
   }
@@ -466,6 +482,38 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to get available sounds: $e');
+    }
+  }
+
+  /// Get configured camera URL
+  Future<String> getCameraUrl() async {
+    try {
+      final url = getApiUrl('/api/camera/url');
+      debugPrint('[ApiService.getCameraUrl] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getCameraUrl] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.getCameraUrl] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final cameraUrl = json['camera_url'] as String? ?? '';
+        debugPrint('[ApiService.getCameraUrl] Parsed camera_url: "$cameraUrl"');
+        return cameraUrl;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.getCameraUrl] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to get camera URL');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getCameraUrl] Exception: $e');
+      throw Exception('Failed to get camera URL: $e');
     }
   }
 }

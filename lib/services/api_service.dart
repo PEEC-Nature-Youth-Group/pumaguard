@@ -387,6 +387,43 @@ class ApiService {
     }
   }
 
+  /// Stop currently playing sound
+  Future<bool> stopSound() async {
+    try {
+      final response = await http.post(
+        Uri.parse(getApiUrl('/api/settings/stop-sound')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to stop sound');
+      }
+    } catch (e) {
+      throw Exception('Failed to stop sound: $e');
+    }
+  }
+
+  /// Check if sound is currently playing
+  Future<bool> getSoundStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse(getApiUrl('/api/settings/sound-status')),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['playing'] ?? false;
+      } else {
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Get list of available models with cache status
   /// [modelType] can be 'classifier' (*.h5 files) or 'yolo' (*.pt files)
   Future<List<Map<String, dynamic>>> getAvailableModels({

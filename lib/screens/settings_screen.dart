@@ -28,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _soundFileController;
   late TextEditingController _fileStabilizationController;
   bool _playSound = false;
+  double _volume = 80.0;
   List<Map<String, dynamic>> _availableModels = [];
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
@@ -78,6 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _fileStabilizationController.text = settings.fileStabilizationExtraWait
             .toString();
         _playSound = settings.playSound;
+        _volume = settings.volume.toDouble();
         _isLoading = false;
       });
     } catch (e) {
@@ -117,6 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         fileStabilizationExtraWait:
             double.tryParse(_fileStabilizationController.text) ?? 2.0,
         playSound: _playSound,
+        volume: _volume.round(),
       );
 
       final apiService = context.read<ApiService>();
@@ -165,10 +168,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Sound test completed'),
+            content: Text('Sound test started'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
           ),
         );
+      }
+
+      // Poll sound status to detect when it finishes
+      while (mounted && _isTestingSound) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final isPlaying = await apiService.getSoundStatus();
+        if (!isPlaying && mounted) {
+          setState(() {
+            _isTestingSound = false;
+          });
+          break;
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -178,12 +194,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
             backgroundColor: Colors.red,
           ),
         );
+        setState(() {
+          _isTestingSound = false;
+        });
       }
-    } finally {
+    }
+  }
+
+  Future<void> _stopSound() async {
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.stopSound();
+
       if (mounted) {
         setState(() {
           _isTestingSound = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sound stopped'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to stop sound: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -677,19 +719,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _isTestingSound ? null : _testSound,
-              icon: _isTestingSound
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.play_arrow),
-              label: const Text('Test Sound'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(12),
-              ),
+            Row(
+              children: [
+                Icon(
+                  Icons.volume_down,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                Expanded(
+                  child: Slider(
+                    value: _volume,
+                    min: 0,
+                    max: 100,
+                    divisions: 20,
+                    label: _volume.round().toString(),
+                    onChanged: (value) {
+                      setState(() {
+                        _volume = value;
+                      });
+                    },
+                    onChangeEnd: (value) {
+                      // Save when user releases the slider
+                      _saveSettings();
+                    },
+                  ),
+                ),
+                Icon(
+                  Icons.volume_up,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 45,
+                  child: Text(
+                    '${_volume.round()}%',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontFamily: 'RobotoMono',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isTestingSound ? null : _testSound,
+                    icon: _isTestingSound
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.play_arrow),
+                    label: const Text('Test Sound'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isTestingSound ? _stopSound : null,
+                    icon: const Icon(Icons.stop),
+                    label: const Text('Stop Sound'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(12),
+                      foregroundColor: Colors.orange,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

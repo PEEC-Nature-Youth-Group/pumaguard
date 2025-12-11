@@ -7,6 +7,7 @@ class Settings {
   final String deterrentSoundFile;
   final double fileStabilizationExtraWait;
   final bool playSound;
+  final int volume;
 
   Settings({
     required this.yoloMinSize,
@@ -17,6 +18,7 @@ class Settings {
     required this.deterrentSoundFile,
     required this.fileStabilizationExtraWait,
     required this.playSound,
+    required this.volume,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) {
@@ -31,6 +33,7 @@ class Settings {
       fileStabilizationExtraWait:
           (json['file-stabilization-extra-wait'] as num?)?.toDouble() ?? 2.0,
       playSound: json['play-sound'] as bool? ?? false,
+      volume: json['volume'] as int? ?? 80,
     );
   }
 
@@ -44,6 +47,7 @@ class Settings {
       'deterrent-sound-file': deterrentSoundFile,
       'file-stabilization-extra-wait': fileStabilizationExtraWait,
       'play-sound': playSound,
+      'volume': volume,
     };
   }
 
@@ -56,6 +60,7 @@ class Settings {
     String? deterrentSoundFile,
     double? fileStabilizationExtraWait,
     bool? playSound,
+    int? volume,
   }) {
     return Settings(
       yoloMinSize: yoloMinSize ?? this.yoloMinSize,
@@ -68,6 +73,7 @@ class Settings {
       fileStabilizationExtraWait:
           fileStabilizationExtraWait ?? this.fileStabilizationExtraWait,
       playSound: playSound ?? this.playSound,
+      volume: volume ?? this.volume,
     );
   }
 }

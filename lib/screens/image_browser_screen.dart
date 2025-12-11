@@ -10,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum ImageGrouping { none, day, week }
 
+enum ImageSize { small, large, full }
+
 class ImageBrowserScreen extends StatefulWidget {
   const ImageBrowserScreen({super.key});
 
@@ -27,6 +29,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   String? _error;
   bool _selectAll = false;
   ImageGrouping _grouping = ImageGrouping.none;
+  ImageSize _imageSize = ImageSize.large;
 
   @override
   void initState() {
@@ -38,10 +41,15 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   Future<void> _loadGroupingPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final groupingString = prefs.getString('image_grouping') ?? 'none';
+    final sizeString = prefs.getString('image_size') ?? 'large';
     setState(() {
       _grouping = ImageGrouping.values.firstWhere(
         (e) => e.name == groupingString,
         orElse: () => ImageGrouping.none,
+      );
+      _imageSize = ImageSize.values.firstWhere(
+        (e) => e.name == sizeString,
+        orElse: () => ImageSize.large,
       );
     });
   }
@@ -49,6 +57,11 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   Future<void> _saveGroupingPreference(ImageGrouping grouping) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('image_grouping', grouping.name);
+  }
+
+  Future<void> _saveSizePreference(ImageSize size) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('image_size', size.name);
   }
 
   List<Map<String, dynamic>> _groupImages(List<Map<String, dynamic>> images) {
@@ -365,12 +378,43 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     final fullPath = image['full_path'] as String;
     final isSelected = _selectedImages.contains(fullPath);
 
+    // Determine thumbnail parameters based on selected size
+    final bool useThumbnail;
+    final int? maxWidth;
+    final int? maxHeight;
+    final double cardMaxHeight;
+    final double cardMinHeight;
+
+    switch (_imageSize) {
+      case ImageSize.small:
+        useThumbnail = true;
+        maxWidth = 200;
+        maxHeight = 200;
+        cardMaxHeight = 150;
+        cardMinHeight = 100;
+        break;
+      case ImageSize.large:
+        useThumbnail = true;
+        maxWidth = 400;
+        maxHeight = 400;
+        cardMaxHeight = 300;
+        cardMinHeight = 150;
+        break;
+      case ImageSize.full:
+        useThumbnail = false;
+        maxWidth = null;
+        maxHeight = null;
+        cardMaxHeight = 600;
+        cardMinHeight = 300;
+        break;
+    }
+
     // Debug: log constructed photo URL
     final photoUrl = apiService.getPhotoUrl(
       fullPath,
-      thumbnail: true,
-      maxWidth: 400,
-      maxHeight: 400,
+      thumbnail: useThumbnail,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
     );
     developer.log(
       'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
@@ -388,7 +432,10 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 300, minHeight: 150),
+              constraints: BoxConstraints(
+                maxHeight: cardMaxHeight,
+                minHeight: cardMinHeight,
+              ),
               child: Stack(
                 children: [
                   Center(
@@ -461,34 +508,44 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
             ),
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    image['filename'] as String,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // Debug: show relative path used for API
-                  const SizedBox(height: 4),
-                  Text(
-                    'rel: $fullPath',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatFileSize(image['size'] as int),
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+              child: _imageSize == ImageSize.small
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          image['filename'] as String,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          image['filename'] as String,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // Debug: show relative path used for API
+                        const SizedBox(height: 4),
+                        Text(
+                          'rel: $fullPath',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[600]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatFileSize(image['size'] as int),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -647,6 +704,35 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                     _selectAll ? 'Deselect All' : 'Select All',
                                   ),
                                   const Spacer(),
+                                  const Text('Size:'),
+                                  const SizedBox(width: 8),
+                                  DropdownButton<ImageSize>(
+                                    value: _imageSize,
+                                    underline: Container(),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: ImageSize.small,
+                                        child: Text('Small'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: ImageSize.large,
+                                        child: Text('Large'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: ImageSize.full,
+                                        child: Text('Full'),
+                                      ),
+                                    ],
+                                    onChanged: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          _imageSize = value;
+                                        });
+                                        _saveSizePreference(value);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 16),
                                   const Text('Group by:'),
                                   const SizedBox(width: 8),
                                   DropdownButton<ImageGrouping>(
@@ -694,128 +780,171 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                       slivers: [
                                         SliverPadding(
                                           padding: const EdgeInsets.all(16),
-                                          sliver: SliverList(
-                                            delegate: SliverChildBuilderDelegate((
-                                              context,
-                                              index,
-                                            ) {
-                                              final item = displayImages[index];
+                                          sliver: _imageSize == ImageSize.small
+                                              ? SliverGrid(
+                                                  gridDelegate:
+                                                      const SliverGridDelegateWithMaxCrossAxisExtent(
+                                                        maxCrossAxisExtent: 250,
+                                                        childAspectRatio: 0.8,
+                                                        crossAxisSpacing: 16,
+                                                        mainAxisSpacing: 16,
+                                                      ),
+                                                  delegate: SliverChildBuilderDelegate(
+                                                    (context, index) {
+                                                      final item =
+                                                          displayImages[index];
 
-                                              // Check if this is a header
-                                              if (item['is_header'] == true) {
-                                                final groupImages =
-                                                    item['group_images']
-                                                        as List<
-                                                          Map<String, dynamic>
-                                                        >;
-                                                final allSelected =
-                                                    _areAllImagesInGroupSelected(
-                                                      groupImages,
-                                                    );
+                                                      // Skip headers in grid view
+                                                      if (item['is_header'] ==
+                                                          true) {
+                                                        return const SizedBox.shrink();
+                                                      }
 
-                                                return Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 16,
-                                                        bottom: 8,
-                                                      ),
-                                                  child: Row(
-                                                    children: [
-                                                      Expanded(
-                                                        child: Text(
-                                                          item['header_text']
-                                                              as String,
-                                                          style: Theme.of(context)
-                                                              .textTheme
-                                                              .titleMedium
-                                                              ?.copyWith(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 12,
-                                                              vertical: 4,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: Theme.of(context)
-                                                              .colorScheme
-                                                              .primaryContainer,
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                12,
-                                                              ),
-                                                        ),
-                                                        child: Text(
-                                                          '${item['image_count']} images',
-                                                          style: Theme.of(context)
-                                                              .textTheme
-                                                              .bodySmall
-                                                              ?.copyWith(
-                                                                color: Theme.of(context)
-                                                                    .colorScheme
-                                                                    .onPrimaryContainer,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      OutlinedButton.icon(
-                                                        onPressed: () {
-                                                          if (allSelected) {
-                                                            _deselectAllInGroup(
-                                                              groupImages,
-                                                            );
-                                                          } else {
-                                                            _selectAllInGroup(
-                                                              groupImages,
-                                                            );
-                                                          }
-                                                        },
-                                                        icon: Icon(
-                                                          allSelected
-                                                              ? Icons.check_box
-                                                              : Icons
-                                                                    .check_box_outline_blank,
-                                                          size: 18,
-                                                        ),
-                                                        label: Text(
-                                                          allSelected
-                                                              ? 'Deselect All'
-                                                              : 'Select All',
-                                                        ),
-                                                        style: OutlinedButton.styleFrom(
-                                                          padding:
-                                                              const EdgeInsets.symmetric(
-                                                                horizontal: 12,
-                                                                vertical: 8,
-                                                              ),
-                                                          visualDensity:
-                                                              VisualDensity
-                                                                  .compact,
-                                                        ),
-                                                      ),
-                                                    ],
+                                                      return _buildImageItem(
+                                                        context,
+                                                        apiService,
+                                                        item,
+                                                      );
+                                                    },
+                                                    childCount:
+                                                        displayImages.length,
                                                   ),
-                                                );
-                                              }
+                                                )
+                                              : SliverList(
+                                                  delegate: SliverChildBuilderDelegate(
+                                                    (context, index) {
+                                                      final item =
+                                                          displayImages[index];
 
-                                              // Regular image item
-                                              return Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 16,
+                                                      // Check if this is a header
+                                                      if (item['is_header'] ==
+                                                          true) {
+                                                        final groupImages =
+                                                            item['group_images']
+                                                                as List<
+                                                                  Map<
+                                                                    String,
+                                                                    dynamic
+                                                                  >
+                                                                >;
+                                                        final allSelected =
+                                                            _areAllImagesInGroupSelected(
+                                                              groupImages,
+                                                            );
+
+                                                        return Padding(
+                                                          padding:
+                                                              const EdgeInsets.only(
+                                                                top: 16,
+                                                                bottom: 8,
+                                                              ),
+                                                          child: Row(
+                                                            children: [
+                                                              Expanded(
+                                                                child: Text(
+                                                                  item['header_text']
+                                                                      as String,
+                                                                  style: Theme.of(context)
+                                                                      .textTheme
+                                                                      .titleMedium
+                                                                      ?.copyWith(
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          12,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: Theme.of(
+                                                                    context,
+                                                                  ).colorScheme.primaryContainer,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        12,
+                                                                      ),
+                                                                ),
+                                                                child: Text(
+                                                                  '${item['image_count']} images',
+                                                                  style: Theme.of(context)
+                                                                      .textTheme
+                                                                      .bodySmall
+                                                                      ?.copyWith(
+                                                                        color: Theme.of(
+                                                                          context,
+                                                                        ).colorScheme.onPrimaryContainer,
+                                                                      ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 8,
+                                                              ),
+                                                              OutlinedButton.icon(
+                                                                onPressed: () {
+                                                                  if (allSelected) {
+                                                                    _deselectAllInGroup(
+                                                                      groupImages,
+                                                                    );
+                                                                  } else {
+                                                                    _selectAllInGroup(
+                                                                      groupImages,
+                                                                    );
+                                                                  }
+                                                                },
+                                                                icon: Icon(
+                                                                  allSelected
+                                                                      ? Icons
+                                                                            .check_box
+                                                                      : Icons
+                                                                            .check_box_outline_blank,
+                                                                  size: 18,
+                                                                ),
+                                                                label: Text(
+                                                                  allSelected
+                                                                      ? 'Deselect All'
+                                                                      : 'Select All',
+                                                                ),
+                                                                style: OutlinedButton.styleFrom(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            8,
+                                                                      ),
+                                                                  visualDensity:
+                                                                      VisualDensity
+                                                                          .compact,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      }
+
+                                                      // Regular image item
+                                                      return Padding(
+                                                        padding:
+                                                            const EdgeInsets.only(
+                                                              bottom: 16,
+                                                            ),
+                                                        child: _buildImageItem(
+                                                          context,
+                                                          apiService,
+                                                          item,
+                                                        ),
+                                                      );
+                                                    },
+                                                    childCount:
+                                                        displayImages.length,
+                                                  ),
                                                 ),
-                                                child: _buildImageItem(
-                                                  context,
-                                                  apiService,
-                                                  item,
-                                                ),
-                                              );
-                                            }, childCount: displayImages.length),
-                                          ),
                                         ),
                                       ],
                                     ),

@@ -136,6 +136,11 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         _folders = folders;
         _isLoading = false;
       });
+
+      // Reload images for the currently selected folder if there is one
+      if (_selectedFolder != null) {
+        await _loadFolderImages(_selectedFolder!);
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();

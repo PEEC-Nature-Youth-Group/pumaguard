@@ -11,7 +11,7 @@ def playsound(soundfile: str):
     Play a sound file.
     """
     try:
-        subprocess.run(["mpg123", soundfile], check=True)
+        subprocess.run(["mpg123", "-o", "alsa", soundfile], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Error playing soundfile {soundfile}: {e}")
 

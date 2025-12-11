@@ -20,6 +20,7 @@ class PumaGuardApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
+          fontFamily: 'Roboto',
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF8B4513), // Brown/puma color
             brightness: Brightness.light,
@@ -34,6 +35,7 @@ class PumaGuardApp extends StatelessWidget {
         ),
         darkTheme: ThemeData(
           useMaterial3: true,
+          fontFamily: 'Roboto',
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF8B4513),
             brightness: Brightness.dark,

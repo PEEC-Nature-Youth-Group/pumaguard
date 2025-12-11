@@ -300,7 +300,7 @@ class _DirectoriesScreenState extends State<DirectoriesScreen> {
             ),
             title: Text(
               directory,
-              style: const TextStyle(fontFamily: 'monospace'),
+              style: const TextStyle(fontFamily: 'RobotoMono'),
             ),
             subtitle: Text('Directory #${index + 1}'),
             trailing: IconButton(

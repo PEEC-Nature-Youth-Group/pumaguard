@@ -67,6 +67,7 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "file-stabilization-extra-wait",
                 "play-sound",
                 "volume",
+                "camera-url",
             ]
 
             if len(data) == 0:
@@ -322,4 +323,15 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error getting available sounds")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/camera/url", methods=["GET"])
+    def get_camera_url():
+        """Get the configured camera URL."""
+        try:
+            camera_url = webui.presets.camera_url
+            logger.info("Camera URL requested: '%s'", camera_url)
+            return jsonify({"camera_url": camera_url})
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error getting camera URL")
             return jsonify({"error": str(e)}), 500

@@ -26,7 +26,9 @@ from pumaguard.model_downloader import (
     verify_file_checksum,
 )
 from pumaguard.sound import (
+    is_playing,
     playsound,
+    stop_sound,
 )
 
 if TYPE_CHECKING:
@@ -64,6 +66,7 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "deterrent-sound-file",
                 "file-stabilization-extra-wait",
                 "play-sound",
+                "volume",
             ]
 
             if len(data) == 0:
@@ -71,9 +74,18 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
             for key, value in data.items():
                 if key in allowed_settings:
-                    logger.debug("Updating %s with %s", key, value)
+                    logger.info(
+                        "Updating setting %s with value %s", key, value
+                    )
                     attr_name = key.replace("-", "_").replace("YOLO_", "yolo_")
                     setattr(webui.presets, attr_name, value)
+                    # Log verification of volume setting
+                    if key == "volume":
+                        logger.info(
+                            "Volume setting updated to %d, verified: %d",
+                            value,
+                            webui.presets.volume,
+                        )
                 else:
                     logger.debug("Skipping unknown/read-only setting: %s", key)
 
@@ -82,7 +94,11 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 settings_dict = dict(webui.presets)
                 with open(filepath, "w", encoding="utf-8") as f:
                     yaml.dump(settings_dict, f, default_flow_style=False)
-                logger.info("Settings updated and saved to %s", filepath)
+                logger.info(
+                    "Settings updated and saved to %s (volume: %d)",
+                    filepath,
+                    webui.presets.volume,
+                )
             except YAMLError:
                 logger.exception("Error saving settings")
                 return (
@@ -151,17 +167,63 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                     404,
                 )
 
-            # Play the sound
-            logger.info("Testing sound playback: %s", sound_file_path)
-            playsound(sound_file_path)
+            # Play the sound with configured volume (non-blocking)
+            volume = webui.presets.volume
+            logger.info(
+                "Testing sound playback: file=%s, volume=%d",
+                sound_file_path,
+                volume,
+            )
+            logger.debug(
+                "Current presets.volume value before playsound: %d",
+                webui.presets.volume,
+            )
+            playsound(sound_file_path, volume, blocking=False)
             return jsonify(
                 {
                     "success": True,
-                    "message": f"Sound played: {sound_file}",
+                    "message": f"Sound started: {sound_file}",
                 }
             )
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error testing sound")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/settings/stop-sound", methods=["POST"])
+    def stop_test_sound():
+        """Stop the currently playing test sound."""
+        try:
+            stopped = stop_sound()
+            if stopped:
+                logger.info("Sound playback stopped")
+                return jsonify(
+                    {
+                        "success": True,
+                        "message": "Sound stopped",
+                    }
+                )
+            return jsonify(
+                {
+                    "success": True,
+                    "message": "No sound was playing",
+                }
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error stopping sound")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/settings/sound-status", methods=["GET"])
+    def get_sound_status():
+        """Check if a sound is currently playing."""
+        try:
+            playing = is_playing()
+            return jsonify(
+                {
+                    "playing": playing,
+                }
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error checking sound status")
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/models/available", methods=["GET"])

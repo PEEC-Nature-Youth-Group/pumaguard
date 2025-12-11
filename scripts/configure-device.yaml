@@ -147,6 +147,7 @@
       ansible.builtin.apt:
         name:
           - alsa-utils
+          - avahi-utils
           - dnsmasq
           - git
           - htop

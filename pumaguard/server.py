@@ -272,7 +272,7 @@ class FolderObserver:
                 sound_file_path = os.path.join(
                     self.presets.sound_path, self.presets.deterrent_sound_file
                 )
-                playsound(sound_file_path)
+                playsound(sound_file_path, self.presets.volume)
         # Move original file into classification folder
         try:
             dest_root = (

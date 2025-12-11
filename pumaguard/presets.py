@@ -145,6 +145,7 @@ class Preset:
         self.model_function_name = "xception"
         self.model_version = "undefined"
         self.play_sound = True
+        self.volume = 80  # Volume level 0-100 for ALSA playback
         self.print_download_progress = True
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
@@ -228,6 +229,7 @@ class Preset:
         self.deterrent_sound_file = settings.get(
             "deterrent-sound-file", "cougar_call.mp3"
         )
+        self.volume = settings.get("volume", 80)
         self.notebook_number = settings.get("notebook", 1)
         self.epochs = settings.get("epochs", 1)
         dimensions = settings.get("image-dimensions", [0, 0])
@@ -288,6 +290,7 @@ class Preset:
             "file-stabilization-extra-wait", 0
         )
         self.play_sound = settings.get("play-sound", True)
+        self.volume = settings.get("volume", 80)
         self.print_download_progress = settings.get(
             "print-download-progress", True
         )
@@ -318,6 +321,7 @@ class Preset:
             "sound-path": self.sound_path,
             "deterrent-sound-file": self.deterrent_sound_file,
             "play-sound": self.play_sound,
+            "volume": self.volume,
             "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,
@@ -864,3 +868,21 @@ class Preset:
         if not isinstance(play_sound, bool):
             raise TypeError("play_sound needs to be a bool")
         self._play_sound = play_sound
+
+    @property
+    def volume(self) -> int:
+        """
+        Get volume level (0-100).
+        """
+        return self._volume
+
+    @volume.setter
+    def volume(self, volume: int):
+        """
+        Set volume level (0-100).
+        """
+        if not isinstance(volume, int):
+            raise TypeError("volume needs to be an int")
+        if volume < 0 or volume > 100:
+            raise ValueError("volume must be between 0 and 100")
+        self._volume = volume

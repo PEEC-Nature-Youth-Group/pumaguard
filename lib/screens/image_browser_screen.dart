@@ -556,41 +556,9 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(12),
                       ),
-                      child: Image.network(
-                        photoUrl,
+                      child: _RetryableImage(
+                        photoUrl: photoUrl,
                         fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) {
-                            return child;
-                          }
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.broken_image,
-                                  size: 48,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Failed to load',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          );
-                        },
                       ),
                     ),
                   ),
@@ -1079,6 +1047,190 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
               child: CircularProgressIndicator(),
             )
           : null,
+    );
+  }
+}
+
+/// A widget that displays an image with automatic retry capability on error
+class _RetryableImage extends StatefulWidget {
+  final String photoUrl;
+  final BoxFit fit;
+
+  const _RetryableImage({required this.photoUrl, required this.fit});
+
+  @override
+  State<_RetryableImage> createState() => _RetryableImageState();
+}
+
+class _RetryableImageState extends State<_RetryableImage> {
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
+  static const List<int> _retryDelays = [500, 1000, 2000]; // milliseconds
+  bool _hasScheduledRetry = false;
+  int _cacheBuster = DateTime.now().millisecondsSinceEpoch;
+
+  @override
+  void initState() {
+    super.initState();
+    developer.log(
+      'Image widget created: ${widget.photoUrl}',
+      name: 'RetryableImage.initState',
+    );
+  }
+
+  @override
+  void dispose() {
+    developer.log(
+      'Image widget disposed (retries: $_retryCount): ${widget.photoUrl}',
+      name: 'RetryableImage.dispose',
+    );
+    super.dispose();
+  }
+
+  void _scheduleRetry() {
+    if (_retryCount < _maxRetries && !_hasScheduledRetry) {
+      _hasScheduledRetry = true;
+      final delay = _retryDelays[_retryCount];
+
+      developer.log(
+        'Scheduling retry #${_retryCount + 1} in ${delay}ms: ${widget.photoUrl}',
+        name: 'RetryableImage.scheduleRetry',
+      );
+
+      Future.delayed(Duration(milliseconds: delay), () {
+        if (mounted) {
+          developer.log(
+            'Executing retry #${_retryCount + 1}: ${widget.photoUrl}',
+            name: 'RetryableImage.scheduleRetry',
+          );
+          setState(() {
+            _retryCount++;
+            _hasScheduledRetry = false;
+            _cacheBuster = DateTime.now().millisecondsSinceEpoch;
+          });
+        } else {
+          developer.log(
+            'Widget unmounted, skipping retry: ${widget.photoUrl}',
+            name: 'RetryableImage.scheduleRetry',
+          );
+        }
+      });
+    } else {
+      developer.log(
+        'Retry not scheduled (count: $_retryCount, hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
+        name: 'RetryableImage.scheduleRetry',
+      );
+    }
+  }
+
+  void _manualRetry() {
+    developer.log(
+      'Manual retry triggered: ${widget.photoUrl}',
+      name: 'RetryableImage.manualRetry',
+    );
+    setState(() {
+      _retryCount = 0;
+      _hasScheduledRetry = false;
+      _cacheBuster = DateTime.now().millisecondsSinceEpoch;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Use cache buster as query parameter to force reload
+    final separator = widget.photoUrl.contains('?') ? '&' : '?';
+    final imageUrl = '${widget.photoUrl}${separator}_cb=$_cacheBuster';
+
+    developer.log(
+      'Building image (retry: $_retryCount, cb: $_cacheBuster): $imageUrl',
+      name: 'RetryableImage.build',
+    );
+
+    return Image.network(
+      imageUrl,
+      fit: widget.fit,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) {
+          developer.log(
+            'Image loaded successfully (after $_retryCount retries): ${widget.photoUrl}',
+            name: 'RetryableImage.loadingBuilder',
+          );
+          return child;
+        }
+        developer.log(
+          'Image loading (${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? '?'}): ${widget.photoUrl}',
+          name: 'RetryableImage.loadingBuilder',
+        );
+        return Center(
+          child: CircularProgressIndicator(
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                      loadingProgress.expectedTotalBytes!
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        // Log the error for debugging
+        developer.log(
+          'Image load FAILED (attempt ${_retryCount + 1}/$_maxRetries): ${widget.photoUrl}',
+          name: 'RetryableImage.errorBuilder',
+          error: error,
+          stackTrace: stackTrace,
+        );
+
+        // Schedule automatic retry only if we haven't exhausted retries
+        if (_retryCount < _maxRetries) {
+          developer.log(
+            'Will schedule retry (hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
+            name: 'RetryableImage.errorBuilder',
+          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scheduleRetry();
+          });
+        } else {
+          developer.log(
+            'Max retries reached, showing manual retry button: ${widget.photoUrl}',
+            name: 'RetryableImage.errorBuilder',
+          );
+        }
+
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.broken_image, size: 48, color: Colors.grey),
+              const SizedBox(height: 8),
+              Text(
+                _retryCount < _maxRetries
+                    ? 'Retrying... (${_retryCount + 1}/$_maxRetries)'
+                    : 'Failed to load',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 8),
+              if (_retryCount < _maxRetries)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                TextButton.icon(
+                  onPressed: _manualRetry,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Retry'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

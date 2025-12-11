@@ -59,7 +59,14 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
 
             # Start new process
             # pylint: disable=consider-using-with
-            cmd = ["mpg123", "-o", "alsa", "-f", str(mpg123_volume), soundfile]
+            cmd = [
+                "mpg123",
+                "-o",
+                "alsa,pulse",
+                "-f",
+                str(mpg123_volume),
+                soundfile,
+            ]
             logger.info("Executing command: %s", " ".join(cmd))
 
             _current_process = subprocess.Popen(

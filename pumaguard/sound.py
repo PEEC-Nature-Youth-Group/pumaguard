@@ -23,7 +23,7 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
         soundfile: Path to the sound file to play
         volume: Volume level from 0-100 (default: 80)
         blocking: If True, wait for sound to finish. If False, return
-                  immediately (default: True)
+        immediately (default: True)
     """
     global _current_process  # pylint: disable=global-statement
 

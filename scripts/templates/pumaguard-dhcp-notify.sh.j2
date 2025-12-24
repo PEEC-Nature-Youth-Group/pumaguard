@@ -1,0 +1,85 @@
+#!/bin/bash
+# PumaGuard DHCP Notification Script
+# Called by dnsmasq when DHCP lease events occur
+#
+# Arguments passed by dnsmasq:
+# $1 = action (add, old, del)
+# $2 = MAC address
+# $3 = IP address
+# $4 = hostname (if provided by client)
+
+ACTION="$1"
+MAC="$2"
+IP="$3"
+HOSTNAME="${4:-unknown}"
+
+# PumaGuard API endpoint
+PUMAGUARD_API="http://{{ dnsmasq_gateway }}:5000/api"
+
+# Camera hostname to track
+CAMERA_HOSTNAME="Microseven"
+
+# Log file
+LOG_FILE="/var/log/pumaguard-dhcp-notify.log"
+
+# Function to log messages
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "$LOG_FILE"
+}
+
+# Function to notify PumaGuard API
+notify_pumaguard() {
+    local action="$1"
+    local mac="$2"
+    local ip="$3"
+    local hostname="$4"
+
+    # Create JSON payload
+    local json_payload=$(cat <<EOF
+{
+  "action": "$action",
+  "mac_address": "$mac",
+  "ip_address": "$ip",
+  "hostname": "$hostname",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+)
+
+    # Send to PumaGuard API
+    curl -X POST \
+        -H "Content-Type: application/json" \
+        -d "$json_payload" \
+        "$PUMAGUARD_API/dhcp/event" \
+        --silent \
+        --max-time 5 \
+        >> "$LOG_FILE" 2>&1
+}
+
+# Main logic
+case "$ACTION" in
+    add|old)
+        # Device connected or renewed lease
+        log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
+
+        # Check if this is the camera we're tracking
+        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME" ]]; then
+            log_message "Camera detected: $HOSTNAME at $IP"
+            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
+        fi
+        ;;
+    del)
+        # Device disconnected
+        log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
+
+        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME" ]]; then
+            log_message "Camera disconnected: $HOSTNAME"
+            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
+        fi
+        ;;
+    *)
+        log_message "Unknown action: $ACTION"
+        ;;
+esac
+
+exit 0

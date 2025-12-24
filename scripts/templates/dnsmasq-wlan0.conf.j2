@@ -1,0 +1,39 @@
+# Listen only on wlan0
+interface=wlan0
+# Bind only to the interface specified
+bind-interfaces
+# Don't bind to loopback
+except-interface=lo
+
+# Don't use /etc/resolv.conf
+no-resolv
+# Don't use /etc/hosts
+no-hosts
+
+# IPv4 DHCP range for wlan0
+dhcp-range={{ dnsmasq_dhcp_start }},{{ dnsmasq_dhcp_end }},{{ dnsmasq_lease_time }}
+
+# Set default gateway (this device)
+dhcp-option=option:router,{{ dnsmasq_gateway }}
+# Set DNS server (this device)
+dhcp-option=option:dns-server,{{ dnsmasq_dns_server }}
+
+# Local domain name
+domain=local
+# Expand hostnames with domain
+expand-hosts
+
+# Enable IPv6 Router Advertisements
+enable-ra
+# IPv6 DHCP range for wlan0
+dhcp-range={{ dnsmasq_ipv6_prefix }}:10,{{ dnsmasq_ipv6_prefix }}:2000,{{ dnsmasq_lease_time }}
+
+# Upstream DNS server (wired network)
+server=192.168.51.1
+
+# Enable logging
+log-queries
+log-dhcp
+
+# Call script when DHCP lease events occur
+dhcp-script=/usr/local/bin/pumaguard-dhcp-notify.sh

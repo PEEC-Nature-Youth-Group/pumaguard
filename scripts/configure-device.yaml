@@ -8,6 +8,26 @@
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
     wheelhouse_local_base: "{{ playbook_dir }}/.wheelhouse"
+    pumaguard_watch_dir: "/home/pumaguard/watch-folder"
+    pumaguard_user: "{{ ansible_user }}"
+    pumaguard_group: "{{ ansible_group }}"
+    # hostapd configuration for wlan0 access point
+    hostapd_ssid: pumaguard
+    hostapd_passphrase: pumaguard
+    hostapd_channel: 6
+    # vsftpd passive mode configuration
+    vsftpd_pasv_min_port: 40000
+    vsftpd_pasv_max_port: 50000
+    # dnsmasq configuration for wlan0 access point
+    dnsmasq_dhcp_start: 192.168.52.50
+    dnsmasq_dhcp_end: 192.168.52.150
+    dnsmasq_lease_time: 2h
+    dnsmasq_gateway: 192.168.52.1
+    dnsmasq_dns_server: 192.168.52.1
+    dnsmasq_domain_name: pumaguard.com
+    # IPv6 configuration for wlan0 access point
+    dnsmasq_ipv6_prefix: fd00::52
+    dnsmasq_ipv6_address: fd00::52:1
 
   tasks:
     - name: Check the current size of the swap file
@@ -108,7 +128,7 @@
           {{ filesystem_params.stdout | regex_search('Maximum mount count:\s+([0-9-]+)', '\1') }}
 
     - name: Set filesystem parameters
-      ansible.builtin.command: tune2fs -c 4 "{{ root_device }}"
+      ansible.builtin.command: tune2fs -c 10 "{{ root_device }}"
       register: tune2fs_result
       changed_when: true
 
@@ -122,10 +142,46 @@
         port: ssh
         proto: tcp
 
-    - name: Allow inbound ssh on port 21 (ftp)
+    - name: Allow inbound FTP control on port 21
       community.general.ufw:
         rule: limit
         port: ftp
+        proto: tcp
+
+    - name: Allow inbound FTP passive mode data ports
+      community.general.ufw:
+        rule: allow
+        port: "{{ vsftpd_pasv_min_port }}:{{ vsftpd_pasv_max_port }}"
+        proto: tcp
+
+    - name: Allow DNS on port 53 (udp)
+      community.general.ufw:
+        rule: allow
+        port: "53"
+        proto: udp
+
+    - name: Allow DNS on port 53 (tcp)
+      community.general.ufw:
+        rule: allow
+        port: "53"
+        proto: tcp
+
+    - name: Allow DHCP server on port 67 (udp)
+      community.general.ufw:
+        rule: allow
+        port: "67"
+        proto: udp
+
+    - name: Allow DHCP client on port 68 (udp)
+      community.general.ufw:
+        rule: allow
+        port: "68"
+        proto: udp
+
+    - name: Allow PumaGuard web UI on port 5000
+      community.general.ufw:
+        rule: allow
+        port: "5000"
         proto: tcp
 
     - name: Enable firewall
@@ -150,8 +206,10 @@
           - avahi-utils
           - dnsmasq
           - git
+          - hostapd
           - htop
           - inotify-tools
+          - isc-dhcp-client
           - libatomic1 # For VSCode
           - libgl1
           - lm-sensors
@@ -162,9 +220,38 @@
           - python3-pip
           - python3-venv
           - rsync
+          - tree
           - vim
           - vsftpd
         update_cache: true
+
+    # - name: Check if a reboot is required after package upgrade
+    #   ansible.builtin.command: /usr/bin/test -f /var/run/reboot-required
+    #   register: reboot_required
+    #   ignore_errors: true
+    #   changed_when: false
+
+    # - name: Reboot the server after package upgrade
+    #   ansible.builtin.reboot:
+    #     msg: "Reboot initiated by Ansible due to package upgrades"
+    #     connect_timeout: 5
+    #     reboot_timeout: 600
+    #     pre_reboot_delay: 0
+    #     post_reboot_delay: 30
+    #   when: reboot_required.rc == 0
+
+    - name: Wait for snapd to be ready
+      ansible.builtin.command: snap wait system seed.loaded
+      changed_when: false
+      register: snapd_ready
+      until: snapd_ready.rc == 0
+      retries: 30
+      delay: 2
+
+    - name: Install lnav snap
+      community.general.snap:
+        name: lnav
+        state: present
 
     - name: Install timer for lm-sensors
       ansible.builtin.copy:
@@ -181,7 +268,7 @@
         dest: /etc/systemd/system/lm-sensors.timer
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Ensure lm-sensors.service.d directory exists
       ansible.builtin.file:
@@ -189,7 +276,7 @@
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Install drop-in for lm-sensors.service
       ansible.builtin.copy:
@@ -199,7 +286,7 @@
         dest: /etc/systemd/system/lm-sensors.service.d/override.conf
         owner: root
         group: root
-        mode: '0644'
+        mode: "0644"
 
     - name: Reload systemd daemon to pick up new units
       ansible.builtin.systemd:
@@ -210,38 +297,10 @@
         name: lm-sensors.timer
         enabled: true
 
-    - name: Start the systemd timer
-      ansible.builtin.systemd_service:
-        name: lm-sensors.timer
-        state: started
-
-    - name: Stop dnsmasq before configuration
-      ansible.builtin.systemd:
-        name: dnsmasq
-        state: stopped
-
-    - name: Configure dnsmasq for wlan0
-      ansible.builtin.copy:
-        dest: /etc/dnsmasq.d/wlan0.conf
-        content: |
-          # Listen only on wlan0
-          interface=wlan0
-          # Never forward plain names (without a dot or domain part)
-          domain-needed
-          # Never forward addresses in the non-routed address spaces
-          bogus-priv
-          # DHCP range for wlan0
-          dhcp-range=192.168.50.50,192.168.50.150,12h
-          # Optional: Set default gateway (this device)
-          dhcp-option=3,192.168.50.1
-          # Optional: Set DNS server (this device)
-          dhcp-option=6,192.168.50.1
-          # Bind only to the interface specified
-          bind-interfaces
-        owner: root
-        group: root
-        mode: '0644'
-      notify: restart dnsmasq
+    # - name: Start the systemd timer
+    #   ansible.builtin.systemd_service:
+    #     name: lm-sensors.timer
+    #     state: started
 
     - name: Allow ansible user to run rsync without password
       ansible.builtin.copy:
@@ -250,8 +309,197 @@
           {{ ansible_user }} ALL=(ALL) NOPASSWD: /usr/bin/rsync
         owner: root
         group: root
-        mode: '0440'
+        mode: "0440"
         validate: /usr/sbin/visudo -cf %s
+
+    - name: Ensure vsftpd is enabled
+      ansible.builtin.systemd:
+        name: vsftpd
+        enabled: true
+
+    # - name: Ensure vsftpd is running and enabled
+    #   ansible.builtin.systemd:
+    #     name: vsftpd
+    #     state: started
+
+    - name: Configure vsftpd (write_enable)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: write_enable=YES
+        regexp: "^write_enable"
+        insertafter: "^#write_enable"
+
+    - name: Configure vsftpd (log_ftp_protocol)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: log_ftp_protocol=YES
+        regexp: "^log_ftp_protocol"
+
+    - name: Configure vsftpd (pasv_enable)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: pasv_enable=Yes
+        regexp: "^pasv_enable"
+
+    - name: Configure vsftpd (pasv_min_port)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: pasv_min_port={{ vsftpd_pasv_min_port }}
+        regexp: "^pasv_min_port"
+
+    - name: Configure vsftpd (pasv_max_port)
+      ansible.builtin.lineinfile:
+        path: /etc/vsftpd.conf
+        line: pasv_max_port={{ vsftpd_pasv_max_port }}
+        regexp: "^pasv_max_port"
+      notify: Restart vsftpd
+
+    #
+    # Network configuration
+    #
+
+    - name: Ensure /etc/systemd/network directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/network
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Get wlan0 MAC address
+      ansible.builtin.set_fact:
+        wlan0_mac: "{{ ansible_wlan0.macaddress }}"
+      when: ansible_wlan0 is defined
+
+    - name: Configure systemd network link for wlan0
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/systemd-network-wlan0.link.j2
+        dest: /etc/systemd/network/10-pumaguard-hotspot.link
+        owner: root
+        group: root
+        mode: "0644"
+      when: wlan0_mac is defined
+
+    - name: Configure systemd network for wlan0
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/systemd-network-wlan0.network.j2
+        dest: /etc/systemd/network/10-pumaguard-hotspot.network
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Enable systemd-networkd.servive
+      ansible.builtin.systemd:
+        name: systemd-networkd.service
+        enabled: true
+        daemon_reload: true
+
+    # - name: Start systemd-networkd.service
+    #   ansible.builtin.systemd:
+    #     name: systemd-networkd.service
+    #     state: started
+
+    - name: Install DHCP notification script for camera detection
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/pumaguard-dhcp-notify.sh.j2
+        dest: /usr/local/bin/pumaguard-dhcp-notify.sh
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Ensure log file for DHCP notifications exists
+      ansible.builtin.file:
+        path: /var/log/pumaguard-dhcp-notify.log
+        state: touch
+        owner: root
+        group: root
+        mode: "0644"
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Configure dnsmasq for wlan0 hotspot
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/dnsmasq-wlan0.conf.j2
+        dest: /etc/dnsmasq.d/10-pumaguard.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart dnsmasq
+
+    - name: Configure hostapd for wlan0 access point
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/hostapd.conf.j2
+        dest: /etc/hostapd/hostapd.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart hostapd
+
+    - name: Unmask hostapd service
+      ansible.builtin.systemd:
+        name: hostapd
+        masked: false
+
+    - name: Enable hostapd service
+      ansible.builtin.systemd:
+        name: hostapd
+        enabled: true
+        daemon_reload: true
+
+    # - name: Start hostapd service
+    #   ansible.builtin.systemd:
+    #     name: hostapd
+    #     state: started
+
+    - name: Configure wired network
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/netplan-wired.j2
+        dest: /etc/netplan/90-pumaguard-wired.yaml
+        mode: "0600"
+
+    - name: Disable cloud-init network configuration
+      ansible.builtin.copy:
+        dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+        content: |
+          network: {config: disabled}
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Remove cloud-init netplan file if it exists
+      ansible.builtin.file:
+        path: /etc/netplan/50-cloud-init.yaml
+        state: absent
+
+    - name: Disable systemd-networkd-wait-online service
+      ansible.builtin.systemd:
+        name: systemd-networkd-wait-online.service
+        enabled: false
+        masked: true
+
+    # - name: Stop execution for debug
+    #   ansible.builtin.meta: end_play
+
+    # - name: Apply netplan configuration
+    #   ansible.builtin.command: netplan generate
+    #   register: netplan_generate
+    #   changed_when: netplan_generate.rc == 0
+
+    #
+    # Network configuration
+    #
 
     - name: Compute local wheelhouse path for this host arch
       ansible.builtin.set_fact:
@@ -287,82 +535,16 @@
         group: root
         mode: "0755"
 
-    - name: Sync wheelhouse from control to target
+    - name: Sync wheelhouse from local to device
       delegate_to: localhost
       become: false
       ansible.posix.synchronize:
         src: "{{ wheelhouse_local }}/"
         dest: "{{ inventory_hostname }}:{{ wheelhouse_remote }}/"
         archive: true
-        compress: true
+        compress: false
         delete: false
         rsync_path: "sudo rsync"
-
-    - name: Check if a reboot is required
-      ansible.builtin.command: /usr/bin/test -f /var/run/reboot-required
-      register: reboot_required
-      ignore_errors: true
-      changed_when: false
-
-    - name: Reboot the server if necessary
-      ansible.builtin.reboot:
-        msg: "Reboot initiated by Ansible due to package upgrades"
-        connect_timeout: 5
-        reboot_timeout: 600
-        pre_reboot_delay: 0
-        post_reboot_delay: 30
-      when: reboot_required.rc == 0
-
-    - name: Ensure vsftpd is running and enabled
-      ansible.builtin.systemd:
-        name: vsftpd
-        state: started
-        enabled: true
-
-    - name: Configure vsftpd (write_enable)
-      ansible.builtin.lineinfile:
-        path: /etc/vsftpd.conf
-        line: write_enable=YES
-        regexp: "^write_enable"
-        insertafter: "^#write_enable"
-
-    - name: Configure vsftpd (log_ftp_protocol)
-      ansible.builtin.lineinfile:
-        path: /etc/vsftpd.conf
-        line: log_ftp_protocol=YES
-        regexp: "^log_ftp_protocol"
-
-    - name: Configure vsftpd (pasv_enable)
-      ansible.builtin.lineinfile:
-        path: /etc/vsftpd.conf
-        line: pasv_enable=Yes
-        regexp: "^pasv_enable"
-
-    # - name: Install pumaguard snap
-    #   community.general.snap:
-    #     name: pumaguard
-    #     state: present
-
-    - name: Configure netplan to use NetworkManager
-      ansible.builtin.template:
-        lstrip_blocks: true
-        trim_blocks: true
-        src: templates/netplan-network-manager.j2
-        dest: /etc/netplan/01-network-manager.yaml
-        mode: "0600"
-
-    - name: Configure netplan for wireless networks
-      ansible.builtin.template:
-        lstrip_blocks: true
-        trim_blocks: true
-        src: templates/netplan-wireless.j2
-        dest: /etc/netplan/90-wireless-networks.yaml
-        mode: "0600"
-
-    - name: Apply netplan configuration
-      ansible.builtin.command: netplan generate
-      register: netplan_generate
-      changed_when: netplan_generate.rc == 0
 
     - name: Ensure pumaguard directory exists
       ansible.builtin.file:
@@ -370,7 +552,7 @@
         state: directory
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
     - name: Create a Python3 virtualenv for PumaGuard
       ansible.builtin.command: python3 -m venv /opt/pumaguard
@@ -383,7 +565,7 @@
           - pumaguard
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
-        extra_args: "--no-index --find-links={{ wheelhouse_remote }}"
+        extra_args: "--find-links={{ wheelhouse_remote }}"
 
     - name: Add /opt/pumaguard/bin to PATH for all users (profile.d)
       ansible.builtin.copy:
@@ -393,18 +575,86 @@
           export PATH="/opt/pumaguard/bin:$PATH"
         owner: root
         group: root
-        mode: '0755'
+        mode: "0755"
 
+    - name: Ensure pumaguard watch directory exists
+      ansible.builtin.file:
+        path: "{{ pumaguard_watch_dir }}"
+        state: directory
+        owner: "{{ pumaguard_user }}"
+        group: "{{ pumaguard_group | default(pumaguard_user) }}"
+        mode: "0755"
+
+    # - name: Ensure pumaguard models directory exists
+    #   ansible.builtin.file:
+    #     path: "/home/{{ ansible_user }}/.local/share/pumaguard/models"
+    #     state: directory
+    #     owner: "{{ pumaguard_user }}"
+    #     group: "{{ pumaguard_group | default(pumaguard_user) }}"
+    #     mode: "0755"
+
+    # - name: Sync pumaguard models
+    #   ansible.posix.synchronize:
+    #     src: "{{ playbook_dir }}/../pumaguard-models/"
+    #     dest: "/home/{{ ansible_user }}/.local/share/pumaguard/models/"
+    #     archive: true
+    #     delete: false
+    #     rsync_opts:
+    #       - "--chown={{ pumaguard_user }}:{{ pumaguard_group | default(pumaguard_user) }}"
+
+    - name: Install pumaguard systemd service
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/pumaguard.service.j2
+        dest: /etc/systemd/system/pumaguard.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload systemd and restart pumaguard
+
+    - name: Enable pumaguard service
+      ansible.builtin.systemd:
+        name: pumaguard
+        enabled: true
+        daemon_reload: true
+
+    # - name: Start pumaguard service
+    #   ansible.builtin.systemd:
+    #     name: pumaguard
+    #     state: started
+    # - name: Check if a reboot is required
+    #   ansible.builtin.command: /usr/bin/test -f /var/run/reboot-required
+    #   register: reboot_required
+    #   ignore_errors: true
+    #   changed_when: false
     - name: Reboot the server
       ansible.builtin.reboot:
-        msg: "Reboot initiated by Ansible"
+        msg: "Reboot initiated by Ansible due to package upgrades"
         connect_timeout: 5
         reboot_timeout: 600
         pre_reboot_delay: 0
         post_reboot_delay: 30
+      # when: reboot_required.rc == 0
 
   handlers:
     - name: Restart dnsmasq
       ansible.builtin.systemd:
         name: dnsmasq
         state: restarted
+
+    - name: Restart hostapd
+      ansible.builtin.systemd:
+        name: hostapd
+        state: restarted
+
+    - name: Restart vsftpd
+      ansible.builtin.systemd:
+        name: vsftpd
+        state: restarted
+
+    - name: Reload systemd and restart pumaguard
+      ansible.builtin.systemd:
+        name: pumaguard
+        state: restarted
+        daemon_reload: true

@@ -1,0 +1,23 @@
+[Unit]
+Description=PumaGuard Wildlife Monitoring Service
+Documentation=http://pumaguard.rtfd.io/
+After=network-online.target dnsmasq.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ pumaguard_user | default(ansible_user) }}
+Group={{ pumaguard_group | default(ansible_user) }}
+WorkingDirectory={{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}
+ExecStart=/opt/pumaguard/bin/pumaguard server --debug {{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

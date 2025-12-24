@@ -1,0 +1,23 @@
+# Interface to use for access point
+interface=wlan0
+
+# nl80211 driver for modern wireless cards
+driver=nl80211
+
+# Network name (SSID)
+ssid={{ hostapd_ssid }}
+
+# 802.11g mode (2.4 GHz)
+hw_mode=g
+
+# WiFi channel
+channel={{ hostapd_channel }}
+
+# WPA2 security
+wpa=2
+
+# WPA passphrase
+wpa_passphrase={{ hostapd_passphrase }}
+
+# WPA key management
+wpa_key_mgmt=WPA-PSK

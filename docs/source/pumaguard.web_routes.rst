@@ -12,6 +12,14 @@ pumaguard.web\_routes.artifacts module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.web\_routes.dhcp module
+---------------------------------
+
+.. automodule:: pumaguard.web_routes.dhcp
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.web\_routes.diagnostics module
 ----------------------------------------
 

@@ -148,7 +148,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install dependencies
-        run: sudo apt-get install --yes --no-install-recommends inotify-tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends inotify-tools
       - name: Run tests
         run: make test
 
@@ -202,6 +204,7 @@ jobs:
         run: make install
       - name: Install additional packages
         run: |
+          sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \
             mpg123 \
             pipewire

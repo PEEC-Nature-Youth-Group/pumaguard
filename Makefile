@@ -3,6 +3,7 @@ DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
 ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
+ANSIBLE_SKIP_TASKS ?= pumaguard
 NEW_MODEL ?=
 TEST_NAME ?= pumaguard-test
 
@@ -154,7 +155,7 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev
-	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass scripts/configure-device.yaml
+	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --skip-tags $(ANSIBLE_SKIP_TASKS) scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev

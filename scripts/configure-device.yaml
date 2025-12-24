@@ -719,7 +719,7 @@
       when: reboot_required.rc == 0
       async: 1
       poll: 0
-      ignore_errors: true
+      failed_when: false
 
     - name: Display message about IP address change
       ansible.builtin.debug:

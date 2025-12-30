@@ -32,7 +32,7 @@ enable-ra
 dhcp-range={{ dnsmasq_ipv6_prefix }}:10,{{ dnsmasq_ipv6_prefix }}:2000,{{ dnsmasq_lease_time }}
 
 # Upstream DNS server (wired network)
-server={{ dnsmasq_gateway }}
+server={{ dnsmasq_wired_gateway }}
 
 # Enable logging
 log-queries

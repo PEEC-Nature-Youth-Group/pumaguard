@@ -24,6 +24,7 @@
     dnsmasq_lease_time: 30m
     dnsmasq_gateway: 192.168.52.1
     dnsmasq_dns_server: 192.168.52.1
+    dnsmasq_wired_gateway: 192.168.51.1
     dnsmasq_domain_name: pumaguard.com
     # IPv6 configuration for wlan0 access point
     dnsmasq_ipv6_prefix: fd00::52

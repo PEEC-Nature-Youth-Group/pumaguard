@@ -79,6 +79,7 @@ make dev-ui-web API_BASE_URL=http://10.0.2.2:5000 # For Android emulator
 ```
 
 The Flutter UI auto-detects the API URL:
+
 - **Web**: Uses `Uri.base.origin` (current browser URL)
 - **Mobile/Desktop**: Uses configured `baseUrl` or `localhost:5000`
 
@@ -95,12 +96,14 @@ cd ..
 **⚠️ MANDATORY:** This step is REQUIRED for ALL UI changes. Do not skip it.
 
 This ensures:
+
 - Version is generated from git tags
 - Flutter analyze passes with no issues (zero warnings/errors)
 - Code is properly formatted with `dart format`
 - Web build succeeds without errors
 
 **Note:** If `flutter analyze` reports warnings about unused elements, either:
+
 1. Remove the unused code, OR
 2. Add `// ignore: unused_element` comment if the code is intentionally reserved for future use
 
@@ -171,6 +174,7 @@ All API endpoints in `web_ui.py` follow these patterns:
 - **Checksums for sync**: SHA256 hashes in `/api/sync/checksums` enable rsync-like downloads
 
 Example validation pattern:
+
 ```python
 abs_filepath = os.path.abspath(filepath)
 if not any(abs_filepath.startswith(d) for d in self.classification_directories):
@@ -193,6 +197,7 @@ These are **regression tests** - percentages must match exactly to catch model d
 ### Unit Tests
 
 **Python Tests:**
+
 - **Test settings persistence**: `test_presets.py`
 - **Test server routes**: `test_server.py`
 - **Test model loading**: `test_utils.py`
@@ -200,6 +205,7 @@ These are **regression tests** - percentages must match exactly to catch model d
 Run with `make test` for coverage reports.
 
 **Flutter Tests:**
+
 - Run `make test-ui` from root directory, or
 - Run `flutter test` from `pumaguard-ui/` subdirectory
 - **Before committing UI code**: Always run `cd pumaguard-ui && make pre-commit`
@@ -238,6 +244,7 @@ Requires Avahi (Linux), Bonjour (Windows), or native support (macOS). See `docs/
 ### Packaging
 
 Python wheel includes:
+
 - ✅ Compiled Python code
 - ✅ Built Flutter app (`pumaguard/pumaguard-ui/`)
 - ✅ Model registry YAML
@@ -277,6 +284,7 @@ uv run pumaguard-webui --host 0.0.0.0       # Start web UI
 ## Documentation
 
 Full docs at <http://pumaguard.rtfd.io/>. Key references:
+
 - **API Reference**: `docs/API_REFERENCE.md` (REST endpoint specs)
 - **Build Reference**: `docs/BUILD_REFERENCE.md` (Flutter + Python packaging)
 - **Contributing**: `CONTRIBUTING.md` (branch strategy, PR workflow)
@@ -284,4 +292,4 @@ Full docs at <http://pumaguard.rtfd.io/>. Key references:
 
 ---
 
-*When in doubt, check existing test files for patterns and consult the comprehensive documentation in `docs/`.*
+_When in doubt, check existing test files for patterns and consult the comprehensive documentation in `docs/`._

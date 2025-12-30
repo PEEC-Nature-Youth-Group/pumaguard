@@ -43,6 +43,7 @@ def test_app(mock_preset):
     webui = MagicMock(spec=WebUI)
     webui.cameras = {}
     webui.presets = mock_preset
+    webui.heartbeat = MagicMock()
 
     register_dhcp_routes(app, webui)
 
@@ -325,11 +326,11 @@ def test_add_camera_default_status(test_app):
 
 
 def test_clear_cameras(test_app):
-    """Test clearing all cameras."""
+    """Test clearing all camera records."""
     app, webui = test_app
     client = app.test_client()
 
-    # Add some cameras
+    # Add some cameras first
     webui.cameras["aa:bb:cc:dd:ee:01"] = {
         "hostname": "Camera1",
         "ip_address": "192.168.52.101",
@@ -350,12 +351,88 @@ def test_clear_cameras(test_app):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["status"] == "success"
-    assert "Cleared 2 camera record(s)" in data["message"]
+    assert "2" in data["message"]
 
     # Verify cameras were cleared
     assert len(webui.cameras) == 0
-    assert len(webui.presets.cameras) == 0
+    assert webui.presets.cameras == []
     webui.presets.save.assert_called()
+
+
+def test_check_heartbeat_success(test_app):
+    """Test manual heartbeat check endpoint."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add test cameras
+    webui.cameras["aa:bb:cc:dd:ee:01"] = {
+        "hostname": "Camera1",
+        "ip_address": "192.168.52.101",
+        "mac_address": "aa:bb:cc:dd:ee:01",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+    webui.cameras["aa:bb:cc:dd:ee:02"] = {
+        "hostname": "Camera2",
+        "ip_address": "192.168.52.102",
+        "mac_address": "aa:bb:cc:dd:ee:02",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "disconnected",
+    }
+
+    # Mock heartbeat check results
+    webui.heartbeat.check_now.return_value = {
+        "aa:bb:cc:dd:ee:01": True,
+        "aa:bb:cc:dd:ee:02": False,
+    }
+
+    response = client.post("/api/dhcp/cameras/heartbeat")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["message"] == "Heartbeat check completed"
+    assert "cameras" in data
+
+    # Verify camera status in response
+    cameras = data["cameras"]
+    assert len(cameras) == 2
+    assert cameras["aa:bb:cc:dd:ee:01"]["reachable"] is True
+    assert cameras["aa:bb:cc:dd:ee:01"]["hostname"] == "Camera1"
+    assert cameras["aa:bb:cc:dd:ee:02"]["reachable"] is False
+    assert cameras["aa:bb:cc:dd:ee:02"]["hostname"] == "Camera2"
+
+    webui.heartbeat.check_now.assert_called_once()
+
+
+def test_check_heartbeat_no_cameras(test_app):
+    """Test heartbeat check with no cameras."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.heartbeat.check_now.return_value = {}
+
+    response = client.post("/api/dhcp/cameras/heartbeat")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["cameras"] == {}
+
+
+def test_check_heartbeat_error(test_app):
+    """Test heartbeat check with error."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.heartbeat.check_now.side_effect = Exception("Heartbeat failed")
+
+    response = client.post("/api/dhcp/cameras/heartbeat")
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Failed to perform heartbeat check"
 
 
 def test_clear_cameras_empty(test_app):

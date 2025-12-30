@@ -151,6 +151,14 @@ class Preset:
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
+
+        # Camera heartbeat monitoring settings
+        self.camera_heartbeat_enabled = True
+        self.camera_heartbeat_interval = 60  # Check interval in seconds
+        self.camera_heartbeat_method = "tcp"  # "icmp", "tcp", or "both"
+        self.camera_heartbeat_tcp_port = 80  # TCP port to check
+        self.camera_heartbeat_tcp_timeout = 3  # TCP timeout in seconds
+        self.camera_heartbeat_icmp_timeout = 2  # ICMP timeout in seconds
         if version.parse(tf.__version__) < version.parse("2.17"):
             self.tf_compat = "2.15"
         else:

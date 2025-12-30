@@ -337,3 +337,52 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
             ),
             200,
         )
+
+    @app.route("/api/dhcp/cameras/heartbeat", methods=["POST"])
+    def check_heartbeat():
+        """
+        Manually trigger a heartbeat check for all cameras.
+
+        This immediately checks all cameras and returns their
+        reachability status.
+
+        Returns:
+            JSON with camera reachability results
+        """
+        try:
+            results = webui.heartbeat.check_now()
+
+            # Convert results to human-readable format
+            camera_status = {}
+            for mac_address, is_reachable in results.items():
+                camera = webui.cameras.get(mac_address)
+                if camera:
+                    camera_status[mac_address] = {
+                        "hostname": camera["hostname"],
+                        "ip_address": camera["ip_address"],
+                        "reachable": is_reachable,
+                        "status": camera["status"],
+                        "last_seen": camera["last_seen"],
+                    }
+
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Heartbeat check completed",
+                        "cameras": camera_status,
+                    }
+                ),
+                200,
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error performing heartbeat check: %s", str(e))
+            return (
+                jsonify(
+                    {
+                        "error": "Failed to perform heartbeat check",
+                    }
+                ),
+                500,
+            )

@@ -33,6 +33,9 @@ from zeroconf import (
     Zeroconf,
 )
 
+from pumaguard.camera_heartbeat import (
+    CameraHeartbeat,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -160,6 +163,17 @@ class WebUI:
         # Camera tracking - stores detected cameras by MAC address
         # Format: {mac_address: CameraInfo}
         self.cameras: dict[str, CameraInfo] = {}
+
+        # Camera heartbeat monitoring
+        self.heartbeat: CameraHeartbeat = CameraHeartbeat(
+            webui=self,
+            interval=presets.camera_heartbeat_interval,
+            enabled=presets.camera_heartbeat_enabled,
+            check_method=presets.camera_heartbeat_method,
+            tcp_port=presets.camera_heartbeat_tcp_port,
+            tcp_timeout=presets.camera_heartbeat_tcp_timeout,
+            icmp_timeout=presets.camera_heartbeat_icmp_timeout,
+        )
 
         # Load cameras from persisted settings
         for camera in presets.cameras:
@@ -454,6 +468,9 @@ class WebUI:
         # Start mDNS service
         self._start_mdns()
 
+        # Start camera heartbeat monitoring
+        self.heartbeat.start()
+
         if self.debug:
             self._run_server()
         else:
@@ -472,6 +489,9 @@ class WebUI:
             return
 
         self._running = False
+
+        # Stop camera heartbeat monitoring
+        self.heartbeat.stop()
 
         # Stop mDNS service
         self._stop_mdns()

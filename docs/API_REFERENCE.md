@@ -283,6 +283,195 @@ Remove a directory from the watch list by index.
 
 ---
 
+### Camera Management (DHCP)
+
+#### GET `/api/dhcp/cameras`
+
+Get list of all detected cameras from DHCP events.
+
+**Response:**
+```json
+{
+  "cameras": [
+    {
+      "hostname": "Microseven",
+      "ip_address": "192.168.52.100",
+      "mac_address": "aa:bb:cc:dd:ee:ff",
+      "last_seen": "2024-01-15T14:30:00Z",
+      "status": "connected"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200 OK`: Success
+
+---
+
+#### GET `/api/dhcp/cameras/{mac_address}`
+
+Get information about a specific camera by MAC address.
+
+**Path Parameters:**
+- `mac_address`: Camera MAC address (e.g., `aa:bb:cc:dd:ee:ff`)
+
+**Response:**
+```json
+{
+  "hostname": "Microseven",
+  "ip_address": "192.168.52.100",
+  "mac_address": "aa:bb:cc:dd:ee:ff",
+  "last_seen": "2024-01-15T14:30:00Z",
+  "status": "connected"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Success
+- `404 Not Found`: Camera not found
+
+---
+
+#### POST `/api/dhcp/event`
+
+Receive DHCP event notifications from dnsmasq script. This endpoint is typically called automatically by the DHCP notification script.
+
+**Request Body:**
+```json
+{
+  "action": "add",
+  "mac_address": "aa:bb:cc:dd:ee:ff",
+  "ip_address": "192.168.52.100",
+  "hostname": "Microseven",
+  "timestamp": "2024-01-15T14:30:00Z"
+}
+```
+
+**Fields:**
+- `action`: DHCP action - `"add"` (new lease), `"old"` (renewal), or `"del"` (expired)
+- `mac_address`: Camera MAC address
+- `ip_address`: Assigned IP address
+- `hostname`: Device hostname
+- `timestamp`: ISO8601 timestamp of the event
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "DHCP event processed",
+  "data": {
+    "action": "add",
+    "hostname": "Microseven",
+    "ip_address": "192.168.52.100"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Event processed successfully
+- `400 Bad Request`: Invalid or missing data
+- `500 Internal Server Error`: Processing failed
+
+---
+
+#### POST `/api/dhcp/cameras`
+
+Manually add or update a camera record.
+
+**Request Body:**
+```json
+{
+  "hostname": "TestCamera",
+  "ip_address": "192.168.52.150",
+  "mac_address": "aa:bb:cc:dd:ee:99",
+  "status": "connected"
+}
+```
+
+**Fields:**
+- `hostname`: Camera hostname (required)
+- `ip_address`: Camera IP address (required)
+- `mac_address`: Camera MAC address (required)
+- `status`: Connection status - `"connected"` or `"disconnected"` (optional, defaults to `"connected"`)
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Camera added successfully",
+  "camera": {
+    "hostname": "TestCamera",
+    "ip_address": "192.168.52.150",
+    "mac_address": "aa:bb:cc:dd:ee:99",
+    "last_seen": "2024-01-15T14:35:00Z",
+    "status": "connected"
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Camera added/updated successfully
+- `400 Bad Request`: Missing required fields
+
+---
+
+#### POST `/api/dhcp/cameras/heartbeat`
+
+Manually trigger a heartbeat check for all cameras. This immediately checks camera availability and updates their status.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Heartbeat check completed",
+  "cameras": {
+    "aa:bb:cc:dd:ee:ff": {
+      "hostname": "Microseven",
+      "ip_address": "192.168.52.100",
+      "reachable": true,
+      "status": "connected",
+      "last_seen": "2024-01-15T14:40:00Z"
+    },
+    "aa:bb:cc:dd:ee:01": {
+      "hostname": "Camera2",
+      "ip_address": "192.168.52.101",
+      "reachable": false,
+      "status": "disconnected",
+      "last_seen": "2024-01-15T12:00:00Z"
+    }
+  }
+}
+```
+
+**Status Codes:**
+- `200 OK`: Heartbeat check completed
+- `500 Internal Server Error`: Check failed
+
+**Notes:**
+- This triggers an immediate check outside the regular heartbeat interval
+- Camera status and `last_seen` are updated based on results
+- Check method (ICMP/TCP) is determined by server configuration
+
+---
+
+#### DELETE `/api/dhcp/cameras`
+
+Clear all camera records from memory and settings.
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Cleared 3 camera record(s)"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Cameras cleared successfully
+
+---
+
 ### Photos & Images
 
 #### GET `/api/photos`

@@ -24,7 +24,7 @@ domain=local
 expand-hosts
 
 # Static DNS entry for pumaguard.local
-address=/pumaguard.local/192.168.52.1
+address=/pumaguard.local/{{ dnsmasq_gateway }}
 
 # Enable IPv6 Router Advertisements
 enable-ra
@@ -32,7 +32,7 @@ enable-ra
 dhcp-range={{ dnsmasq_ipv6_prefix }}:10,{{ dnsmasq_ipv6_prefix }}:2000,{{ dnsmasq_lease_time }}
 
 # Upstream DNS server (wired network)
-server=192.168.51.1
+server={{ dnsmasq_gateway }}
 
 # Enable logging
 log-queries

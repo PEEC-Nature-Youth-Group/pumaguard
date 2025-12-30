@@ -20,6 +20,9 @@ from PIL import (
     Image,
 )
 
+from pumaguard import (
+    __version__,
+)
 from pumaguard.lock_manager import (
     acquire_lock,
 )
@@ -429,6 +432,8 @@ def main(options: argparse.Namespace, presets: Preset):
 
     signal.signal(signal.SIGTERM, handle_termination)
     signal.signal(signal.SIGINT, handle_termination)
+
+    logger.info("Pumaguard version %s started", __version__)
 
     try:
         while True:

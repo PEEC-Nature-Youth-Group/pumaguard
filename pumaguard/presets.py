@@ -147,7 +147,6 @@ class Preset:
         self.play_sound = True
         self.volume = 80  # Volume level 0-100 for ALSA playback
         self.print_download_progress = True
-        self.camera_url = ""  # URL for external camera web interface
         self.cameras: list[dict[str, str]] = []  # List of detected cameras
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
@@ -296,7 +295,6 @@ class Preset:
         self.print_download_progress = settings.get(
             "print-download-progress", True
         )
-        self.camera_url = settings.get("camera-url", "")
         self.cameras = settings.get("cameras", [])
 
     def save(self):
@@ -326,7 +324,6 @@ class Preset:
             "deterrent-sound-file": self.deterrent_sound_file,
             "play-sound": self.play_sound,
             "volume": self.volume,
-            "camera-url": self.camera_url,
             "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,

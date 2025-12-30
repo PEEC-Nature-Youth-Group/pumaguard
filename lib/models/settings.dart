@@ -10,7 +10,6 @@ class Settings {
   final double fileStabilizationExtraWait;
   final bool playSound;
   final int volume;
-  final String cameraUrl;
   final List<Camera> cameras;
 
   Settings({
@@ -23,7 +22,6 @@ class Settings {
     required this.fileStabilizationExtraWait,
     required this.playSound,
     required this.volume,
-    required this.cameraUrl,
     required this.cameras,
   });
 
@@ -50,7 +48,6 @@ class Settings {
           (json['file-stabilization-extra-wait'] as num?)?.toDouble() ?? 2.0,
       playSound: json['play-sound'] as bool? ?? false,
       volume: json['volume'] as int? ?? 80,
-      cameraUrl: json['camera-url'] as String? ?? '',
       cameras: camerasList,
     );
   }
@@ -66,7 +63,6 @@ class Settings {
       'file-stabilization-extra-wait': fileStabilizationExtraWait,
       'play-sound': playSound,
       'volume': volume,
-      'camera-url': cameraUrl,
       'cameras': cameras.map((camera) => camera.toJson()).toList(),
     };
   }
@@ -81,7 +77,6 @@ class Settings {
     double? fileStabilizationExtraWait,
     bool? playSound,
     int? volume,
-    String? cameraUrl,
     List<Camera>? cameras,
   }) {
     return Settings(
@@ -96,7 +91,6 @@ class Settings {
           fileStabilizationExtraWait ?? this.fileStabilizationExtraWait,
       playSound: playSound ?? this.playSound,
       volume: volume ?? this.volume,
-      cameraUrl: cameraUrl ?? this.cameraUrl,
       cameras: cameras ?? this.cameras,
     );
   }

@@ -506,38 +506,6 @@ class ApiService {
     }
   }
 
-  /// Get configured camera URL
-  Future<String> getCameraUrl() async {
-    try {
-      final url = getApiUrl('/api/camera/url');
-      debugPrint('[ApiService.getCameraUrl] Requesting URL: $url');
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-      );
-
-      debugPrint(
-        '[ApiService.getCameraUrl] Response status: ${response.statusCode}',
-      );
-      debugPrint('[ApiService.getCameraUrl] Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final cameraUrl = json['camera_url'] as String? ?? '';
-        debugPrint('[ApiService.getCameraUrl] Parsed camera_url: "$cameraUrl"');
-        return cameraUrl;
-      } else {
-        final error = jsonDecode(response.body);
-        debugPrint('[ApiService.getCameraUrl] Error response: $error');
-        throw Exception(error['error'] ?? 'Failed to get camera URL');
-      }
-    } catch (e) {
-      debugPrint('[ApiService.getCameraUrl] Exception: $e');
-      throw Exception('Failed to get camera URL: $e');
-    }
-  }
-
   /// Get list of detected cameras
   Future<List<Camera>> getCameras() async {
     try {

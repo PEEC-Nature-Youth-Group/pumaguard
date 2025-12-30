@@ -235,15 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ).then((_) => _refresh());
               },
             ),
-            const Divider(),
-            _buildActionButton(
-              icon: Icons.videocam,
-              label: 'Camera',
-              description: 'Open camera web interface',
-              onTap: _openCamera,
-            ),
             // Show detected cameras if any
             if (_cameras.isNotEmpty) ...[
+              const Divider(),
               const SizedBox(height: 16),
               const Divider(thickness: 2),
               const SizedBox(height: 8),
@@ -313,69 +307,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e, stackTrace) {
       debugPrint('[HomeScreen._openCameraByIp] Error: $e');
       debugPrint('[HomeScreen._openCameraByIp] Stack trace: $stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error opening camera: $e'),
-          duration: const Duration(seconds: 3),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _openCamera() async {
-    try {
-      debugPrint('[HomeScreen._openCamera] Starting camera open...');
-      final apiService = context.read<ApiService>();
-      final cameraUrl = await apiService.getCameraUrl();
-      debugPrint('[HomeScreen._openCamera] Got camera URL: "$cameraUrl"');
-
-      if (cameraUrl.isEmpty) {
-        debugPrint('[HomeScreen._openCamera] Camera URL is empty');
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Camera URL not configured. Please set it in Settings.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
-      }
-
-      // Parse the URL and add http:// if no scheme is present
-      String urlToOpen = cameraUrl;
-      if (!cameraUrl.startsWith('http://') &&
-          !cameraUrl.startsWith('https://')) {
-        urlToOpen = 'http://$cameraUrl';
-      }
-      debugPrint('[HomeScreen._openCamera] URL to open: "$urlToOpen"');
-
-      // On web, use native JavaScript window.open()
-      if (kIsWeb) {
-        debugPrint('[HomeScreen._openCamera] Using window.open() for web...');
-        web.window.open(urlToOpen, '_blank');
-        debugPrint('[HomeScreen._openCamera] URL opened successfully');
-      } else {
-        // For mobile/desktop, would use url_launcher (not implemented yet)
-        debugPrint(
-          '[HomeScreen._openCamera] Non-web platform not yet supported',
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Opening camera URL is only supported on web currently.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      debugPrint('[HomeScreen._openCamera] Error: $e');
-      debugPrint('[HomeScreen._openCamera] Stack trace: $stackTrace');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

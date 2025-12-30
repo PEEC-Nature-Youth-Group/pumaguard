@@ -673,6 +673,9 @@
         delete: false
         rsync_opts:
           - "--chown={{ pumaguard_user }}:{{ pumaguard_group | default(pumaguard_user) }}"
+          - "--include=*.h5_??"
+          - "--include=*.pt"
+          - "--exclude=*"
       tags:
         - pumaguard
 

@@ -129,6 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         playSound: _playSound,
         volume: _volume.round(),
         cameraUrl: _cameraUrlController.text,
+        cameras: _settings?.cameras ?? [],
       );
 
       developer.log(
@@ -871,6 +872,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               keyboardType: TextInputType.url,
             ),
+            const SizedBox(height: 24),
+            // Detected Cameras Section
+            if (_settings != null && _settings!.cameras.isNotEmpty) ...[
+              Text(
+                'Detected Cameras',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Cameras detected via DHCP',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._settings!.cameras.map((camera) {
+                return Card(
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.videocam,
+                      color: camera.isConnected ? Colors.green : Colors.grey,
+                    ),
+                    title: Text(camera.displayName),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('IP: ${camera.ipAddress}'),
+                        Text(
+                          'Status: ${camera.status}',
+                          style: TextStyle(
+                            color: camera.isConnected
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Icon(
+                      camera.isConnected ? Icons.check_circle : Icons.cancel,
+                      color: camera.isConnected ? Colors.green : Colors.grey,
+                    ),
+                  ),
+                );
+              }),
+            ],
           ],
         ),
       ),

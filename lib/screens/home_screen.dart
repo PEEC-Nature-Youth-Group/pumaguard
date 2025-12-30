@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:web/web.dart' as web;
 import '../models/status.dart';
+import '../models/camera.dart';
 import '../services/api_service.dart';
 import '../version.dart';
 import 'settings_screen.dart';
@@ -20,11 +21,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Status? _status;
   bool _isLoading = true;
   String? _error;
+  List<Camera> _cameras = [];
 
   @override
   void initState() {
     super.initState();
     _loadStatus();
+    _loadCameras();
+  }
+
+  Future<void> _refresh() async {
+    await Future.wait([_loadStatus(), _loadCameras()]);
   }
 
   Future<void> _loadStatus() async {
@@ -48,6 +55,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadCameras() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final cameras = await apiService.getCameras();
+      setState(() {
+        _cameras = cameras;
+      });
+    } catch (e) {
+      debugPrint('[HomeScreen._loadCameras] Error loading cameras: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -63,12 +82,12 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadStatus,
+            onPressed: _refresh,
             tooltip: 'Refresh Status',
           ),
         ],
       ),
-      body: RefreshIndicator(onRefresh: _loadStatus, child: _buildBody()),
+      body: RefreshIndicator(onRefresh: _refresh, child: _buildBody()),
     );
   }
 
@@ -185,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const SettingsScreen(),
                   ),
-                ).then((_) => _loadStatus());
+                ).then((_) => _refresh());
               },
             ),
             const Divider(),
@@ -199,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const DirectoriesScreen(),
                   ),
-                ).then((_) => _loadStatus());
+                ).then((_) => _refresh());
               },
             ),
             const Divider(),
@@ -213,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(
                     builder: (context) => const ImageBrowserScreen(),
                   ),
-                ).then((_) => _loadStatus());
+                ).then((_) => _refresh());
               },
             ),
             const Divider(),
@@ -223,10 +242,86 @@ class _HomeScreenState extends State<HomeScreen> {
               description: 'Open camera web interface',
               onTap: _openCamera,
             ),
+            // Show detected cameras if any
+            if (_cameras.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Divider(thickness: 2),
+              const SizedBox(height: 8),
+              Text(
+                'Detected Cameras',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ..._cameras.map((camera) {
+                return Column(
+                  children: [
+                    _buildActionButton(
+                      icon: Icons.videocam,
+                      label: camera.displayName,
+                      description: 'IP: ${camera.ipAddress} • ${camera.status}',
+                      onTap: () => _openCameraByIp(camera.ipAddress),
+                    ),
+                    if (camera != _cameras.last) const Divider(),
+                  ],
+                );
+              }),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openCameraByIp(String ipAddress) async {
+    try {
+      debugPrint('[HomeScreen._openCameraByIp] Opening camera at: $ipAddress');
+
+      if (ipAddress.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid camera IP address.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      // Add http:// if no scheme is present
+      String urlToOpen = ipAddress;
+      if (!ipAddress.startsWith('http://') &&
+          !ipAddress.startsWith('https://')) {
+        urlToOpen = 'http://$ipAddress';
+      }
+      debugPrint('[HomeScreen._openCameraByIp] URL to open: "$urlToOpen"');
+
+      // On web, use native JavaScript window.open()
+      if (kIsWeb) {
+        web.window.open(urlToOpen, '_blank');
+        debugPrint('[HomeScreen._openCameraByIp] URL opened successfully');
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Opening camera URL is only supported on web currently.',
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      debugPrint('[HomeScreen._openCameraByIp] Error: $e');
+      debugPrint('[HomeScreen._openCameraByIp] Stack trace: $stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening camera: $e'),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _openCamera() async {

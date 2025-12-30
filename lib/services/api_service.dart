@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 import '../models/status.dart';
 import '../models/settings.dart';
+import '../models/camera.dart';
 
 class ApiService {
   String? _baseUrl;
@@ -534,6 +535,44 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService.getCameraUrl] Exception: $e');
       throw Exception('Failed to get camera URL: $e');
+    }
+  }
+
+  /// Get list of detected cameras
+  Future<List<Camera>> getCameras() async {
+    try {
+      final url = getApiUrl('/api/dhcp/cameras');
+      debugPrint('[ApiService.getCameras] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getCameras] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.getCameras] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final camerasList = json['cameras'] as List? ?? [];
+        final cameras = camerasList
+            .map(
+              (cameraJson) =>
+                  Camera.fromJson(cameraJson as Map<String, dynamic>),
+            )
+            .toList();
+        debugPrint('[ApiService.getCameras] Parsed ${cameras.length} cameras');
+        return cameras;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.getCameras] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to get cameras');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getCameras] Exception: $e');
+      throw Exception('Failed to get cameras: $e');
     }
   }
 }

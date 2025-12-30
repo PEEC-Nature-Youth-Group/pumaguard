@@ -627,7 +627,7 @@
           - pumaguard
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
-        extra_args: "--find-links={{ wheelhouse_remote }}"
+        extra_args: "--find-links={{ wheelhouse_remote }} -v"
       tags:
         - pumaguard
 

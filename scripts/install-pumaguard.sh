@@ -9,7 +9,7 @@ python3 -m venv venv
 source venv/bin/activate
 
 pip install --upgrade pip
-pip install ansible passlib pumaguard
+pip install -v ansible passlib pumaguard
 
 curl --output deploy-pumaguard.yaml https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/deploy-pumaguard.yaml
 curl --output vsftpd.conf.j2 https://raw.githubusercontent.com/PEEC-Nature-Youth-Group/pumaguard/refs/heads/main/scripts/vsftpd.conf.j2

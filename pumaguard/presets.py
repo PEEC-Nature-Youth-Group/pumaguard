@@ -148,6 +148,7 @@ class Preset:
         self.volume = 80  # Volume level 0-100 for ALSA playback
         self.print_download_progress = True
         self.camera_url = ""  # URL for external camera web interface
+        self.cameras: list[dict[str, str]] = []  # List of detected cameras
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
@@ -296,6 +297,7 @@ class Preset:
             "print-download-progress", True
         )
         self.camera_url = settings.get("camera-url", "")
+        self.cameras = settings.get("cameras", [])
 
     def save(self):
         """

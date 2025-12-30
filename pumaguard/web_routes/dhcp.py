@@ -5,6 +5,10 @@ from __future__ import (
 )
 
 import logging
+from datetime import (
+    datetime,
+    timezone,
+)
 from typing import (
     TYPE_CHECKING,
 )
@@ -80,6 +84,32 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                     "last_seen": timestamp,
                     "status": "connected",
                 }
+
+                # Update settings with camera list
+                # Convert cameras dict to list for settings persistence
+                camera_list = []
+                for _, cam_info in webui.cameras.items():
+                    camera_list.append(
+                        {
+                            "hostname": cam_info["hostname"],
+                            "ip_address": cam_info["ip_address"],
+                            "mac_address": cam_info["mac_address"],
+                            "last_seen": cam_info["last_seen"],
+                            "status": cam_info["status"],
+                        }
+                    )
+
+                webui.presets.cameras = camera_list
+
+                # Persist to settings file
+                try:
+                    webui.presets.save()
+                    logger.info("Camera list saved to settings")
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.error(
+                        "Failed to save camera list to settings: %s", str(e)
+                    )
+
             elif action == "del":
                 # Camera disconnected
                 logger.info("Camera '%s' disconnected", hostname)
@@ -87,6 +117,31 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                 if mac_address in webui.cameras:
                     webui.cameras[mac_address]["status"] = "disconnected"
                     webui.cameras[mac_address]["last_seen"] = timestamp
+
+                    # Update settings with updated camera list
+                    camera_list = []
+                    for _, cam_info in webui.cameras.items():
+                        camera_list.append(
+                            {
+                                "hostname": cam_info["hostname"],
+                                "ip_address": cam_info["ip_address"],
+                                "mac_address": cam_info["mac_address"],
+                                "last_seen": cam_info["last_seen"],
+                                "status": cam_info["status"],
+                            }
+                        )
+
+                    webui.presets.cameras = camera_list
+
+                    # Persist to settings file
+                    try:
+                        webui.presets.save()
+                        logger.info("Camera list updated in settings")
+                    except Exception as e:  # pylint: disable=broad-except
+                        logger.error(
+                            "Failed to save camera list to settings: %s",
+                            str(e),
+                        )
 
             return (
                 jsonify(
@@ -156,6 +211,104 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
             404,
         )
 
+    @app.route("/api/dhcp/cameras", methods=["POST"])
+    def add_camera():
+        """
+        Manually add a camera (for testing purposes).
+
+        Expected JSON payload:
+        {
+            "hostname": "camera-name",
+            "ip_address": "192.168.52.100",
+            "mac_address": "aa:bb:cc:dd:ee:ff",
+            "status": "connected"  // optional, defaults to "connected"
+        }
+        """
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+
+            hostname = data.get("hostname")
+            ip_address = data.get("ip_address")
+            mac_address = data.get("mac_address")
+            status = data.get("status", "connected")
+
+            # Validate required fields
+            if not hostname or not ip_address or not mac_address:
+                return (
+                    jsonify(
+                        {
+                            "error": "Missing required fields: hostname, "
+                            "ip_address, mac_address"
+                        }
+                    ),
+                    400,
+                )
+
+            # Generate timestamp
+            timestamp = datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+
+            # Add camera to webui.cameras
+            webui.cameras[mac_address] = {
+                "hostname": hostname,
+                "ip_address": ip_address,
+                "mac_address": mac_address,
+                "last_seen": timestamp,
+                "status": status,
+            }
+
+            # Update settings with camera list
+            camera_list = []
+            for _, cam_info in webui.cameras.items():
+                camera_list.append(
+                    {
+                        "hostname": cam_info["hostname"],
+                        "ip_address": cam_info["ip_address"],
+                        "mac_address": cam_info["mac_address"],
+                        "last_seen": cam_info["last_seen"],
+                        "status": cam_info["status"],
+                    }
+                )
+
+            webui.presets.cameras = camera_list
+
+            # Persist to settings file
+            try:
+                webui.presets.save()
+                logger.info(
+                    "Manually added camera '%s' at %s", hostname, ip_address
+                )
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error(
+                    "Failed to save camera list to settings: %s", str(e)
+                )
+
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Camera added successfully",
+                        "camera": webui.cameras[mac_address],
+                    }
+                ),
+                201,
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error adding camera: %s", str(e))
+            return (
+                jsonify(
+                    {
+                        "error": "Failed to add camera",
+                    }
+                ),
+                500,
+            )
+
     @app.route("/api/dhcp/cameras", methods=["DELETE"])
     def clear_cameras():
         """
@@ -166,6 +319,14 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
         count = len(webui.cameras)
         webui.cameras.clear()
         logger.info("Cleared %d camera records", count)
+
+        # Update settings
+        webui.presets.cameras = []
+        try:
+            webui.presets.save()
+            logger.info("Camera list cleared from settings")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Failed to save camera list to settings: %s", str(e))
 
         return (
             jsonify(

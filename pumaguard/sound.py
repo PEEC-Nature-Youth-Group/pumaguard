@@ -6,7 +6,9 @@ import logging
 import subprocess
 import sys
 import threading
-from typing import Optional
+from typing import (
+    Optional,
+)
 
 logger = logging.getLogger(__name__)
 

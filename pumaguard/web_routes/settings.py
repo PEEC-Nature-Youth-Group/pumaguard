@@ -48,7 +48,21 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/settings", methods=["GET"])
     def get_settings():
-        return jsonify(dict(webui.presets))
+        settings_dict = dict(webui.presets)
+        # Add cameras from webui.cameras (runtime state)
+        camera_list = []
+        for _, cam_info in webui.cameras.items():
+            camera_list.append(
+                {
+                    "hostname": cam_info["hostname"],
+                    "ip_address": cam_info["ip_address"],
+                    "mac_address": cam_info["mac_address"],
+                    "last_seen": cam_info["last_seen"],
+                    "status": cam_info["status"],
+                }
+            )
+        settings_dict["cameras"] = camera_list
+        return jsonify(settings_dict)
 
     @app.route("/api/settings", methods=["PUT"])
     def update_settings():

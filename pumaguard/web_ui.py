@@ -161,6 +161,18 @@ class WebUI:
         # Format: {mac_address: CameraInfo}
         self.cameras: dict[str, CameraInfo] = {}
 
+        # Load cameras from persisted settings
+        for camera in presets.cameras:
+            mac = camera.get("mac_address")
+            if mac:
+                self.cameras[mac] = CameraInfo(
+                    hostname=camera.get("hostname", ""),
+                    ip_address=camera.get("ip_address", ""),
+                    mac_address=mac,
+                    last_seen=camera.get("last_seen", ""),
+                    status=camera.get("status", "disconnected"),
+                )
+
         # mDNS/Zeroconf support
         self.zeroconf: Zeroconf | None = None
         self.service_info: ServiceInfo | None = None

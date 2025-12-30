@@ -12,6 +12,14 @@ Subpackages
 Submodules
 ----------
 
+pumaguard.camera\_heartbeat module
+----------------------------------
+
+.. automodule:: pumaguard.camera_heartbeat
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.classify module
 -------------------------
 

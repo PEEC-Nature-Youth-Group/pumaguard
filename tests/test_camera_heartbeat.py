@@ -6,14 +6,25 @@
 # Tests need to access protected members for verification
 
 import time
-from subprocess import TimeoutExpired
-from unittest.mock import MagicMock, patch
+from subprocess import (
+    TimeoutExpired,
+)
+from unittest.mock import (
+    MagicMock,
+    patch,
+)
 
 import pytest
 
-from pumaguard.camera_heartbeat import CameraHeartbeat
-from pumaguard.presets import Preset
-from pumaguard.web_ui import WebUI
+from pumaguard.camera_heartbeat import (
+    CameraHeartbeat,
+)
+from pumaguard.presets import (
+    Preset,
+)
+from pumaguard.web_ui import (
+    WebUI,
+)
 
 
 @pytest.fixture

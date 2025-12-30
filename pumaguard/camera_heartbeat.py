@@ -4,17 +4,26 @@ This module provides background monitoring of camera availability using
 ICMP ping and TCP connection checks.
 """
 
-from __future__ import annotations
+from __future__ import (
+    annotations,
+)
 
 import logging
 import socket
 import subprocess
 import threading
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from datetime import (
+    datetime,
+    timezone,
+)
+from typing import (
+    TYPE_CHECKING,
+)
 
 if TYPE_CHECKING:
-    from pumaguard.web_ui import WebUI
+    from pumaguard.web_ui import (
+        WebUI,
+    )
 
 logger = logging.getLogger(__name__)
 

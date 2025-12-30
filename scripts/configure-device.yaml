@@ -627,7 +627,8 @@
           - pumaguard
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
-        extra_args: "--find-links={{ wheelhouse_remote }} -v"
+        extra_args: "--upgrade --find-links={{ wheelhouse_remote }} -v"
+      notify: Reload systemd and restart pumaguard
       tags:
         - pumaguard
 

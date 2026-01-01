@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
 import '../services/api_service.dart';
+import '../services/camera_events_service.dart';
 import 'dart:developer' as developer;
 
 class SettingsScreen extends StatefulWidget {
@@ -32,6 +33,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _availableModels = [];
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
+  Timer? _cameraRefreshTimer;
+  CameraEventsService? _cameraEventsService;
+  StreamSubscription<CameraEvent>? _eventsSubscription;
+
+  // Camera refresh interval (in seconds)
+  static const int _cameraRefreshInterval = 30;
 
   @override
   void initState() {
@@ -44,11 +51,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _soundFileController = TextEditingController();
     _fileStabilizationController = TextEditingController();
     _loadSettings();
+    _initializeCameraEvents();
+    _startCameraRefresh();
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _cameraRefreshTimer?.cancel();
+    _eventsSubscription?.cancel();
+    _cameraEventsService?.dispose();
     _yoloMinSizeController.dispose();
     _yoloConfThreshController.dispose();
     _yoloMaxDetsController.dispose();
@@ -57,6 +69,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _soundFileController.dispose();
     _fileStabilizationController.dispose();
     super.dispose();
+  }
+
+  void _initializeCameraEvents() {
+    try {
+      final apiService = context.read<ApiService>();
+      final baseUrl = apiService.getApiUrl('').replaceAll('/api/', '');
+
+      _cameraEventsService = CameraEventsService(baseUrl);
+
+      // Subscribe to camera events
+      _eventsSubscription = _cameraEventsService!.events.listen(
+        (event) {
+          // Reload settings when camera status changes
+          if (event.type != CameraEventType.connected &&
+              event.type != CameraEventType.unknown) {
+            debugPrint(
+              '[SettingsScreen] Camera event: ${event.type}, reloading settings',
+            );
+            _loadSettings();
+          }
+        },
+        onError: (error) {
+          debugPrint('[SettingsScreen] Camera events error: $error');
+        },
+      );
+
+      // Start listening for events
+      _cameraEventsService!.startListening();
+      debugPrint('[SettingsScreen] Camera events service initialized');
+    } catch (e) {
+      debugPrint('[SettingsScreen] Error initializing camera events: $e');
+    }
+  }
+
+  void _startCameraRefresh() {
+    // Set up periodic timer to refresh camera status
+    _cameraRefreshTimer = Timer.periodic(
+      const Duration(seconds: _cameraRefreshInterval),
+      (_) => _loadSettings(),
+    );
   }
 
   Future<void> _loadSettings() async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
@@ -5,6 +6,7 @@ import 'package:web/web.dart' as web;
 import '../models/status.dart';
 import '../models/camera.dart';
 import '../services/api_service.dart';
+import '../services/camera_events_service.dart';
 import '../version.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
@@ -22,12 +24,103 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _error;
   List<Camera> _cameras = [];
+  Timer? _cameraPollingTimer;
+  CameraEventsService? _cameraEventsService;
+  StreamSubscription<CameraEvent>? _eventsSubscription;
+
+  // Polling interval for camera status updates (in seconds)
+  // This serves as a fallback if SSE connection fails
+  static const int _cameraPollingInterval = 30;
 
   @override
   void initState() {
     super.initState();
     _loadStatus();
     _loadCameras();
+    _startCameraPolling();
+    _initializeCameraEvents();
+  }
+
+  @override
+  void dispose() {
+    _cameraPollingTimer?.cancel();
+    _eventsSubscription?.cancel();
+    _cameraEventsService?.dispose();
+    super.dispose();
+  }
+
+  void _initializeCameraEvents() {
+    try {
+      final apiService = context.read<ApiService>();
+      final baseUrl = apiService.getApiUrl('').replaceAll('/api/', '');
+
+      _cameraEventsService = CameraEventsService(baseUrl);
+
+      // Subscribe to camera events
+      _eventsSubscription = _cameraEventsService!.events.listen(
+        _handleCameraEvent,
+        onError: (error) {
+          debugPrint('[HomeScreen] Camera events error: $error');
+        },
+      );
+
+      // Start listening for events
+      _cameraEventsService!.startListening();
+      debugPrint('[HomeScreen] Camera events service initialized');
+    } catch (e) {
+      debugPrint('[HomeScreen] Error initializing camera events: $e');
+      // Fallback to polling only if SSE fails
+    }
+  }
+
+  void _handleCameraEvent(CameraEvent event) {
+    debugPrint('[HomeScreen] Camera event received: ${event.type}');
+
+    // Handle different event types
+    switch (event.type) {
+      case CameraEventType.connected:
+        // SSE connection established
+        debugPrint('[HomeScreen] Connected to camera events stream');
+        break;
+
+      case CameraEventType.cameraConnected:
+      case CameraEventType.cameraDisconnected:
+      case CameraEventType.cameraAdded:
+      case CameraEventType.cameraStatusChangedOnline:
+      case CameraEventType.cameraStatusChangedOffline:
+        // Camera status changed - reload camera list
+        _loadCameras();
+
+        // Show a subtle notification
+        if (mounted && event.camera != null) {
+          final isOnline =
+              event.type == CameraEventType.cameraConnected ||
+              event.type == CameraEventType.cameraStatusChangedOnline;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${event.camera!.hostname} is now ${isOnline ? "online" : "offline"}',
+              ),
+              duration: const Duration(seconds: 2),
+              backgroundColor: isOnline ? Colors.green : Colors.orange,
+            ),
+          );
+        }
+        break;
+
+      case CameraEventType.unknown:
+        debugPrint('[HomeScreen] Unknown camera event type');
+        break;
+    }
+  }
+
+  void _startCameraPolling() {
+    // Set up periodic timer to check for camera status changes
+    _cameraPollingTimer = Timer.periodic(
+      const Duration(seconds: _cameraPollingInterval),
+      (_) => _loadCameras(),
+    );
   }
 
   Future<void> _refresh() async {
@@ -59,12 +152,42 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final apiService = context.read<ApiService>();
       final cameras = await apiService.getCameras();
-      setState(() {
-        _cameras = cameras;
-      });
+
+      // Only update state if cameras have changed to avoid unnecessary rebuilds
+      if (_camerasChanged(cameras)) {
+        setState(() {
+          _cameras = cameras;
+        });
+        debugPrint(
+          '[HomeScreen._loadCameras] Camera list updated: ${cameras.length} cameras',
+        );
+      }
     } catch (e) {
       debugPrint('[HomeScreen._loadCameras] Error loading cameras: $e');
     }
+  }
+
+  bool _camerasChanged(List<Camera> newCameras) {
+    if (_cameras.length != newCameras.length) {
+      return true;
+    }
+
+    // Check if any camera status has changed
+    for (int i = 0; i < _cameras.length; i++) {
+      final oldCamera = _cameras[i];
+      final newCamera = newCameras.firstWhere(
+        (c) => c.macAddress == oldCamera.macAddress,
+        orElse: () => newCameras[i],
+      );
+
+      if (oldCamera.status != newCamera.status ||
+          oldCamera.ipAddress != newCamera.ipAddress ||
+          oldCamera.hostname != newCamera.hostname) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @override

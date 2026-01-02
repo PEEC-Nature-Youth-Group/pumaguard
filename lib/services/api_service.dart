@@ -543,4 +543,132 @@ class ApiService {
       throw Exception('Failed to get cameras: $e');
     }
   }
+
+  /// Scan for available WiFi networks
+  Future<Map<String, dynamic>> scanWifiNetworks() async {
+    try {
+      final url = getApiUrl('/api/wifi/scan');
+      debugPrint('[ApiService.scanWifiNetworks] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.scanWifiNetworks] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to scan WiFi networks');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.scanWifiNetworks] Exception: $e');
+      throw Exception('Failed to scan WiFi networks: $e');
+    }
+  }
+
+  /// Get current WiFi mode (ap or client)
+  Future<Map<String, dynamic>> getWifiMode() async {
+    try {
+      final url = getApiUrl('/api/wifi/mode');
+      debugPrint('[ApiService.getWifiMode] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getWifiMode] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to get WiFi mode');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getWifiMode] Exception: $e');
+      throw Exception('Failed to get WiFi mode: $e');
+    }
+  }
+
+  /// Set WiFi mode (ap or client)
+  Future<Map<String, dynamic>> setWifiMode({
+    required String mode,
+    required String ssid,
+    String? password,
+  }) async {
+    try {
+      final url = getApiUrl('/api/wifi/mode');
+      debugPrint('[ApiService.setWifiMode] Requesting URL: $url');
+      debugPrint('[ApiService.setWifiMode] Mode: $mode, SSID: $ssid');
+
+      final body = jsonEncode({
+        'mode': mode,
+        'ssid': ssid,
+        if (password != null && password.isNotEmpty) 'password': password,
+      });
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      debugPrint(
+        '[ApiService.setWifiMode] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.setWifiMode] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to set WiFi mode');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.setWifiMode] Exception: $e');
+      throw Exception('Failed to set WiFi mode: $e');
+    }
+  }
+
+  /// Forget a saved WiFi network
+  Future<Map<String, dynamic>> forgetWifiNetwork(String ssid) async {
+    try {
+      final url = getApiUrl('/api/wifi/forget');
+      debugPrint('[ApiService.forgetWifiNetwork] Requesting URL: $url');
+
+      final body = jsonEncode({'ssid': ssid});
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      debugPrint(
+        '[ApiService.forgetWifiNetwork] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to forget WiFi network');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.forgetWifiNetwork] Exception: $e');
+      throw Exception('Failed to forget WiFi network: $e');
+    }
+  }
 }

@@ -5,6 +5,7 @@ import '../models/settings.dart';
 import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
 import 'dart:developer' as developer;
+import 'wifi_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -898,6 +899,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 24),
+            // WiFi Settings Button
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => WifiSettingsScreen(
+                      apiService: context.read<ApiService>(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.wifi),
+              label: const Text('WiFi Settings'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
             const SizedBox(height: 24),
             // Detected Cameras Section

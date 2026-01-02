@@ -203,6 +203,33 @@
       tags:
         - firewall
 
+    - name: Allow inbound HTTP on port 80 (for port redirect)
+      community.general.ufw:
+        rule: allow
+        port: "80"
+        proto: tcp
+      tags:
+        - firewall
+
+    - name: Configure UFW NAT rules for port 80 to 5000 redirect
+      ansible.builtin.blockinfile:
+        path: /etc/ufw/before.rules
+        insertbefore: "^# Don't delete these required lines"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - PumaGuard port redirect"
+        block: |
+          # NAT table rules for port redirection
+          *nat
+          :PREROUTING ACCEPT [0:0]
+
+          # Redirect port 80 to 5000 for PumaGuard web UI
+          -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5000
+
+          # Commit NAT rules
+          COMMIT
+      notify: Restart ufw
+      tags:
+        - firewall
+
     - name: Enable logging for dropped packets
       community.general.ufw:
         logging: "medium"
@@ -735,6 +762,11 @@
       when: reboot_required.rc == 0
 
   handlers:
+    - name: Restart ufw
+      ansible.builtin.systemd:
+        name: ufw
+        state: restarted
+
     - name: Restart dnsmasq
       ansible.builtin.systemd:
         name: dnsmasq

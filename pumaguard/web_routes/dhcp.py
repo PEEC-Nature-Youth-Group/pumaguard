@@ -4,7 +4,13 @@ from __future__ import (
     annotations,
 )
 
+import json
 import logging
+import queue
+import threading
+from collections.abc import (
+    Callable,
+)
 from datetime import (
     datetime,
     timezone,
@@ -14,8 +20,10 @@ from typing import (
 )
 
 from flask import (
+    Response,
     jsonify,
     request,
+    stream_with_context,
 )
 
 if TYPE_CHECKING:
@@ -30,8 +38,44 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
-    """Register DHCP event endpoints for camera detection."""
+def register_dhcp_routes(
+    app: "Flask", webui: "WebUI"
+) -> Callable[[str, dict], None]:
+    """
+    Register DHCP event endpoints for camera detection.
+
+    Returns:
+        Callback function to notify SSE clients of camera changes
+    """
+
+    # Queue for SSE notifications
+    sse_clients: list[queue.Queue] = []
+    sse_clients_lock = threading.Lock()
+
+    def notify_camera_change(event_type: str, camera_data: dict) -> None:
+        """Notify all SSE clients about a camera status change."""
+        message = {
+            "type": event_type,
+            "data": camera_data,
+            "timestamp": datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            ),
+        }
+
+        with sse_clients_lock:
+            disconnected_clients = []
+            for client_queue in sse_clients:
+                try:
+                    # Non-blocking put with timeout
+                    client_queue.put(message, block=False)
+                except queue.Full:
+                    # Client queue is full, mark for removal
+                    disconnected_clients.append(client_queue)
+
+            # Remove disconnected clients
+            for client_queue in disconnected_clients:
+                sse_clients.remove(client_queue)
+                logger.debug("Removed disconnected SSE client")
 
     @app.route("/api/dhcp/event", methods=["POST"])
     def dhcp_event():
@@ -85,6 +129,11 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                     "status": "connected",
                 }
 
+                # Notify SSE clients
+                notify_camera_change(
+                    "camera_connected", dict(webui.cameras[mac_address])
+                )
+
                 # Update settings with camera list
                 # Convert cameras dict to list for settings persistence
                 camera_list = []
@@ -117,6 +166,11 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                 if mac_address in webui.cameras:
                     webui.cameras[mac_address]["status"] = "disconnected"
                     webui.cameras[mac_address]["last_seen"] = timestamp
+
+                    # Notify SSE clients
+                    notify_camera_change(
+                        "camera_disconnected", dict(webui.cameras[mac_address])
+                    )
 
                     # Update settings with updated camera list
                     camera_list = []
@@ -287,6 +341,11 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                     "Failed to save camera list to settings: %s", str(e)
                 )
 
+            # Notify SSE clients
+            notify_camera_change(
+                "camera_added", dict(webui.cameras[mac_address])
+            )
+
             return (
                 jsonify(
                     {
@@ -386,3 +445,79 @@ def register_dhcp_routes(app: "Flask", webui: "WebUI") -> None:
                 ),
                 500,
             )
+
+    @app.route("/api/dhcp/cameras/events", methods=["GET"])
+    def camera_events():
+        """
+        Server-Sent Events (SSE) endpoint for real-time camera status updates.
+
+        This endpoint provides a stream of camera status changes including:
+        - camera_connected: A camera has connected
+        - camera_disconnected: A camera has disconnected
+        - camera_added: A camera was manually added
+        - camera_status_changed: Camera status changed (from heartbeat)
+
+        The stream sends JSON-formatted events with the following structure:
+        {
+            "type": "event_type",
+            "data": {...camera data...},
+            "timestamp": "ISO8601 timestamp"
+        }
+        """
+
+        def event_stream():
+            # Create a queue for this client
+            client_queue: queue.Queue = queue.Queue(maxsize=10)
+
+            with sse_clients_lock:
+                sse_clients.append(client_queue)
+
+            logger.info(
+                "SSE client connected, total clients: %d", len(sse_clients)
+            )
+
+            try:
+                # Send initial connection message
+                # Send initial connection message
+                initial_msg = {
+                    "type": "connected",
+                    "timestamp": datetime.now(timezone.utc).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    ),
+                }
+                yield f"data: {json.dumps(initial_msg)}\n\n"
+
+                # Stream events to client
+                while True:
+                    try:
+                        # Wait for messages with timeout for periodic keepalive
+                        message = client_queue.get(timeout=30)
+                        yield f"data: {json.dumps(message)}\n\n"
+                    except queue.Empty:
+                        # Send keepalive comment to prevent connection timeout
+                        yield ": keepalive\n\n"
+            except GeneratorExit:
+                # Client disconnected
+                logger.info("SSE client disconnected")
+            finally:
+                # Remove this client from the list
+                with sse_clients_lock:
+                    if client_queue in sse_clients:
+                        sse_clients.remove(client_queue)
+                logger.info(
+                    "SSE client removed, remaining clients: %d",
+                    len(sse_clients),
+                )
+
+        return Response(
+            stream_with_context(event_stream()),
+            mimetype="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    # Return the notification callback so it can be wired to heartbeat
+    return notify_camera_change

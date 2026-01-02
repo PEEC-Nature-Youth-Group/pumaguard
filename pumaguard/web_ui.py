@@ -63,6 +63,9 @@ from pumaguard.web_routes.settings import (
 from pumaguard.web_routes.sync import (
     register_sync_routes,
 )
+from pumaguard.web_routes.wifi import (
+    register_wifi_routes,
+)
 
 if TYPE_CHECKING:
     from pumaguard.server import (
@@ -279,6 +282,8 @@ class WebUI:
         register_folders_routes(self.app, self)
 
         register_sync_routes(self.app, self)
+
+        register_wifi_routes(self.app, self)
 
         # Routes delegated to web_routes.artifacts
 

@@ -1,4 +1,6 @@
-"""WiFi management routes for scanning networks and configuring WiFi mode."""
+"""
+WiFi management routes for scanning networks and configuring WiFi mode.
+"""
 
 from __future__ import (
     annotations,
@@ -6,6 +8,7 @@ from __future__ import (
 
 import logging
 import subprocess
+import time
 from typing import (
     TYPE_CHECKING,
     TypedDict,
@@ -39,7 +42,8 @@ class NetworkInfo(TypedDict):
 
 
 def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
-    """Register WiFi management endpoints.
+    """
+    Register WiFi management endpoints.
 
     Args:
         app: Flask application instance
@@ -49,13 +53,50 @@ def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/wifi/scan", methods=["GET"])
     def scan_wifi_networks():
-        """Scan for available WiFi networks.
+        """
+        Scan for available WiFi networks.
+
+        Note: If hostapd is running (AP mode), we temporarily stop it,
+        let NetworkManager manage wlan0, scan, then restore AP mode.
 
         Returns:
             JSON with list of networks containing SSID, signal strength,
             security type, etc.
         """
+        hostapd_was_active = False
         try:
+            # Check if hostapd is active (AP mode)
+            hostapd_status = subprocess.run(
+                ["systemctl", "is-active", "hostapd"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            hostapd_was_active = hostapd_status.stdout.strip() == "active"
+
+            if hostapd_was_active:
+                logger.info("Temporarily stopping AP mode for WiFi scan")
+                # Stop hostapd and dnsmasq
+                subprocess.run(
+                    ["systemctl", "stop", "hostapd"],
+                    check=True,
+                    timeout=10,
+                )
+                subprocess.run(
+                    ["systemctl", "stop", "dnsmasq"],
+                    check=False,
+                    timeout=10,
+                )
+                # Let NetworkManager manage wlan0
+                subprocess.run(
+                    ["nmcli", "device", "set", "wlan0", "managed", "yes"],
+                    check=True,
+                    timeout=10,
+                )
+                # Give NetworkManager a moment to take over
+                time.sleep(2)
+
             # Use nmcli to scan for networks
             # First, rescan to get fresh results
             subprocess.run(
@@ -137,6 +178,34 @@ def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Unexpected error scanning WiFi")
             return jsonify({"error": str(e)}), 500
+        finally:
+            # Restore AP mode if it was active before scan
+            if hostapd_was_active:
+                try:
+                    logger.info("Restoring AP mode after WiFi scan")
+                    # Stop NetworkManager management
+                    subprocess.run(
+                        ["nmcli", "device", "set", "wlan0", "managed", "no"],
+                        check=False,
+                        timeout=10,
+                    )
+                    # Restart hostapd and dnsmasq
+                    subprocess.run(
+                        ["systemctl", "restart", "hostapd"],
+                        check=False,
+                        timeout=15,
+                    )
+                    subprocess.run(
+                        ["systemctl", "restart", "dnsmasq"],
+                        check=False,
+                        timeout=15,
+                    )
+                    logger.info("AP mode restored successfully")
+                # pylint: disable=broad-except
+                except Exception as restore_error:
+                    logger.error(
+                        "Failed to restore AP mode: %s", restore_error
+                    )
 
     @app.route("/api/wifi/mode", methods=["GET"])
     def get_wifi_mode():

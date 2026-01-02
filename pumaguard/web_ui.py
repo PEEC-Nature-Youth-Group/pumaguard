@@ -33,6 +33,9 @@ from zeroconf import (
     Zeroconf,
 )
 
+from pumaguard import (
+    __version__,
+)
 from pumaguard.camera_heartbeat import (
     CameraHeartbeat,
 )
@@ -363,7 +366,9 @@ class WebUI:
             return "127.0.0.1"
 
     def _start_mdns(self):
-        """Start mDNS/Zeroconf service advertisement."""
+        """
+        Start mDNS/Zeroconf service advertisement.
+        """
         if not self.mdns_enabled:
             return
 
@@ -389,7 +394,7 @@ class WebUI:
                 addresses=[ip_bytes],
                 port=self.port,
                 properties={
-                    "version": "1.0.0",
+                    "version": __version__,
                     "path": "/",
                     "app": "pumaguard",
                 },
@@ -455,7 +460,9 @@ class WebUI:
                 self.service_info = None
 
     def _run_server(self):
-        """Internal method to run the Flask server."""
+        """
+        Internal method to run the Flask server.
+        """
         self.app.run(
             host=self.host,
             port=self.port,

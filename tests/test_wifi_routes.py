@@ -44,9 +44,16 @@ def client(app, webui):
 class TestWifiScan:
     """Tests for WiFi network scanning."""
 
+    @patch("pumaguard.web_routes.wifi.time.sleep")
     @patch("pumaguard.web_routes.wifi.subprocess.run")
-    def test_scan_success(self, mock_run, client):
+    def test_scan_success(
+        self, mock_run, mock_sleep, client
+    ):  # pylint: disable=unused-argument
         """Test successful WiFi scan."""
+        # Mock hostapd status check (not active)
+        hostapd_result = MagicMock()
+        hostapd_result.stdout = "inactive"
+
         # Mock the rescan command (returns nothing)
         rescan_result = MagicMock()
         rescan_result.stdout = ""
@@ -57,7 +64,7 @@ class TestWifiScan:
             "MyNetwork:85:WPA2:*\nOpenNetwork:60:::\nWeakNetwork:20:WPA:\n"
         )
 
-        mock_run.side_effect = [rescan_result, list_result]
+        mock_run.side_effect = [hostapd_result, rescan_result, list_result]
 
         response = client.get("/api/wifi/scan")
 
@@ -87,10 +94,20 @@ class TestWifiScan:
         assert networks[2]["ssid"] == "WeakNetwork"
         assert networks[2]["signal"] == 20
 
+    @patch("pumaguard.web_routes.wifi.time.sleep")
     @patch("pumaguard.web_routes.wifi.subprocess.run")
-    def test_scan_timeout(self, mock_run, client):
+    def test_scan_timeout(
+        self, mock_run, mock_sleep, client
+    ):  # pylint: disable=unused-argument
         """Test WiFi scan timeout."""
-        mock_run.side_effect = subprocess.TimeoutExpired("nmcli", 30)
+        # Mock hostapd status check (not active)
+        hostapd_result = MagicMock()
+        hostapd_result.stdout = "inactive"
+
+        mock_run.side_effect = [
+            hostapd_result,
+            subprocess.TimeoutExpired("nmcli", 30),
+        ]
 
         response = client.get("/api/wifi/scan")
 
@@ -99,9 +116,16 @@ class TestWifiScan:
         assert "error" in data
         assert "timed out" in data["error"].lower()
 
+    @patch("pumaguard.web_routes.wifi.time.sleep")
     @patch("pumaguard.web_routes.wifi.subprocess.run")
-    def test_scan_filters_empty_ssids(self, mock_run, client):
+    def test_scan_filters_empty_ssids(
+        self, mock_run, mock_sleep, client
+    ):  # pylint: disable=unused-argument
         """Test that empty SSIDs are filtered out."""
+        # Mock hostapd status check (not active)
+        hostapd_result = MagicMock()
+        hostapd_result.stdout = "inactive"
+
         rescan_result = MagicMock()
         rescan_result.stdout = ""
 
@@ -113,7 +137,7 @@ class TestWifiScan:
             "ValidNetwork:70:WPA:\n"
         )
 
-        mock_run.side_effect = [rescan_result, list_result]
+        mock_run.side_effect = [hostapd_result, rescan_result, list_result]
 
         response = client.get("/api/wifi/scan")
 
@@ -125,6 +149,60 @@ class TestWifiScan:
         assert len(networks) == 2
         assert networks[0]["ssid"] == "MyNetwork"
         assert networks[1]["ssid"] == "ValidNetwork"
+
+    @patch("pumaguard.web_routes.wifi.time.sleep")
+    @patch("pumaguard.web_routes.wifi.subprocess.run")
+    def test_scan_success_in_ap_mode(self, mock_run, mock_sleep, client):
+        """Test successful WiFi scan when AP mode is active."""
+        # Mock hostapd status check (active)
+        hostapd_result = MagicMock()
+        hostapd_result.stdout = "active"
+
+        # Mock stopping hostapd
+        stop_hostapd = MagicMock()
+        # Mock stopping dnsmasq
+        stop_dnsmasq = MagicMock()
+        # Mock setting wlan0 to managed
+        set_managed = MagicMock()
+
+        # Mock the rescan command
+        rescan_result = MagicMock()
+        rescan_result.stdout = ""
+
+        # Mock the list command
+        list_result = MagicMock()
+        list_result.stdout = "TestNetwork:75:WPA2:\n"
+
+        # Mock restoring AP mode
+        set_unmanaged = MagicMock()
+        restart_hostapd = MagicMock()
+        restart_dnsmasq = MagicMock()
+
+        mock_run.side_effect = [
+            hostapd_result,
+            stop_hostapd,
+            stop_dnsmasq,
+            set_managed,
+            rescan_result,
+            list_result,
+            set_unmanaged,
+            restart_hostapd,
+            restart_dnsmasq,
+        ]
+
+        response = client.get("/api/wifi/scan")
+
+        assert response.status_code == 200
+        data = json.loads(response.data)
+
+        assert "networks" in data
+        networks = data["networks"]
+        assert len(networks) == 1
+        assert networks[0]["ssid"] == "TestNetwork"
+
+        # Verify AP mode was restored
+        assert mock_run.call_count == 9
+        mock_sleep.assert_called_once_with(2)
 
 
 class TestGetWifiMode:

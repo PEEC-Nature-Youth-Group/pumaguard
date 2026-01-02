@@ -18,6 +18,14 @@ The WiFi management functionality is implemented in `pumaguard/pumaguard/web_rou
 #### `GET /api/wifi/scan`
 Scans for available WiFi networks in the area.
 
+**Important:** If the device is currently in AP mode (hostapd running), the scan will temporarily:
+1. Stop hostapd and dnsmasq services
+2. Let NetworkManager manage wlan0
+3. Perform the scan
+4. Restore AP mode automatically
+
+This brief interruption (2-3 seconds) is necessary because hostapd cannot scan while managing the interface.
+
 **Response:**
 ```json
 {

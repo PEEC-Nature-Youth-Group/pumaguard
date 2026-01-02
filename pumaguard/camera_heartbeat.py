@@ -241,10 +241,12 @@ class CameraHeartbeat:
             logger.error("Failed to save camera list: %s", str(e))
 
     def _monitor_loop(self) -> None:
-        """Main monitoring loop that runs in a background thread."""
+        """
+        Main monitoring loop that runs in a background thread.
+        """
         logger.info(
             "Camera heartbeat monitor started "
-            "(method=%s, interval=%ds, port=%d)",
+            + "(method=%s, interval=%ds, port=%d)",
             self.check_method,
             self.interval,
             self.tcp_port,
@@ -279,7 +281,9 @@ class CameraHeartbeat:
         logger.info("Camera heartbeat monitor stopped")
 
     def start(self) -> None:
-        """Start the heartbeat monitoring thread."""
+        """
+        Start the heartbeat monitoring thread.
+        """
         if not self.enabled:
             logger.info("Camera heartbeat monitoring is disabled")
             return
@@ -297,7 +301,9 @@ class CameraHeartbeat:
         logger.info("Camera heartbeat monitoring started")
 
     def stop(self) -> None:
-        """Stop the heartbeat monitoring thread."""
+        """
+        Stop the heartbeat monitoring thread.
+        """
         if not self._running:
             logger.warning("Heartbeat monitor is not running")
             return

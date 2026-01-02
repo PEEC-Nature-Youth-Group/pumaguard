@@ -1,9 +1,8 @@
 LAPTOP ?= laptop
 DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
-ANSIBLE_ASK_VAULT_PASS ?= true
-ANSIBLE_VAULT_PASSWORD_FILE ?=
 ANSIBLE_SKIP_TAGS ?= pumaguard
+ANSIBLE_VERBOSE ?=
 NEW_MODEL ?=
 TEST_NAME ?= pumaguard-test
 
@@ -83,8 +82,8 @@ bashate: install-dev
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run --frozen ansible-lint -v scripts/configure-device.yaml
-	ANSIBLE_ASK_VAULT_PASS=$(ANSIBLE_ASK_VAULT_PASS) ANSIBLE_VAULT_PASSWORD_FILE=$(ANSIBLE_VAULT_PASSWORD_FILE) uv run --frozen ansible-lint -v scripts/configure-laptop.yaml
+	uv run --frozen ansible-lint -v scripts/configure-device.yaml
+	uv run --frozen ansible-lint -v scripts/configure-laptop.yaml
 
 .PHONY: snap
 snap:
@@ -155,11 +154,11 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev
-	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --skip-tags $(ANSIBLE_SKIP_TAGS) scripts/configure-device.yaml
+	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --skip-tags $(ANSIBLE_SKIP_TAGS) $(ANSIBLE_VERBOSE) scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev
-	uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
+	uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass scripts/configure-laptop.yaml
 
 .PHONY: verify-poetry
 verify-poetry: install
@@ -179,7 +178,7 @@ test-server: install
 	./scripts/test-server.sh
 
 .PHONY: pre-commit
-pre-commit: lint docs poetry test-ui test
+pre-commit: lint docs test-ui test
 
 .PHONY: add-model
 add-model:

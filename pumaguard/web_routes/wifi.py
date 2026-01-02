@@ -110,8 +110,8 @@ def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
             result = subprocess.run(
                 [
                     "nmcli",
-                    "-t",
-                    "-f",
+                    "--terse",
+                    "--fields",
                     "SSID,SIGNAL,SECURITY,IN-USE",
                     "device",
                     "wifi",
@@ -184,17 +184,21 @@ def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
                 try:
                     logger.info("Restoring AP mode after WiFi scan")
                     # Stop NetworkManager management
-                    subprocess.run(
+                    result = subprocess.run(
                         ["nmcli", "device", "set", "wlan0", "managed", "no"],
                         check=False,
                         timeout=10,
                     )
+                    if result.returncode != 0:
+                        logger.error("Failed to set wifi to unmanaged")
                     # Restart hostapd and dnsmasq
-                    subprocess.run(
+                    result = subprocess.run(
                         ["systemctl", "restart", "hostapd"],
                         check=False,
                         timeout=15,
                     )
+                    if result.returncode != 0:
+                        logger.error("Failed to restart hostapd")
                     subprocess.run(
                         ["systemctl", "restart", "dnsmasq"],
                         check=False,
@@ -260,8 +264,8 @@ def register_wifi_routes(app: "Flask", webui: "WebUI") -> None:
             result = subprocess.run(
                 [
                     "nmcli",
-                    "-t",
-                    "-f",
+                    "--terse",
+                    "--fields",
                     "TYPE,DEVICE,STATE,CONNECTION",
                     "connection",
                     "show",

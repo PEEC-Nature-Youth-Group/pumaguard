@@ -164,7 +164,7 @@ class WebUI:
         # Format: {mac_address: CameraInfo}
         self.cameras: dict[str, CameraInfo] = {}
 
-        # Camera heartbeat monitoring
+        # Camera heartbeat monitoring (callback set after routes registered)
         self.heartbeat: CameraHeartbeat = CameraHeartbeat(
             webui=self,
             interval=presets.camera_heartbeat_interval,
@@ -173,6 +173,8 @@ class WebUI:
             tcp_port=presets.camera_heartbeat_tcp_port,
             tcp_timeout=presets.camera_heartbeat_tcp_timeout,
             icmp_timeout=presets.camera_heartbeat_icmp_timeout,
+            # Will be set after routes are registered
+            status_change_callback=None,
         )
 
         # Load cameras from persisted settings
@@ -284,7 +286,11 @@ class WebUI:
 
         register_diagnostics_routes(self.app, self)
 
-        register_dhcp_routes(self.app, self)
+        # Register DHCP routes and get the SSE notification callback
+        camera_notification_callback = register_dhcp_routes(self.app, self)
+
+        # Wire the callback to the heartbeat monitor
+        self.heartbeat.status_change_callback = camera_notification_callback
 
         @self.app.route("/<path:path>")
         def serve_static(path: str):

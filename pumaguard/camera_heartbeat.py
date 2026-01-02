@@ -12,6 +12,9 @@ import logging
 import socket
 import subprocess
 import threading
+from collections.abc import (
+    Callable,
+)
 from datetime import (
     datetime,
     timezone,
@@ -48,6 +51,7 @@ class CameraHeartbeat:
         tcp_port: int = 80,
         tcp_timeout: int = 3,
         icmp_timeout: int = 2,
+        status_change_callback: Callable[[str, dict], None] | None = None,
     ):
         """
         Initialize the camera heartbeat monitor.
@@ -61,6 +65,9 @@ class CameraHeartbeat:
             tcp_port: TCP port to check (default: 80 for HTTP)
             tcp_timeout: TCP connection timeout in seconds (default: 3)
             icmp_timeout: ICMP ping timeout in seconds (default: 2)
+            status_change_callback: Optional callback function to be called
+                when camera status changes. Signature:
+                callback(event_type: str, camera_data: dict)
         """
         self.webui = webui
         self.interval = interval
@@ -69,6 +76,7 @@ class CameraHeartbeat:
         self.tcp_port = tcp_port
         self.tcp_timeout = tcp_timeout
         self.icmp_timeout = icmp_timeout
+        self.status_change_callback = status_change_callback
 
         self._running = False
         self._thread: threading.Thread | None = None
@@ -171,6 +179,8 @@ class CameraHeartbeat:
         camera = self.webui.cameras[mac_address]
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        status_changed = False
+
         if is_reachable:
             # Camera is reachable - update status to connected
             if camera["status"] != "connected":
@@ -179,6 +189,7 @@ class CameraHeartbeat:
                     camera["hostname"],
                     camera["ip_address"],
                 )
+                status_changed = True
             camera["status"] = "connected"
             camera["last_seen"] = timestamp
         else:
@@ -189,11 +200,26 @@ class CameraHeartbeat:
                     camera["hostname"],
                     camera["ip_address"],
                 )
+                status_changed = True
             camera["status"] = "disconnected"
             # Don't update last_seen on failure - keep the last successful time
 
         # Persist changes to settings
         self._save_camera_list()
+
+        # Notify callback if status changed
+        if status_changed and self.status_change_callback:
+            try:
+                event_type = (
+                    "camera_status_changed_online"
+                    if is_reachable
+                    else "camera_status_changed_offline"
+                )
+                self.status_change_callback(event_type, dict(camera))
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error(
+                    "Error calling status change callback: %s", str(e)
+                )
 
     def _save_camera_list(self) -> None:
         """Save the camera list to settings file."""

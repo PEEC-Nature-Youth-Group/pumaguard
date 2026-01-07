@@ -574,7 +574,7 @@
     #   ansible.builtin.meta: end_play
 
     #
-    # Network configuration
+    # PumaGuard installation
     #
 
     - name: Compute local wheelhouse path for this host arch
@@ -682,9 +682,39 @@
       tags:
         - pumaguard
 
+    - name: Ensure XDG config directory exists
+      ansible.builtin.file:
+        path: "/home/{{ pumaguard_user }}/.config/pumaguard"
+        state: directory
+        owner: "{{ pumaguard_user }}"
+        group: "{{ pumaguard_group | default(pumaguard_user) }}"
+        mode: "0755"
+      tags:
+        - pumaguard
+
+    - name: Ensure XDG cache directory exists
+      ansible.builtin.file:
+        path: "/home/{{ pumaguard_user }}/.cache/pumaguard"
+        state: directory
+        owner: "{{ pumaguard_user }}"
+        group: "{{ pumaguard_group | default(pumaguard_user) }}"
+        mode: "0755"
+      tags:
+        - pumaguard
+
+    - name: Ensure XDG data directory exists
+      ansible.builtin.file:
+        path: "/home/{{ pumaguard_user }}/.local/share"
+        state: directory
+        owner: "{{ pumaguard_user }}"
+        group: "{{ pumaguard_group | default(pumaguard_user) }}"
+        mode: "0755"
+      tags:
+        - pumaguard
+
     - name: Ensure pumaguard models directory exists
       ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/.local/share/pumaguard/models"
+        path: "/home/{{ pumaguard_user }}/.local/share/pumaguard/models"
         state: directory
         owner: "{{ pumaguard_user }}"
         group: "{{ pumaguard_group | default(pumaguard_user) }}"
@@ -695,7 +725,7 @@
     - name: Sync pumaguard models
       ansible.posix.synchronize:
         src: "{{ playbook_dir }}/../pumaguard-models/"
-        dest: "/home/{{ ansible_user }}/.local/share/pumaguard/models/"
+        dest: "/home/{{ pumaguard_user }}/.local/share/pumaguard/models/"
         archive: true
         delete: false
         rsync_opts:

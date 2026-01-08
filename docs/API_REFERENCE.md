@@ -210,6 +210,78 @@ Load settings from a YAML file.
 
 ---
 
+### Sounds
+
+#### GET `/api/sounds/available`
+
+Get list of available sound files with their sizes.
+
+**Response:**
+```json
+{
+  "sounds": [
+    {
+      "name": "deterrent_puma.mp3",
+      "size_mb": 1.23
+    },
+    {
+      "name": "cougar_call.mp3",
+      "size_mb": 0.87
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200 OK`: Success
+- `404 Not Found`: Sound path not found
+- `500 Internal Server Error`: Error listing sounds
+
+---
+
+#### POST `/api/sounds/upload`
+
+Upload a new sound file to the sound directory.
+
+**Request:**
+- Content-Type: `multipart/form-data`
+- Field name: `file`
+- Supported formats: `.mp3` only
+
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Sound file uploaded: my_sound.mp3",
+  "filename": "my_sound.mp3",
+  "size_mb": 2.45
+}
+```
+
+**Response (Error):**
+```json
+{
+  "error": "File 'my_sound.mp3' already exists. Please rename your file or delete the existing one."
+}
+```
+
+**Status Codes:**
+- `200 OK`: Upload successful
+- `400 Bad Request`: No file provided, invalid file type, or empty file
+- `409 Conflict`: File already exists
+- `500 Internal Server Error`: Upload failed
+
+**Notes:**
+- The backend validates that uploaded files are MP3 files by:
+  - Checking the file extension is `.mp3`
+  - Verifying the file header (ID3 tag or MPEG sync frame)
+  - Testing playback with `mpg123 --test`
+- Files are stored in the configured `sound-path` directory
+- Duplicate filenames are rejected to prevent overwriting existing sounds
+- Only MP3 format is supported for compatibility with `mpg123` player
+
+---
+
 ### Directories
 
 #### GET `/api/directories`
@@ -836,6 +908,13 @@ curl http://localhost:5000/api/diagnostic
 
 # Get just the log file path using jq
 curl -s http://localhost:5000/api/diagnostic | jq -r '.server.log_file'
+
+# Upload a sound file
+curl -X POST http://localhost:5000/api/sounds/upload \
+  -F "file=@/path/to/my_sound.mp3"
+
+# Get available sound files
+curl http://localhost:5000/api/sounds/available
 
 # Download image
 curl http://localhost:5000/api/photos/%2Fpath%2Fto%2Fimage.jpg -o image.jpg

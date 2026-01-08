@@ -506,6 +506,49 @@ class ApiService {
     }
   }
 
+  /// Upload a sound file
+  Future<Map<String, dynamic>> uploadSound(
+    String filePath,
+    Uint8List fileBytes,
+    String fileName,
+  ) async {
+    try {
+      final uri = Uri.parse(getApiUrl('/api/sounds/upload'));
+      debugPrint('[ApiService.uploadSound] URI: $uri');
+      debugPrint('[ApiService.uploadSound] File name: $fileName');
+      debugPrint(
+        '[ApiService.uploadSound] File size: ${fileBytes.length} bytes',
+      );
+
+      final request = http.MultipartRequest('POST', uri);
+
+      // Add the file to the request
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
+      );
+
+      debugPrint('[ApiService.uploadSound] Sending request...');
+      final streamedResponse = await request.send();
+      debugPrint(
+        '[ApiService.uploadSound] Response status: ${streamedResponse.statusCode}',
+      );
+
+      final response = await http.Response.fromStream(streamedResponse);
+      debugPrint('[ApiService.uploadSound] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to upload sound');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.uploadSound] Exception: $e');
+      throw Exception('Failed to upload sound: $e');
+    }
+  }
+
   /// Get list of detected cameras
   Future<List<Camera>> getCameras() async {
     try {

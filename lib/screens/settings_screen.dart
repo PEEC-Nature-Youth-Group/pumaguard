@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
 import 'dart:developer' as developer;
 import 'wifi_settings_screen.dart';
+import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -292,6 +293,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _uploadSoundFile() async {
+    try {
+      // Get API service before any async operations
+      final apiService = context.read<ApiService>();
+
+      // Pick a file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['mp3'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) {
+        // User canceled the picker
+        return;
+      }
+
+      final file = result.files.first;
+      if (file.bytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to read file'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show loading indicator
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
+      debugPrint(
+        '[SettingsScreen] Attempting to upload sound file: ${file.name}',
+      );
+      debugPrint('[SettingsScreen] File size: ${file.bytes!.length} bytes');
+
+      // Upload the file
+      // Note: file.path is not available on web, so we pass empty string
+      final response = await apiService.uploadSound(
+        '', // Path not available/needed on web
+        file.bytes!,
+        file.name,
+      );
+
+      debugPrint('[SettingsScreen] Upload response: $response');
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response['message'] ?? 'Sound file uploaded successfully',
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // Set the uploaded file as the current sound
+        final uploadedFilename = response['filename'] as String?;
+        if (uploadedFilename != null) {
+          setState(() {
+            _soundFileController.text = uploadedFilename;
+          });
+          await _saveSettings();
+        }
+
+        // Refresh the sound picker dialog by calling it again
+        await _showSoundPicker();
+      }
+    } catch (e, stackTrace) {
+      developer.log('Error uploading sound', error: e, stackTrace: stackTrace);
+      debugPrint('[SettingsScreen] Upload error: $e');
+      debugPrint('[SettingsScreen] Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload sound: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _showModelPicker({String modelType = 'classifier'}) async {
     setState(() {
       _isLoading = true;
@@ -412,29 +512,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Select Sound File'),
             content: SizedBox(
               width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _availableSounds.length,
-                itemBuilder: (context, index) {
-                  final sound = _availableSounds[index];
-                  final soundName = sound['name'] as String;
-                  final sizeMb = sound['size_mb'] as double?;
-
-                  return ListTile(
-                    title: Text(soundName),
-                    subtitle: Text(
-                      sizeMb != null ? '${sizeMb.toStringAsFixed(2)} MB' : '',
-                      style: const TextStyle(color: Colors.blue),
-                    ),
-                    leading: const Icon(Icons.music_note, color: Colors.blue),
-                    trailing: soundName == _soundFileController.text
-                        ? const Icon(Icons.check, color: Colors.blue)
-                        : null,
-                    onTap: () {
-                      Navigator.of(context).pop(soundName);
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.of(context).pop('__upload__');
                     },
-                  );
-                },
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Upload New Sound File'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _availableSounds.length,
+                      itemBuilder: (context, index) {
+                        final sound = _availableSounds[index];
+                        final soundName = sound['name'] as String;
+                        final sizeMb = sound['size_mb'] as double?;
+
+                        return ListTile(
+                          title: Text(soundName),
+                          subtitle: Text(
+                            sizeMb != null
+                                ? '${sizeMb.toStringAsFixed(2)} MB'
+                                : '',
+                            style: const TextStyle(color: Colors.blue),
+                          ),
+                          leading: const Icon(
+                            Icons.music_note,
+                            color: Colors.blue,
+                          ),
+                          trailing: soundName == _soundFileController.text
+                              ? const Icon(Icons.check, color: Colors.blue)
+                              : null,
+                          onTap: () {
+                            Navigator.of(context).pop(soundName);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
             actions: [
@@ -447,7 +572,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       );
 
-      if (selectedSound != null) {
+      if (selectedSound == '__upload__') {
+        // User selected upload option
+        await _uploadSoundFile();
+      } else if (selectedSound != null) {
         setState(() {
           _soundFileController.text = selectedSound;
         });
@@ -759,13 +887,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
               readOnly: false,
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: _showSoundPicker,
-              icon: const Icon(Icons.list),
-              label: const Text('Choose from Available Sounds'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(12),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _showSoundPicker,
+                    icon: const Icon(Icons.list),
+                    label: const Text('Choose from Available Sounds'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _uploadSoundFile,
+                    icon: const Icon(Icons.upload_file),
+                    label: const Text('Upload New Sound File'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             SwitchListTile(

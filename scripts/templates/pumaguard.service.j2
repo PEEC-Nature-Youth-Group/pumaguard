@@ -9,6 +9,13 @@ Type=simple
 User={{ pumaguard_user | default(ansible_user) }}
 Group={{ pumaguard_group | default(ansible_user) }}
 WorkingDirectory={{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}
+
+# Set XDG Base Directory environment variables for proper config/cache/data locations
+Environment="HOME=/home/{{ pumaguard_user | default(ansible_user) }}"
+Environment="XDG_CONFIG_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/.config"
+Environment="XDG_CACHE_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/.cache"
+Environment="XDG_DATA_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/.local/share"
+
 ExecStart=/opt/pumaguard/bin/pumaguard server --debug {{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}
 Restart=always
 RestartSec=10

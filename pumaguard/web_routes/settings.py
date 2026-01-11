@@ -6,6 +6,7 @@ from __future__ import (
 
 import logging
 import os
+import subprocess
 from typing import (
     TYPE_CHECKING,
 )
@@ -14,6 +15,9 @@ import yaml
 from flask import (
     jsonify,
     request,
+)
+from werkzeug.utils import (
+    secure_filename,
 )
 from yaml.representer import (
     YAMLError,
@@ -313,8 +317,8 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                     404,
                 )
 
-            # Supported audio formats
-            audio_extensions = {".mp3", ".wav", ".ogg", ".flac", ".m4a"}
+            # Only MP3 files are supported (mpg123 player)
+            audio_extensions = {".mp3"}
 
             sound_files = []
             for filename in os.listdir(sound_path):
@@ -337,4 +341,133 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error getting available sounds")
+            return jsonify({"error": str(e)}), 500
+
+    def _validate_uploaded_file():
+        """Validate uploaded file exists and has proper format."""
+        if "file" not in request.files:
+            return {"error": "No file provided"}, 400
+
+        logger.debug("Verifying uploaded sound file")
+        uploaded_file = request.files["file"]
+
+        if uploaded_file.filename == "" or uploaded_file.filename is None:
+            return {"error": "No file selected"}, 400
+
+        filename = os.path.basename(uploaded_file.filename)
+        ext = os.path.splitext(filename)[1].lower()
+
+        if ext != ".mp3":
+            return {
+                "error": (
+                    "Unsupported file type. Only MP3 files are supported."
+                )
+            }, 400
+
+        return None
+
+    def _validate_mp3_file(filepath):
+        """Validate MP3 file integrity and format."""
+        # Check file size first
+        file_size = os.path.getsize(filepath)
+        if file_size == 0:
+            os.remove(filepath)
+            return {"error": "Uploaded file is empty"}, 400
+
+        # Check MP3 file signature
+        with open(filepath, "rb") as f:
+            header = f.read(3)
+            is_id3 = header == b"ID3"
+            is_mpeg = (
+                len(header) >= 2
+                and header[0] == 0xFF
+                and (header[1] & 0xE0) == 0xE0
+            )
+
+            if not (is_id3 or is_mpeg):
+                os.remove(filepath)
+                return {
+                    "error": ("File does not appear to be a valid MP3 file")
+                }, 400
+
+        # Test with mpg123 to ensure it can play
+        try:
+            result = subprocess.run(
+                ["mpg123", "--test", filepath],
+                capture_output=True,
+                timeout=5,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                os.remove(filepath)
+                return {
+                    "error": (
+                        "MP3 file validation failed. File may be corrupted."
+                    )
+                }, 400
+
+        except subprocess.TimeoutExpired:
+            os.remove(filepath)
+            return {"error": "File validation timeout"}, 400
+        except FileNotFoundError:
+            logger.warning("mpg123 not found, skipping audio validation")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.warning("Audio validation failed: %s", e)
+            # Don't fail upload if validation fails, just log it
+
+        return None
+
+    @app.route("/api/sounds/upload", methods=["POST"])
+    def upload_sound():
+        """Upload a new sound file."""
+        try:
+            # Validate uploaded file
+            error = _validate_uploaded_file()
+            if error:
+                return jsonify(error[0]), error[1]
+
+            file = request.files["file"]
+            # Type guard: _validate_uploaded_file ensures filename is not None
+            assert file.filename is not None
+            filename = secure_filename(file.filename)
+
+            # Ensure sound path exists
+            sound_path = webui.presets.sound_path
+            os.makedirs(sound_path, exist_ok=True)
+
+            filepath = os.path.join(sound_path, filename)
+
+            # Check if file already exists
+            if os.path.exists(filepath):
+                msg = (
+                    f"File '{filename}' already exists. "
+                    "Please rename your file or "
+                    "delete the existing one."
+                )
+                return jsonify({"error": msg}), 409
+
+            # Save the file
+            file.save(filepath)
+            logger.info("Uploaded sound file: %s", filepath)
+
+            # Validate MP3 file
+            error = _validate_mp3_file(filepath)
+            if error:
+                return jsonify(error[0]), error[1]
+
+            # Get file size
+            size_mb = os.path.getsize(filepath) / (1024 * 1024)
+
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Sound file uploaded: {filename}",
+                    "filename": filename,
+                    "size_mb": size_mb,
+                }
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error uploading sound file")
             return jsonify({"error": str(e)}), 500

@@ -37,6 +37,6 @@ References
 .. [A53ARM] https://www.arm.com/products/silicon-ip-cpu/cortex-a/cortex-a53
 .. [A53Wikipedia] https://en.wikipedia.org/wiki/ARM_Cortex-A53
 .. [Pi5] https://www.raspberrypi.com/products/raspberry-pi-5/
-.. [A76ARM] https://developer.arm.com/Processors/Cortex-A76
+.. [A76ARM] https://www.arm.com/products/silicon-ip-cpu/cortex-a/cortex-a76
 .. [A76Wikipedia] https://en.wikipedia.org/wiki/ARM_Cortex-A76
 .. [RaspberryPerformance] https://web.eece.maine.edu/~vweaver/group/green_machines.html

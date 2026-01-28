@@ -479,7 +479,7 @@
       tags:
         - networking
 
-    - name: Configure dnsmasq for wlan0 hotspot
+    - name: Configure dnsmasq for wlan0 hotspot (captive portal)
       ansible.builtin.template:
         lstrip_blocks: true
         trim_blocks: true
@@ -491,6 +491,10 @@
       notify: Restart dnsmasq
       tags:
         - networking
+      # This configures selective DNS hijacking for captive portal detection domains only.
+      # Real DNS queries are forwarded to eth0 for internet connectivity.
+      # Combined with port 80->5000 redirect, this triggers captive portal detection
+      # on phones/devices while preserving internet access through the wired interface.
 
     - name: Configure hostapd for wlan0 access point
       ansible.builtin.template:

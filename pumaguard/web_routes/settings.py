@@ -468,6 +468,16 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 }
             )
 
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             logger.exception("Error uploading sound file")
-            return jsonify({"error": str(e)}), 500
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "An internal error occurred while uploading the "
+                            "sound file."
+                        )
+                    }
+                ),
+                500,
+            )

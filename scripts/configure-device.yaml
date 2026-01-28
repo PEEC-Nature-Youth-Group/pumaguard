@@ -211,6 +211,16 @@
       tags:
         - firewall
 
+    - name: Enable IPv4 forwarding
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      tags:
+        - firewall
+
     - name: Configure UFW NAT rules for port 80 to 5000 redirect
       ansible.builtin.blockinfile:
         path: /etc/ufw/before.rules
@@ -225,6 +235,47 @@
           -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5000
 
           # Commit NAT rules
+          COMMIT
+      notify: Restart ufw
+      tags:
+        - firewall
+
+    - name: Configure UFW NAT masquerading for IP forwarding
+      ansible.builtin.blockinfile:
+        path: /etc/ufw/before.rules
+        insertbefore: "^# Don't delete these required lines"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - PumaGuard NAT masquerading"
+        block: |
+          # NAT table rules for masquerading (IP forwarding)
+          *nat
+          :POSTROUTING ACCEPT [0:0]
+
+          # Enable masquerading for outbound traffic on eth0
+          -A POSTROUTING -o eth0 -j MASQUERADE
+
+          # Commit NAT rules
+          COMMIT
+      notify: Restart ufw
+      tags:
+        - firewall
+
+    - name: Configure UFW FORWARD chain rules for wlan0 to eth0 traffic
+      ansible.builtin.blockinfile:
+        path: /etc/ufw/before.rules
+        insertbefore: "^# Don't delete these required lines"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - PumaGuard FORWARD rules"
+        block: |
+          # FORWARD chain rules for traffic between wlan0 and eth0
+          *filter
+          :FORWARD ACCEPT [0:0]
+
+          # Allow existing connections to return from eth0 to wlan0
+          -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+          # Allow new requests from the hotspot (wlan0) to go out via eth0
+          -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+
+          # Commit FORWARD rules
           COMMIT
       notify: Restart ufw
       tags:

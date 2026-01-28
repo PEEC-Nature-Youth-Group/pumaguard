@@ -2,8 +2,7 @@
 - name: Configure PumaGuard Device
   hosts: all
   become: true
-  vars_files:
-    - wireless_credentials.yaml
+
   vars:
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
@@ -589,6 +588,35 @@
         state: directory
         mode: "0755"
       delegate_to: localhost
+      become: false
+      tags:
+        - pumaguard
+
+    - name: Check for local pumaguard wheel in dist folder
+      delegate_to: localhost
+      ansible.builtin.find:
+        paths: "{{ playbook_dir }}/../dist"
+        patterns: "pumaguard-*.whl"
+        file_type: file
+      register: local_wheel_files
+      become: false
+      tags:
+        - pumaguard
+
+    - name: Set fact for local wheel presence
+      ansible.builtin.set_fact:
+        local_wheel_exists: "{{ local_wheel_files.matched > 0 }}"
+      tags:
+        - pumaguard
+
+    - name: Copy all local wheels to wheelhouse if present
+      delegate_to: localhost
+      ansible.builtin.copy:
+        src: "{{ item.path }}"
+        dest: "{{ wheelhouse_local }}/"
+        mode: "0644"
+      loop: "{{ local_wheel_files.files }}"
+      when: local_wheel_exists
       become: false
       tags:
         - pumaguard

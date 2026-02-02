@@ -82,6 +82,16 @@ class CameraInfo(TypedDict):
     status: str
 
 
+class PlugInfo(TypedDict):
+    """Type definition for plug information stored in webui.plugs."""
+
+    hostname: str
+    ip_address: str
+    mac_address: str
+    last_seen: str
+    status: str
+
+
 class PhotoDict(TypedDict):
     """Type definition for photo metadata dictionary."""
 
@@ -167,6 +177,10 @@ class WebUI:
         # Format: {mac_address: CameraInfo}
         self.cameras: dict[str, CameraInfo] = {}
 
+        # Plug tracking - stores detected plugs by MAC address
+        # Format: {mac_address: PlugInfo}
+        self.plugs: dict[str, PlugInfo] = {}
+
         # Camera heartbeat monitoring (callback set after routes registered)
         self.heartbeat: CameraHeartbeat = CameraHeartbeat(
             webui=self,
@@ -190,6 +204,18 @@ class WebUI:
                     mac_address=mac,
                     last_seen=camera.get("last_seen", ""),
                     status=camera.get("status", "disconnected"),
+                )
+
+        # Load plugs from persisted settings
+        for plug in presets.plugs:
+            mac = plug.get("mac_address")
+            if mac:
+                self.plugs[mac] = PlugInfo(
+                    hostname=plug.get("hostname", ""),
+                    ip_address=plug.get("ip_address", ""),
+                    mac_address=mac,
+                    last_seen=plug.get("last_seen", ""),
+                    status=plug.get("status", "disconnected"),
                 )
 
         # mDNS/Zeroconf support

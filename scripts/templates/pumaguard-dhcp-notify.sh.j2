@@ -16,8 +16,9 @@ HOSTNAME="${4:-unknown}"
 # PumaGuard API endpoint
 PUMAGUARD_API="http://{{ dnsmasq_gateway }}:5000/api"
 
-# Camera hostname to track
-CAMERA_HOSTNAME="Microseven"
+# Device hostnames to track
+CAMERA_HOSTNAME_PREFIX="Microseven"
+PLUG_HOSTNAME_PREFIX="shellyplug"
 
 # Log file
 LOG_FILE="/var/log/pumaguard-dhcp-notify.log"
@@ -62,9 +63,13 @@ case "$ACTION" in
         # Device connected or renewed lease
         log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
 
-        # Check if this is the camera we're tracking
-        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME" ]]; then
+        # Check if this is a camera we're tracking
+        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME_PREFIX"* ]]; then
             log_message "Camera detected: $HOSTNAME at $IP"
+            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
+        # Check if this is a plug we're tracking
+        elif [[ "${HOSTNAME,,}" == "$PLUG_HOSTNAME_PREFIX"* ]]; then
+            log_message "Plug detected: $HOSTNAME at $IP"
             notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
         fi
         ;;
@@ -72,8 +77,13 @@ case "$ACTION" in
         # Device disconnected
         log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
 
-        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME" ]]; then
+        # Check if this is a camera
+        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME_PREFIX"* ]]; then
             log_message "Camera disconnected: $HOSTNAME"
+            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
+        # Check if this is a plug
+        elif [[ "${HOSTNAME,,}" == "$PLUG_HOSTNAME_PREFIX"* ]]; then
+            log_message "Plug disconnected: $HOSTNAME"
             notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
         fi
         ;;

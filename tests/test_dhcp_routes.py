@@ -42,7 +42,9 @@ def test_app(mock_preset):
     # Create a mock WebUI instance
     webui = MagicMock(spec=WebUI)
     webui.cameras = {}
+    webui.plugs = {}
     webui.presets = mock_preset
+    webui.presets.plugs = []
     webui.heartbeat = MagicMock()
 
     register_dhcp_routes(app, webui)
@@ -446,3 +448,340 @@ def test_clear_cameras_empty(test_app):
     data = json.loads(response.data)
     assert data["status"] == "success"
     assert "Cleared 0 camera record(s)" in data["message"]
+
+
+# ============= Plug Tests =============
+
+
+def test_dhcp_event_add_plug(test_app):
+    """Test adding a plug via DHCP event."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "action": "add",
+        "mac_address": "11:22:33:44:55:66",
+        "ip_address": "192.168.52.150",
+        "hostname": "shellyplugsg4-abcdef",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["message"] == "DHCP event processed"
+    assert data["data"]["device_type"] == "plug"
+
+    # Verify plug was added to webui.plugs
+    assert "11:22:33:44:55:66" in webui.plugs
+    plug = webui.plugs["11:22:33:44:55:66"]
+    assert plug["hostname"] == "shellyplugsg4-abcdef"
+    assert plug["ip_address"] == "192.168.52.150"
+    assert plug["status"] == "connected"
+
+    # Verify settings were updated
+    assert len(webui.presets.plugs) == 1
+    webui.presets.save.assert_called()
+
+
+def test_dhcp_event_old_plug(test_app):
+    """Test renewing a plug lease via DHCP event."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "action": "old",
+        "mac_address": "11:22:33:44:55:66",
+        "ip_address": "192.168.52.150",
+        "hostname": "ShellyPlugS-Gen4",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+
+    # Verify plug was added/updated
+    assert "11:22:33:44:55:66" in webui.plugs
+    assert webui.plugs["11:22:33:44:55:66"]["status"] == "connected"
+
+
+def test_dhcp_event_delete_plug(test_app):
+    """Test removing a plug via DHCP event."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # First add a plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "shellyplug-test",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+
+    # Now delete it
+    payload = {
+        "action": "del",
+        "mac_address": "11:22:33:44:55:66",
+        "ip_address": "192.168.52.150",
+        "hostname": "shellyplug-test",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+
+    # Verify plug status was updated to disconnected
+    assert "11:22:33:44:55:66" in webui.plugs
+    assert webui.plugs["11:22:33:44:55:66"]["status"] == "disconnected"
+    assert (
+        webui.plugs["11:22:33:44:55:66"]["last_seen"] == "2024-01-15T10:30:00Z"
+    )
+
+
+def test_get_plugs(test_app):
+    """Test getting list of all plugs."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add some plugs
+    webui.plugs["11:22:33:44:55:01"] = {
+        "hostname": "Plug1",
+        "ip_address": "192.168.52.151",
+        "mac_address": "11:22:33:44:55:01",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+    webui.plugs["11:22:33:44:55:02"] = {
+        "hostname": "Plug2",
+        "ip_address": "192.168.52.152",
+        "mac_address": "11:22:33:44:55:02",
+        "last_seen": "2024-01-15T10:05:00Z",
+        "status": "disconnected",
+    }
+
+    response = client.get("/api/dhcp/plugs")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["count"] == 2
+    assert len(data["plugs"]) == 2
+
+    # Verify plug data
+    plugs = {plug["mac_address"]: plug for plug in data["plugs"]}
+    assert "11:22:33:44:55:01" in plugs
+    assert plugs["11:22:33:44:55:01"]["hostname"] == "Plug1"
+    assert plugs["11:22:33:44:55:02"]["status"] == "disconnected"
+
+
+def test_get_plug_by_mac(test_app):
+    """Test getting a specific plug by MAC address."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "TestPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:66")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["plug"]["hostname"] == "TestPlug"
+    assert data["plug"]["ip_address"] == "192.168.52.150"
+    assert data["plug"]["mac_address"] == "11:22:33:44:55:66"
+
+
+def test_get_plug_not_found(test_app):
+    """Test getting a plug that doesn't exist."""
+    app, _ = test_app
+    client = app.test_client()
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:99")
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Plug not found"
+
+
+def test_add_plug_manually(test_app):
+    """Test manually adding a plug via POST."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "hostname": "ManualPlug",
+        "ip_address": "192.168.52.200",
+        "mac_address": "11:22:33:44:55:aa",
+        "status": "connected",
+    }
+
+    response = client.post(
+        "/api/dhcp/plugs",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["message"] == "Plug added successfully"
+    assert data["plug"]["hostname"] == "ManualPlug"
+
+    # Verify plug was added
+    assert "11:22:33:44:55:aa" in webui.plugs
+    plug = webui.plugs["11:22:33:44:55:aa"]
+    assert plug["hostname"] == "ManualPlug"
+    assert plug["ip_address"] == "192.168.52.200"
+    assert plug["status"] == "connected"
+
+    # Verify settings were updated
+    assert len(webui.presets.plugs) == 1
+    webui.presets.save.assert_called()
+
+
+def test_add_plug_missing_fields(test_app):
+    """Test adding a plug with missing required fields."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "hostname": "IncompletePlug",
+        # Missing ip_address and mac_address
+    }
+
+    response = client.post(
+        "/api/dhcp/plugs",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Missing required fields" in data["error"]
+
+
+def test_add_plug_default_status(test_app):
+    """Test adding a plug with default status."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "hostname": "DefaultStatusPlug",
+        "ip_address": "192.168.52.201",
+        "mac_address": "11:22:33:44:55:bb",
+        # No status provided
+    }
+
+    response = client.post(
+        "/api/dhcp/plugs",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201
+    data = json.loads(response.data)
+    assert data["plug"]["status"] == "connected"  # Default status
+
+
+def test_clear_plugs(test_app):
+    """Test clearing all plug records."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add some plugs first
+    webui.plugs["11:22:33:44:55:01"] = {
+        "hostname": "Plug1",
+        "ip_address": "192.168.52.151",
+        "mac_address": "11:22:33:44:55:01",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+    webui.plugs["11:22:33:44:55:02"] = {
+        "hostname": "Plug2",
+        "ip_address": "192.168.52.152",
+        "mac_address": "11:22:33:44:55:02",
+        "last_seen": "2024-01-15T10:05:00Z",
+        "status": "connected",
+    }
+
+    response = client.delete("/api/dhcp/plugs")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert "2" in data["message"]
+
+    # Verify plugs were cleared
+    assert len(webui.plugs) == 0
+    assert webui.presets.plugs == []
+    webui.presets.save.assert_called()
+
+
+def test_clear_plugs_empty(test_app):
+    """Test clearing plugs when there are none."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    response = client.delete("/api/dhcp/plugs")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert "Cleared 0 plug record(s)" in data["message"]
+
+
+def test_dhcp_event_unknown_device(test_app):
+    """Test DHCP event with unknown device (not camera or plug)."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {
+        "action": "add",
+        "mac_address": "99:88:77:66:55:44",
+        "ip_address": "192.168.52.199",
+        "hostname": "UnknownDevice",
+        "timestamp": "2024-01-15T10:30:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["data"]["device_type"] == "unknown"
+
+    # Verify device was not added to cameras or plugs
+    assert "99:88:77:66:55:44" not in webui.cameras
+    assert "99:88:77:66:55:44" not in webui.plugs

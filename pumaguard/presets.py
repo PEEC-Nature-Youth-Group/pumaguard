@@ -148,6 +148,7 @@ class Preset:
         self.volume = 80  # Volume level 0-100 for ALSA playback
         self.print_download_progress = True
         self.cameras: list[dict[str, str]] = []  # List of detected cameras
+        self.plugs: list[dict[str, str]] = []  # List of detected plugs
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False

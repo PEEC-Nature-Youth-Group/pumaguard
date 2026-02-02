@@ -102,9 +102,6 @@ jobs:
           pushd training-data
           git archive --output ../training-data.tar.gz HEAD verification Stables testlion_100525
           popd
-          pushd pumaguard-ui
-          git archive --output ../pumaguard-ui.tar.gz HEAD
-          popd
       - uses: actions/upload-artifact@v4
         with:
           name: submodule-models
@@ -113,10 +110,6 @@ jobs:
         with:
           name: submodule-data
           path: training-data.tar.gz
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ui-data
-          path: pumaguard-ui.tar.gz
 
   test-python:
     runs-on: ubuntu-latest
@@ -157,22 +150,36 @@ jobs:
   test-ui:
     runs-on: ubuntu-latest
     needs:
-      - compress-submodules
+      - lint-ui
 
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/clean-runner
-      - uses: actions/download-artifact@v4
-        with:
-          name: ui-data
-      - name: Unpack ui source
-        run: |
-          set -e -u -x
-          tar -C pumaguard-ui -xf pumaguard-ui.tar.gz
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
+        with:
+          channel: stable
       - name: Test UI
         run: make test-ui
+
+  lint-ui:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/clean-runner
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter doctor
+      - run: |
+            ls -lh pumaguard-ui
+            ls -lh pumaguard-ui/test
+            ls -lh pumaguard-ui/test/models
+            cat pumaguard-ui/test/models/status_test.dart
+      - name: Lint UI
+        run: make lint-ui
 
   test-server:
     runs-on: ubuntu-latest
@@ -235,13 +242,6 @@ jobs:
         run: |
           set -e -u -x
           tar -C pumaguard-models -xf pumaguard-models.tar.gz
-      - uses: actions/download-artifact@v4
-        with:
-          name: ui-data
-      - name: Unpack ui source
-        run: |
-          set -e -u -x
-          tar -C pumaguard-ui -xf pumaguard-ui.tar.gz
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
         with:

@@ -1,4 +1,5 @@
 import 'camera.dart';
+import 'plug.dart';
 
 class Settings {
   final double yoloMinSize;
@@ -11,6 +12,7 @@ class Settings {
   final bool playSound;
   final int volume;
   final List<Camera> cameras;
+  final List<Plug> plugs;
 
   Settings({
     required this.yoloMinSize,
@@ -23,6 +25,7 @@ class Settings {
     required this.playSound,
     required this.volume,
     required this.cameras,
+    required this.plugs,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) {
@@ -32,6 +35,16 @@ class Settings {
       camerasList = (json['cameras'] as List)
           .map(
             (cameraJson) => Camera.fromJson(cameraJson as Map<String, dynamic>),
+          )
+          .toList();
+    }
+
+    // Parse plugs list
+    List<Plug> plugsList = [];
+    if (json['plugs'] is List) {
+      plugsList = (json['plugs'] as List)
+          .map(
+            (plugJson) => Plug.fromJson(plugJson as Map<String, dynamic>),
           )
           .toList();
     }
@@ -49,6 +62,7 @@ class Settings {
       playSound: json['play-sound'] as bool? ?? false,
       volume: json['volume'] as int? ?? 80,
       cameras: camerasList,
+      plugs: plugsList,
     );
   }
 
@@ -64,6 +78,7 @@ class Settings {
       'play-sound': playSound,
       'volume': volume,
       'cameras': cameras.map((camera) => camera.toJson()).toList(),
+      'plugs': plugs.map((plug) => plug.toJson()).toList(),
     };
   }
 
@@ -78,6 +93,7 @@ class Settings {
     bool? playSound,
     int? volume,
     List<Camera>? cameras,
+    List<Plug>? plugs,
   }) {
     return Settings(
       yoloMinSize: yoloMinSize ?? this.yoloMinSize,
@@ -92,6 +108,7 @@ class Settings {
       playSound: playSound ?? this.playSound,
       volume: volume ?? this.volume,
       cameras: cameras ?? this.cameras,
+      plugs: plugs ?? this.plugs,
     );
   }
 }

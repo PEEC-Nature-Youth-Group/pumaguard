@@ -175,6 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         playSound: _playSound,
         volume: _volume.round(),
         cameras: _settings?.cameras ?? [],
+        plugs: _settings?.plugs ?? [],
       );
 
       developer.log(
@@ -1103,6 +1104,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: Icon(
                       camera.isConnected ? Icons.check_circle : Icons.cancel,
                       color: camera.isConnected ? Colors.green : Colors.grey,
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 24),
+            ],
+            // Detected Plugs Section
+            if (_settings != null && _settings!.plugs.isNotEmpty) ...[
+              Text(
+                'Detected Plugs',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Smart plugs detected via DHCP (for deterrents)',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ..._settings!.plugs.map((plug) {
+                return Card(
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.power,
+                      color: plug.isConnected ? Colors.green : Colors.grey,
+                    ),
+                    title: Text(plug.displayName),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('IP: ${plug.ipAddress}'),
+                        Text(
+                          'Status: ${plug.status}',
+                          style: TextStyle(
+                            color: plug.isConnected
+                                ? Colors.green
+                                : Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Icon(
+                      plug.isConnected ? Icons.check_circle : Icons.cancel,
+                      color: plug.isConnected ? Colors.green : Colors.grey,
                     ),
                   ),
                 );

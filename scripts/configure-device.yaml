@@ -11,6 +11,14 @@
     pumaguard_watch_dir: "/home/pumaguard/watch-folder"
     pumaguard_user: "{{ ansible_user }}"
     pumaguard_group: "{{ ansible_group }}"
+    # PumaGuard installation method:
+    #   "pypi"  - Install from PyPI (default, for production)
+    #   "local" - Install from local development build
+    # To use local build: ansible-playbook configure-device.yaml -i inventory.ini \
+    #                     --extra-vars "pumaguard_install_method=local"
+    pumaguard_install_method: "local"
+    # Path to local wheel files (used when pumaguard_install_method is "local")
+    pumaguard_local_wheel_path: "{{ playbook_dir }}/../dist"
     # hostapd configuration for wlan0 access point
     hostapd_ssid: pumaguard
     hostapd_passphrase: pumaguard
@@ -631,6 +639,10 @@
     #
     # PumaGuard installation
     #
+    # Note: The wheelhouse cache is used by BOTH installation methods (PyPI and local)
+    # to ensure dependencies (TensorFlow, Flask, etc.) are installed from cache rather
+    # than downloaded repeatedly. Only the pumaguard package itself differs between methods.
+    #
 
     - name: Compute local wheelhouse path for this host arch
       ansible.builtin.set_fact:
@@ -704,7 +716,44 @@
       tags:
         - pumaguard
 
-    - name: Install PumaGuard Python package into the virtualenv
+    - name: Find local wheel file
+      delegate_to: localhost
+      ansible.builtin.find:
+        paths: "{{ pumaguard_local_wheel_path }}"
+        patterns: "pumaguard-*.whl"
+        file_type: file
+      register: local_wheel_files
+      become: false
+      when: pumaguard_install_method == "local"
+      tags:
+        - pumaguard
+
+    - name: Set local wheel filename variable (most recent)
+      # If multiple wheels exist, select the most recently modified one (by mtime)
+      # This ensures we deploy the latest build even if old wheels remain in dist/
+      ansible.builtin.set_fact:
+        local_wheel_filename: "{{ (local_wheel_files.files | sort(attribute='mtime') | last).path | basename }}"
+      when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
+      tags:
+        - pumaguard
+
+    - name: Display local wheel file being deployed
+      ansible.builtin.debug:
+        msg: "Deploying local wheel: {{ local_wheel_filename }}"
+      when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
+      tags:
+        - pumaguard
+
+    - name: Copy local wheel to device
+      ansible.builtin.copy:
+        src: "{{ (local_wheel_files.files | sort(attribute='mtime') | last).path }}"
+        dest: "/tmp/{{ local_wheel_filename }}"
+        mode: "0644"
+      when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
+      tags:
+        - pumaguard
+
+    - name: Install PumaGuard from PyPI
       ansible.builtin.pip:
         name:
           - pumaguard
@@ -712,6 +761,19 @@
         executable: /opt/pumaguard/bin/pip
         extra_args: "--upgrade --find-links={{ wheelhouse_remote }} -v"
       notify: Reload systemd and restart pumaguard
+      when: pumaguard_install_method == "pypi"
+      tags:
+        - pumaguard
+
+    - name: Install PumaGuard from local wheel
+      ansible.builtin.pip:
+        name: "file:///tmp/{{ local_wheel_filename }}"
+        virtualenv_site_packages: false
+        executable: /opt/pumaguard/bin/pip
+        state: forcereinstall
+        extra_args: "--find-links={{ wheelhouse_remote }} -v"
+      notify: Reload systemd and restart pumaguard
+      when: pumaguard_install_method == "local"
       tags:
         - pumaguard
 
@@ -834,8 +896,6 @@
         post_reboot_delay: 30
         test_command: uptime
       when: reboot_required.rc == 0
-      async: 1
-      poll: 0
       failed_when: false
 
     - name: Display message about IP address change

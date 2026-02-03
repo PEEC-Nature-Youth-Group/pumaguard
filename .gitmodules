@@ -4,6 +4,3 @@
 [submodule "training-data"]
 	path = training-data
 	url = https://github.com/PEEC-Nature-Youth-Group/training-data.git
-[submodule "pumaguard-ui"]
-	path = pumaguard-ui
-	url = git@github.com:PEEC-Nature-Youth-Group/pumaguard-ui.git

@@ -515,6 +515,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             _buildInfoRow('Status', _status?.status.toUpperCase() ?? 'UNKNOWN'),
+            const SizedBox(height: 12),
+            _buildInfoRow('Uptime', _status?.uptimeFormatted ?? 'Unknown'),
           ],
         ),
       ),

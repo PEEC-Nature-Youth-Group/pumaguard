@@ -4,6 +4,7 @@ from __future__ import (
     annotations,
 )
 
+import time
 from typing import (
     TYPE_CHECKING,
 )
@@ -35,6 +36,10 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
     def get_status():
         origin = request.headers.get("Origin", "No Origin header")
         host = request.headers.get("Host", "No Host header")
+
+        # Calculate uptime in seconds
+        uptime_seconds = int(time.time() - webui.start_time)
+
         return jsonify(
             {
                 "status": "running",
@@ -42,6 +47,7 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
                 "directories_count": len(webui.image_directories),
                 "host": webui._get_local_ip(),  # pylint: disable=protected-access
                 "port": webui.port,
+                "uptime_seconds": uptime_seconds,
                 "request_origin": origin,
                 "request_host": host,
             }

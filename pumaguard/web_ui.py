@@ -160,6 +160,9 @@ class WebUI:
         self.image_directories: list[str] = []
         self.classification_directories: list[str] = []
 
+        # Track server start time for uptime calculation
+        self.start_time: float = time.time()
+
         # Camera tracking - stores detected cameras by MAC address
         # Format: {mac_address: CameraInfo}
         self.cameras: dict[str, CameraInfo] = {}

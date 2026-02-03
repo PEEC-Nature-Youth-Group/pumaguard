@@ -154,8 +154,8 @@ release:
 	  git tag -a -m "Release v$${NEW_RELEASE}" v$${NEW_RELEASE}
 
 .PHONY: configure-device
-configure-device: install-dev
-	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --skip-tags $(ANSIBLE_SKIP_TAGS) scripts/configure-device.yaml
+configure-device: install-dev build
+	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --extra-vars "pumaguard_install_method=local" --skip-tags $(ANSIBLE_SKIP_TAGS) scripts/configure-device.yaml
 
 .PHONY: configure-laptop
 configure-laptop: install-dev

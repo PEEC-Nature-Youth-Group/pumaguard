@@ -46,12 +46,17 @@ install-dev: .venv
 test: install-dev
 	uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
-.PHONY: test-ui
-test-ui:
+.PHONY: lint-ui
+lint-ui:
 	make -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; dart format --set-exit-if-changed lib test
 	cd pumaguard-ui; flutter analyze
+
+.PHONY: test-ui
+test-ui:
+	make -C pumaguard-ui version
+	cd pumaguard-ui; flutter pub get
 	cd pumaguard-ui; flutter test
 
 .PHONY: build

@@ -60,7 +60,7 @@ dependencies:
   crypto: ^3.0.3
 
   # File picker for selecting download destination
-  file_picker: ^8.0.0+1
+  file_picker: ^10.0.0
 
   # URL launcher for opening camera URL
   url_launcher: ^6.3.0

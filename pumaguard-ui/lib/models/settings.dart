@@ -43,9 +43,7 @@ class Settings {
     List<Plug> plugsList = [];
     if (json['plugs'] is List) {
       plugsList = (json['plugs'] as List)
-          .map(
-            (plugJson) => Plug.fromJson(plugJson as Map<String, dynamic>),
-          )
+          .map((plugJson) => Plug.fromJson(plugJson as Map<String, dynamic>))
           .toList();
     }
 

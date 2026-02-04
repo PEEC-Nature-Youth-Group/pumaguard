@@ -66,6 +66,19 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 }
             )
         settings_dict["cameras"] = camera_list
+        # Add plugs from webui.plugs (runtime state)
+        plug_list = []
+        for _, plug_info in webui.plugs.items():
+            plug_list.append(
+                {
+                    "hostname": plug_info["hostname"],
+                    "ip_address": plug_info["ip_address"],
+                    "mac_address": plug_info["mac_address"],
+                    "last_seen": plug_info["last_seen"],
+                    "status": plug_info["status"],
+                }
+            )
+        settings_dict["plugs"] = plug_list
         return jsonify(settings_dict)
 
     @app.route("/api/settings", methods=["PUT"])

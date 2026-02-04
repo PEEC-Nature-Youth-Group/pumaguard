@@ -114,65 +114,32 @@ def register_dhcp_routes(
                 timestamp,
             )
 
-            # Store camera information in webui.cameras dictionary
-            if action in ["add", "old"]:
-                # Camera connected or renewed lease
-                logger.info(
-                    "Camera '%s' connected at IP %s", hostname, ip_address
-                )
-                # Store camera info indexed by MAC address
-                webui.cameras[mac_address] = {
-                    "hostname": hostname,
-                    "ip_address": ip_address,
-                    "mac_address": mac_address,
-                    "last_seen": timestamp,
-                    "status": "connected",
-                }
+            # Determine device type based on hostname pattern
+            is_camera = hostname and hostname.startswith("Microseven")
+            is_plug = hostname and hostname.lower().startswith("shellyplug")
 
-                # Notify SSE clients
-                notify_camera_change(
-                    "camera_connected", dict(webui.cameras[mac_address])
-                )
-
-                # Update settings with camera list
-                # Convert cameras dict to list for settings persistence
-                camera_list = []
-                for _, cam_info in webui.cameras.items():
-                    camera_list.append(
-                        {
-                            "hostname": cam_info["hostname"],
-                            "ip_address": cam_info["ip_address"],
-                            "mac_address": cam_info["mac_address"],
-                            "last_seen": cam_info["last_seen"],
-                            "status": cam_info["status"],
-                        }
+            if is_camera:
+                # Handle camera events
+                if action in ["add", "old"]:
+                    # Camera connected or renewed lease
+                    logger.info(
+                        "Camera '%s' connected at IP %s", hostname, ip_address
                     )
-
-                webui.presets.cameras = camera_list
-
-                # Persist to settings file
-                try:
-                    webui.presets.save()
-                    logger.info("Camera list saved to settings")
-                except Exception as e:  # pylint: disable=broad-except
-                    logger.error(
-                        "Failed to save camera list to settings: %s", str(e)
-                    )
-
-            elif action == "del":
-                # Camera disconnected
-                logger.info("Camera '%s' disconnected", hostname)
-                # Update camera status to disconnected (keep history)
-                if mac_address in webui.cameras:
-                    webui.cameras[mac_address]["status"] = "disconnected"
-                    webui.cameras[mac_address]["last_seen"] = timestamp
+                    # Store camera info indexed by MAC address
+                    webui.cameras[mac_address] = {
+                        "hostname": hostname,
+                        "ip_address": ip_address,
+                        "mac_address": mac_address,
+                        "last_seen": timestamp,
+                        "status": "connected",
+                    }
 
                     # Notify SSE clients
                     notify_camera_change(
-                        "camera_disconnected", dict(webui.cameras[mac_address])
+                        "camera_connected", dict(webui.cameras[mac_address])
                     )
 
-                    # Update settings with updated camera list
+                    # Update settings with camera list
                     camera_list = []
                     for _, cam_info in webui.cameras.items():
                         camera_list.append(
@@ -190,12 +157,134 @@ def register_dhcp_routes(
                     # Persist to settings file
                     try:
                         webui.presets.save()
-                        logger.info("Camera list updated in settings")
+                        logger.info("Camera list saved to settings")
                     except Exception as e:  # pylint: disable=broad-except
                         logger.error(
                             "Failed to save camera list to settings: %s",
                             str(e),
                         )
+
+                elif action == "del":
+                    # Camera disconnected
+                    logger.info("Camera '%s' disconnected", hostname)
+                    # Update camera status to disconnected (keep history)
+                    if mac_address in webui.cameras:
+                        webui.cameras[mac_address]["status"] = "disconnected"
+                        webui.cameras[mac_address]["last_seen"] = timestamp
+
+                        # Notify SSE clients
+                        notify_camera_change(
+                            "camera_disconnected",
+                            dict(webui.cameras[mac_address]),
+                        )
+
+                        # Update settings with updated camera list
+                        camera_list = []
+                        for _, cam_info in webui.cameras.items():
+                            camera_list.append(
+                                {
+                                    "hostname": cam_info["hostname"],
+                                    "ip_address": cam_info["ip_address"],
+                                    "mac_address": cam_info["mac_address"],
+                                    "last_seen": cam_info["last_seen"],
+                                    "status": cam_info["status"],
+                                }
+                            )
+
+                        webui.presets.cameras = camera_list
+
+                        # Persist to settings file
+                        try:
+                            webui.presets.save()
+                            logger.info("Camera list updated in settings")
+                        except Exception as e:  # pylint: disable=broad-except
+                            logger.error(
+                                "Failed to save camera list to settings: %s",
+                                str(e),
+                            )
+
+            elif is_plug:
+                # Handle plug events
+                if action in ["add", "old"]:
+                    # Plug connected or renewed lease
+                    logger.info(
+                        "Plug '%s' connected at IP %s", hostname, ip_address
+                    )
+                    # Store plug info indexed by MAC address
+                    webui.plugs[mac_address] = {
+                        "hostname": hostname,
+                        "ip_address": ip_address,
+                        "mac_address": mac_address,
+                        "last_seen": timestamp,
+                        "status": "connected",
+                    }
+
+                    # Notify SSE clients
+                    notify_camera_change(
+                        "plug_connected", dict(webui.plugs[mac_address])
+                    )
+
+                    # Update settings with plug list
+                    plug_list = []
+                    for _, plug_info in webui.plugs.items():
+                        plug_list.append(
+                            {
+                                "hostname": plug_info["hostname"],
+                                "ip_address": plug_info["ip_address"],
+                                "mac_address": plug_info["mac_address"],
+                                "last_seen": plug_info["last_seen"],
+                                "status": plug_info["status"],
+                            }
+                        )
+
+                    webui.presets.plugs = plug_list
+
+                    # Persist to settings file
+                    try:
+                        webui.presets.save()
+                        logger.info("Plug list saved to settings")
+                    except Exception as e:  # pylint: disable=broad-except
+                        logger.error(
+                            "Failed to save plug list to settings: %s", str(e)
+                        )
+
+                elif action == "del":
+                    # Plug disconnected
+                    logger.info("Plug '%s' disconnected", hostname)
+                    # Update plug status to disconnected (keep history)
+                    if mac_address in webui.plugs:
+                        webui.plugs[mac_address]["status"] = "disconnected"
+                        webui.plugs[mac_address]["last_seen"] = timestamp
+
+                        # Notify SSE clients
+                        notify_camera_change(
+                            "plug_disconnected", dict(webui.plugs[mac_address])
+                        )
+
+                        # Update settings with updated plug list
+                        plug_list = []
+                        for _, plug_info in webui.plugs.items():
+                            plug_list.append(
+                                {
+                                    "hostname": plug_info["hostname"],
+                                    "ip_address": plug_info["ip_address"],
+                                    "mac_address": plug_info["mac_address"],
+                                    "last_seen": plug_info["last_seen"],
+                                    "status": plug_info["status"],
+                                }
+                            )
+
+                        webui.presets.plugs = plug_list
+
+                        # Persist to settings file
+                        try:
+                            webui.presets.save()
+                            logger.info("Plug list updated in settings")
+                        except Exception as e:  # pylint: disable=broad-except
+                            logger.error(
+                                "Failed to save plug list to settings: %s",
+                                str(e),
+                            )
 
             return (
                 jsonify(
@@ -206,6 +295,11 @@ def register_dhcp_routes(
                             "action": action,
                             "hostname": hostname,
                             "ip_address": ip_address,
+                            "device_type": (
+                                "camera"
+                                if is_camera
+                                else "plug" if is_plug else "unknown"
+                            ),
                         },
                     }
                 ),
@@ -445,6 +539,169 @@ def register_dhcp_routes(
                 ),
                 500,
             )
+
+    @app.route("/api/dhcp/plugs", methods=["GET"])
+    def get_plugs():
+        """
+        Get list of known plugs.
+
+        Returns all detected plugs with their connection status.
+        """
+        plugs_list = list(webui.plugs.values())
+
+        return (
+            jsonify(
+                {
+                    "plugs": plugs_list,
+                    "count": len(plugs_list),
+                }
+            ),
+            200,
+        )
+
+    @app.route("/api/dhcp/plugs/<mac_address>", methods=["GET"])
+    def get_plug(mac_address: str):
+        """
+        Get information about a specific plug.
+
+        Args:
+            mac_address: MAC address of the plug
+        """
+        plug = webui.plugs.get(mac_address)
+        if not plug:
+            return jsonify({"error": "Plug not found"}), 404
+
+        return jsonify({"plug": plug}), 200
+
+    @app.route("/api/dhcp/plugs", methods=["POST"])
+    def add_plug():
+        """
+        Manually add a plug (for testing purposes).
+
+        Expected JSON payload:
+        {
+            "hostname": "plug-name",
+            "ip_address": "192.168.52.100",
+            "mac_address": "aa:bb:cc:dd:ee:ff",
+            "status": "connected"  // optional, defaults to "connected"
+        }
+        """
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+
+            hostname = data.get("hostname")
+            ip_address = data.get("ip_address")
+            mac_address = data.get("mac_address")
+            status = data.get("status", "connected")
+
+            # Validate required fields
+            if not hostname or not ip_address or not mac_address:
+                return (
+                    jsonify(
+                        {
+                            "error": "Missing required fields: hostname, "
+                            "ip_address, mac_address"
+                        }
+                    ),
+                    400,
+                )
+
+            # Generate timestamp
+            timestamp = datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+
+            # Add plug to webui.plugs
+            webui.plugs[mac_address] = {
+                "hostname": hostname,
+                "ip_address": ip_address,
+                "mac_address": mac_address,
+                "last_seen": timestamp,
+                "status": status,
+            }
+
+            # Update settings with plug list
+            plug_list = []
+            for _, plug_info in webui.plugs.items():
+                plug_list.append(
+                    {
+                        "hostname": plug_info["hostname"],
+                        "ip_address": plug_info["ip_address"],
+                        "mac_address": plug_info["mac_address"],
+                        "last_seen": plug_info["last_seen"],
+                        "status": plug_info["status"],
+                    }
+                )
+
+            webui.presets.plugs = plug_list
+
+            # Persist to settings file
+            try:
+                webui.presets.save()
+                logger.info(
+                    "Manually added plug '%s' at %s", hostname, ip_address
+                )
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error(
+                    "Failed to save plug list to settings: %s", str(e)
+                )
+
+            # Notify SSE clients
+            notify_camera_change("plug_added", dict(webui.plugs[mac_address]))
+
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Plug added successfully",
+                        "plug": webui.plugs[mac_address],
+                    }
+                ),
+                201,
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error adding plug: %s", str(e))
+            return (
+                jsonify(
+                    {
+                        "error": "Failed to add plug",
+                    }
+                ),
+                500,
+            )
+
+    @app.route("/api/dhcp/plugs", methods=["DELETE"])
+    def clear_plugs():
+        """
+        Clear all plug records.
+
+        This removes all stored plug information from memory.
+        """
+        count = len(webui.plugs)
+        webui.plugs.clear()
+        logger.info("Cleared %d plug records", count)
+
+        # Update settings
+        webui.presets.plugs = []
+        try:
+            webui.presets.save()
+            logger.info("Plug list cleared from settings")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Failed to save plug list to settings: %s", str(e))
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"Cleared {count} plug record(s)",
+                }
+            ),
+            200,
+        )
 
     @app.route("/api/dhcp/cameras/events", methods=["GET"])
     def camera_events():

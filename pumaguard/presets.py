@@ -305,6 +305,7 @@ class Preset:
             "print-download-progress", True
         )
         self.cameras = settings.get("cameras", [])
+        self.plugs = settings.get("plugs", [])
 
     def save(self):
         """
@@ -348,6 +349,8 @@ class Preset:
             "notebook": self.notebook_number,
             "verification-path": self.verification_path,
             "with-augmentation": self.with_augmentation,
+            "cameras": self.cameras,
+            "plugs": self.plugs,
         }.items()
 
     def __str__(self):

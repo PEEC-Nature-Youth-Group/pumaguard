@@ -93,6 +93,95 @@ no-lion-directories:
         self.assertEqual(self.base_preset.validation_lion_directories, [])
         self.assertEqual(self.base_preset.validation_no_lion_directories, [])
 
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+image-dimensions: [128, 128]
+cameras:
+    - hostname: camera1
+      ip_address: 192.168.1.100
+      mac_address: aa:bb:cc:dd:ee:01
+      last_seen: "2024-01-15T10:00:00Z"
+      status: connected
+    - hostname: camera2
+      ip_address: 192.168.1.101
+      mac_address: aa:bb:cc:dd:ee:02
+      last_seen: "2024-01-15T10:05:00Z"
+      status: disconnected
+plugs:
+    - hostname: plug1
+      ip_address: 192.168.1.200
+      mac_address: ff:ee:dd:cc:bb:01
+      last_seen: "2024-01-15T09:00:00Z"
+      status: connected
+      mode: off
+""",
+    )
+    def test_load_cameras_and_plugs(self, mock_file):  # pylint: disable=unused-argument
+        """
+        Test loading cameras and plugs from settings file.
+        """
+        self.base_preset.load("/fake/path/to/settings.yaml")
+
+        # Verify cameras were loaded
+        self.assertEqual(len(self.base_preset.cameras), 2)
+        self.assertEqual(self.base_preset.cameras[0]["hostname"], "camera1")
+        self.assertEqual(
+            self.base_preset.cameras[0]["ip_address"], "192.168.1.100"
+        )
+        self.assertEqual(
+            self.base_preset.cameras[0]["mac_address"], "aa:bb:cc:dd:ee:01"
+        )
+        self.assertEqual(self.base_preset.cameras[1]["hostname"], "camera2")
+
+        # Verify plugs were loaded
+        self.assertEqual(len(self.base_preset.plugs), 1)
+        self.assertEqual(self.base_preset.plugs[0]["hostname"], "plug1")
+        self.assertEqual(
+            self.base_preset.plugs[0]["ip_address"], "192.168.1.200"
+        )
+        self.assertEqual(
+            self.base_preset.plugs[0]["mac_address"], "ff:ee:dd:cc:bb:01"
+        )
+        # YAML parses 'off' as False (boolean)
+        self.assertEqual(self.base_preset.plugs[0]["mode"], False)
+
+    def test_serialize_cameras_and_plugs(self):
+        """
+        Test that cameras and plugs are included in serialization.
+        """
+        self.base_preset.cameras = [
+            {
+                "hostname": "test-camera",
+                "ip_address": "192.168.1.50",
+                "mac_address": "11:22:33:44:55:66",
+                "last_seen": "2024-01-15T12:00:00Z",
+                "status": "connected",
+            }
+        ]
+        self.base_preset.plugs = [
+            {
+                "hostname": "test-plug",
+                "ip_address": "192.168.1.51",
+                "mac_address": "66:55:44:33:22:11",
+                "last_seen": "2024-01-15T11:00:00Z",
+                "status": "connected",
+                "mode": "on",
+            }
+        ]
+
+        # Convert to dict (this is what yaml.dump uses)
+        serialized = dict(self.base_preset)
+
+        # Verify cameras and plugs are in the serialized data
+        self.assertIn("cameras", serialized)
+        self.assertIn("plugs", serialized)
+        self.assertEqual(len(serialized["cameras"]), 1)
+        self.assertEqual(len(serialized["plugs"]), 1)
+        self.assertEqual(serialized["cameras"][0]["hostname"], "test-camera")
+        self.assertEqual(serialized["plugs"][0]["hostname"], "test-plug")
+
     def test_tf_compat(self):
         """
         Test tf compatiblity.

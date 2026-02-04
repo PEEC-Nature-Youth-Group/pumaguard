@@ -210,13 +210,20 @@ def register_dhcp_routes(
                     logger.info(
                         "Plug '%s' connected at IP %s", hostname, ip_address
                     )
-                    # Store plug info indexed by MAC address
+                    # Preserve existing mode if plug already exists
+                    existing_mode = (
+                        webui.plugs[mac_address].get("mode", "off")
+                        if mac_address in webui.plugs
+                        else "off"
+                    )
+                    # Add to webui.plugs (or update)
                     webui.plugs[mac_address] = {
                         "hostname": hostname,
                         "ip_address": ip_address,
                         "mac_address": mac_address,
                         "last_seen": timestamp,
                         "status": "connected",
+                        "mode": existing_mode,
                     }
 
                     # Notify SSE clients
@@ -251,10 +258,14 @@ def register_dhcp_routes(
                 elif action == "del":
                     # Plug disconnected
                     logger.info("Plug '%s' disconnected", hostname)
-                    # Update plug status to disconnected (keep history)
+                    # Update plug status to disconnected (keep history
+                    # and mode)
                     if mac_address in webui.plugs:
                         webui.plugs[mac_address]["status"] = "disconnected"
                         webui.plugs[mac_address]["last_seen"] = timestamp
+                        # Preserve mode
+                        if "mode" not in webui.plugs[mac_address]:
+                            webui.plugs[mac_address]["mode"] = "off"
 
                         # Notify SSE clients
                         notify_camera_change(
@@ -614,13 +625,14 @@ def register_dhcp_routes(
                 "%Y-%m-%dT%H:%M:%SZ"
             )
 
-            # Add plug to webui.plugs
+            # Add plug to webui.plugs with default mode
             webui.plugs[mac_address] = {
                 "hostname": hostname,
                 "ip_address": ip_address,
                 "mac_address": mac_address,
                 "last_seen": timestamp,
                 "status": status,
+                "mode": data.get("mode", "off"),
             }
 
             # Update settings with plug list
@@ -633,6 +645,7 @@ def register_dhcp_routes(
                         "mac_address": plug_info["mac_address"],
                         "last_seen": plug_info["last_seen"],
                         "status": plug_info["status"],
+                        "mode": plug_info.get("mode", "off"),
                     }
                 )
 
@@ -698,6 +711,148 @@ def register_dhcp_routes(
                 {
                     "status": "success",
                     "message": f"Cleared {count} plug record(s)",
+                }
+            ),
+            200,
+        )
+
+    @app.route("/api/dhcp/plugs/<mac_address>/mode", methods=["PUT"])
+    def set_plug_mode(mac_address: str):
+        """
+        Set plug mode (on/off/automatic).
+
+        Expected JSON payload:
+        {
+            "mode": "on" | "off" | "automatic"
+        }
+
+        Modes:
+        - "on": Plug is always on
+        - "off": Plug is always off
+        - "automatic": Plug turns on when sound is playing
+        """
+        try:
+            data = request.get_json()
+
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+
+            mode = data.get("mode")
+
+            # Validate mode
+            if mode not in ["on", "off", "automatic"]:
+                return (
+                    jsonify(
+                        {
+                            "error": "Invalid mode. Must be 'on', "
+                            + "'off', or 'automatic'"
+                        }
+                    ),
+                    400,
+                )
+
+            # Normalize MAC address format
+            mac_address = mac_address.lower()
+
+            # Check if plug exists
+            if mac_address not in webui.plugs:
+                return (
+                    jsonify(
+                        {
+                            "error": "Plug not found",
+                            "mac_address": mac_address,
+                        }
+                    ),
+                    404,
+                )
+
+            # Update plug mode
+            webui.plugs[mac_address]["mode"] = mode
+
+            # Update settings
+            plug_list = []
+            for _, plug_info in webui.plugs.items():
+                plug_list.append(
+                    {
+                        "hostname": plug_info["hostname"],
+                        "ip_address": plug_info["ip_address"],
+                        "mac_address": plug_info["mac_address"],
+                        "last_seen": plug_info["last_seen"],
+                        "status": plug_info["status"],
+                        "mode": plug_info.get("mode", "off"),
+                    }
+                )
+
+            webui.presets.plugs = plug_list
+
+            # Persist to settings file
+            try:
+                webui.presets.save()
+                logger.info(
+                    "Plug '%s' mode changed to '%s'",
+                    webui.plugs[mac_address]["hostname"],
+                    mode,
+                )
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error("Failed to save plug settings: %s", str(e))
+
+            # Notify SSE clients
+            notify_camera_change(
+                "plug_mode_changed", dict(webui.plugs[mac_address])
+            )
+
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Plug mode updated successfully",
+                        "plug": webui.plugs[mac_address],
+                    }
+                ),
+                200,
+            )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Error setting plug mode: %s", str(e))
+            return (
+                jsonify(
+                    {
+                        "error": "Failed to set plug mode",
+                    }
+                ),
+                500,
+            )
+
+    @app.route("/api/dhcp/plugs/<mac_address>/mode", methods=["GET"])
+    def get_plug_mode(mac_address: str):
+        """
+        Get current plug mode.
+
+        Returns the current mode (on/off/automatic) for the specified plug.
+        """
+        # Normalize MAC address format
+        mac_address = mac_address.lower()
+
+        if mac_address not in webui.plugs:
+            return (
+                jsonify(
+                    {
+                        "error": "Plug not found",
+                        "mac_address": mac_address,
+                    }
+                ),
+                404,
+            )
+
+        plug = webui.plugs[mac_address]
+        mode = plug.get("mode", "off")
+
+        return (
+            jsonify(
+                {
+                    "mac_address": mac_address,
+                    "hostname": plug["hostname"],
+                    "mode": mode,
                 }
             ),
             200,

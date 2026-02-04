@@ -14,6 +14,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.hostname, 'TestPlug');
@@ -21,6 +22,7 @@ void main() {
         expect(plug.macAddress, 'aa:bb:cc:dd:ee:ff');
         expect(plug.lastSeen, '2024-01-15T10:30:00Z');
         expect(plug.status, 'connected');
+        expect(plug.mode, 'off');
       });
 
       test('creates Plug with empty strings', () {
@@ -30,6 +32,7 @@ void main() {
           macAddress: '',
           lastSeen: '',
           status: '',
+          mode: '',
         );
 
         expect(plug.hostname, '');
@@ -37,6 +40,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, '');
+        expect(plug.mode, '');
       });
     });
 
@@ -48,6 +52,7 @@ void main() {
           'mac_address': 'bb:cc:dd:ee:ff:01',
           'last_seen': '2024-01-15T10:30:00Z',
           'status': 'connected',
+          'mode': 'automatic',
         };
 
         final plug = Plug.fromJson(json);
@@ -57,6 +62,7 @@ void main() {
         expect(plug.macAddress, 'bb:cc:dd:ee:ff:01');
         expect(plug.lastSeen, '2024-01-15T10:30:00Z');
         expect(plug.status, 'connected');
+        expect(plug.mode, 'automatic');
       });
 
       test('handles null values with defaults', () {
@@ -66,6 +72,7 @@ void main() {
           'mac_address': null,
           'last_seen': null,
           'status': null,
+          'mode': null,
         };
 
         final plug = Plug.fromJson(json);
@@ -75,6 +82,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
+        expect(plug.mode, 'off');
       });
 
       test('handles missing fields with defaults', () {
@@ -87,6 +95,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
+        expect(plug.mode, 'off');
       });
 
       test('handles partial JSON with some fields missing', () {
@@ -102,6 +111,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
+        expect(plug.mode, 'off');
       });
     });
 
@@ -113,6 +123,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'on',
         );
 
         final json = plug.toJson();
@@ -122,6 +133,7 @@ void main() {
         expect(json['mac_address'], 'aa:bb:cc:dd:ee:ff');
         expect(json['last_seen'], '2024-01-15T10:30:00Z');
         expect(json['status'], 'connected');
+        expect(json['mode'], 'on');
       });
 
       test('preserves empty strings in JSON', () {
@@ -131,6 +143,7 @@ void main() {
           macAddress: '',
           lastSeen: '',
           status: '',
+          mode: '',
         );
 
         final json = plug.toJson();
@@ -140,6 +153,7 @@ void main() {
         expect(json['mac_address'], '');
         expect(json['last_seen'], '');
         expect(json['status'], '');
+        expect(json['mode'], '');
       });
     });
 
@@ -151,6 +165,7 @@ void main() {
           'mac_address': 'aa:bb:cc:dd:ee:99',
           'last_seen': '2024-01-15T12:00:00Z',
           'status': 'disconnected',
+          'mode': 'automatic',
         };
 
         final plug = Plug.fromJson(originalJson);
@@ -161,6 +176,7 @@ void main() {
         expect(resultJson['mac_address'], originalJson['mac_address']);
         expect(resultJson['last_seen'], originalJson['last_seen']);
         expect(resultJson['status'], originalJson['status']);
+        expect(resultJson['mode'], originalJson['mode']);
       });
     });
 
@@ -172,6 +188,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.isConnected, true);
@@ -184,6 +201,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'disconnected',
+          mode: 'off',
         );
 
         expect(plug.isConnected, false);
@@ -196,6 +214,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'unknown',
+          mode: 'off',
         );
 
         expect(plug.isConnected, false);
@@ -208,6 +227,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: '',
+          mode: 'off',
         );
 
         expect(plug.isConnected, false);
@@ -220,6 +240,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'pending',
+          mode: 'off',
         );
 
         expect(plug.isConnected, false);
@@ -232,6 +253,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'Connected', // Capital C
+          mode: 'off',
         );
 
         expect(plug.isConnected, false);
@@ -246,6 +268,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.displayName, 'MySmartPlug');
@@ -258,6 +281,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.displayName, '192.168.52.200');
@@ -270,6 +294,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.displayName, '');
@@ -282,6 +307,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.displayName, 'PreferredName');
@@ -297,6 +323,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, '192.168.52.200');
@@ -309,6 +336,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, '');
@@ -321,6 +349,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, '10.0.0.1');
@@ -333,6 +362,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, 'fe80::1');
@@ -345,6 +375,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, '192.168.52.200:9999');
@@ -357,6 +388,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.plugUrl, 'localhost');
@@ -371,6 +403,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.hostname, 'My Smart Plug');
@@ -384,6 +417,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.hostname, 'Plug-1_Test@Site#A');
@@ -397,6 +431,7 @@ void main() {
           macAddress: 'aa:bb:cc:dd:ee:ff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.hostname, longHostname);
@@ -410,6 +445,7 @@ void main() {
           macAddress: 'AA:BB:CC:DD:EE:FF',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.macAddress, 'AA:BB:CC:DD:EE:FF');
@@ -422,6 +458,7 @@ void main() {
           macAddress: 'aabbccddeeff',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         expect(plug.macAddress, 'aabbccddeeff');
@@ -442,6 +479,7 @@ void main() {
             macAddress: 'aa:bb:cc:dd:ee:ff',
             lastSeen: timestamp,
             status: 'connected',
+            mode: 'off',
           );
 
           expect(plug.lastSeen, timestamp);
@@ -457,6 +495,7 @@ void main() {
           'mac_address': 'bb:cc:dd:ee:ff:01',
           'last_seen': '2024-01-15T10:30:00Z',
           'status': 'connected',
+          'mode': 'automatic',
         };
 
         final plug = Plug.fromJson(json);
@@ -465,6 +504,7 @@ void main() {
         expect(plug.isConnected, true);
         expect(plug.displayName, 'KasaPlug');
         expect(plug.plugUrl, '192.168.52.201');
+        expect(plug.mode, 'automatic');
       });
 
       test('creates disconnected plug', () {
@@ -474,12 +514,14 @@ void main() {
           'mac_address': 'ff:ff:ff:ff:ff:ff',
           'last_seen': '2024-01-14T08:00:00Z',
           'status': 'disconnected',
+          'mode': 'off',
         };
 
         final plug = Plug.fromJson(json);
 
         expect(plug.isConnected, false);
         expect(plug.status, 'disconnected');
+        expect(plug.mode, 'off');
       });
 
       test('creates plug with minimal information', () {
@@ -493,6 +535,7 @@ void main() {
         expect(plug.displayName, '192.168.52.250');
         expect(plug.status, 'unknown');
         expect(plug.isConnected, false);
+        expect(plug.mode, 'off');
       });
     });
   });

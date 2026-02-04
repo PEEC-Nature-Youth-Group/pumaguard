@@ -4,6 +4,7 @@ class Plug {
   final String macAddress;
   final String lastSeen;
   final String status;
+  final String mode;
 
   Plug({
     required this.hostname,
@@ -11,6 +12,7 @@ class Plug {
     required this.macAddress,
     required this.lastSeen,
     required this.status,
+    required this.mode,
   });
 
   factory Plug.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class Plug {
       macAddress: json['mac_address'] as String? ?? '',
       lastSeen: json['last_seen'] as String? ?? '',
       status: json['status'] as String? ?? 'unknown',
+      mode: json['mode'] as String? ?? 'off',
     );
   }
 
@@ -30,6 +33,7 @@ class Plug {
       'mac_address': macAddress,
       'last_seen': lastSeen,
       'status': status,
+      'mode': mode,
     };
   }
 

@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import '../models/status.dart';
 import '../models/settings.dart';
 import '../models/camera.dart';
+import '../models/plug.dart';
 
 class ApiService {
   String? _baseUrl;
@@ -584,6 +585,109 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService.getCameras] Exception: $e');
       throw Exception('Failed to get cameras: $e');
+    }
+  }
+
+  /// Get list of known plugs
+  Future<List<Plug>> getPlugs() async {
+    try {
+      final url = getApiUrl('/api/dhcp/plugs');
+      debugPrint('[ApiService.getPlugs] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getPlugs] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.getPlugs] Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final plugsList = json['plugs'] as List? ?? [];
+        final plugs = plugsList
+            .map((plugJson) => Plug.fromJson(plugJson as Map<String, dynamic>))
+            .toList();
+        debugPrint('[ApiService.getPlugs] Parsed ${plugs.length} plugs');
+        return plugs;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.getPlugs] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to get plugs');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getPlugs] Exception: $e');
+      throw Exception('Failed to get plugs: $e');
+    }
+  }
+
+  /// Set plug mode (on/off/automatic)
+  Future<Map<String, dynamic>> setPlugMode(
+    String macAddress,
+    String mode,
+  ) async {
+    try {
+      final url = getApiUrl('/api/dhcp/plugs/$macAddress/mode');
+      debugPrint('[ApiService.setPlugMode] Requesting URL: $url');
+      debugPrint('[ApiService.setPlugMode] Mode: $mode');
+
+      final body = jsonEncode({'mode': mode});
+
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      debugPrint(
+        '[ApiService.setPlugMode] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        debugPrint('[ApiService.setPlugMode] Success');
+        return json;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.setPlugMode] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to set plug mode');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.setPlugMode] Exception: $e');
+      throw Exception('Failed to set plug mode: $e');
+    }
+  }
+
+  /// Get plug mode
+  Future<String> getPlugMode(String macAddress) async {
+    try {
+      final url = getApiUrl('/api/dhcp/plugs/$macAddress/mode');
+      debugPrint('[ApiService.getPlugMode] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getPlugMode] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final mode = json['mode'] as String? ?? 'off';
+        debugPrint('[ApiService.getPlugMode] Mode: $mode');
+        return mode;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.getPlugMode] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to get plug mode');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getPlugMode] Exception: $e');
+      throw Exception('Failed to get plug mode: $e');
     }
   }
 

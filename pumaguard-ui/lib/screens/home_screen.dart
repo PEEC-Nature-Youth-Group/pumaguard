@@ -11,6 +11,7 @@ import '../version.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
 import 'image_browser_screen.dart';
+import 'devices_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -354,6 +355,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const ImageBrowserScreen(),
+                  ),
+                ).then((_) => _refresh());
+              },
+            ),
+            const Divider(),
+            _buildActionButton(
+              icon: Icons.devices,
+              label: 'Devices',
+              description: 'Manage cameras and smart plugs',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const DevicesScreen(),
                   ),
                 ).then((_) => _refresh());
               },

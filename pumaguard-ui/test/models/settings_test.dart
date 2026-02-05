@@ -24,6 +24,7 @@ void main() {
           macAddress: 'bb:cc:dd:ee:ff:00',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         final settings = Settings(
@@ -97,6 +98,7 @@ void main() {
             macAddress: 'bb:cc:dd:ee:ff:01',
             lastSeen: '2024-01-15T10:30:00Z',
             status: 'connected',
+            mode: 'off',
           ),
           Plug(
             hostname: 'Plug2',
@@ -104,6 +106,7 @@ void main() {
             macAddress: 'bb:cc:dd:ee:ff:02',
             lastSeen: '2024-01-15T10:30:00Z',
             status: 'connected',
+            mode: 'automatic',
           ),
         ];
 
@@ -329,6 +332,7 @@ void main() {
           macAddress: 'bb:cc:dd:ee:ff:00',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         final settings = Settings(
@@ -490,6 +494,7 @@ void main() {
           macAddress: 'bb:cc:dd:ee:ff:00',
           lastSeen: '2024-01-15T10:30:00Z',
           status: 'connected',
+          mode: 'off',
         );
 
         originalSettings = Settings(
@@ -638,6 +643,7 @@ void main() {
           macAddress: 'dd:ee:ff:00:11:22',
           lastSeen: '2024-01-15T11:00:00Z',
           status: 'connected',
+          mode: 'on',
         );
 
         final newSettings = originalSettings.copyWith(plugs: [newPlug]);

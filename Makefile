@@ -1,9 +1,21 @@
+# Ansible configuration variables:
+# - ANSIBLE_TAGS: Run only specific tags (e.g., ANSIBLE_TAGS=network,users)
+# - ANSIBLE_SKIP_TAGS: Skip specific tags (e.g., ANSIBLE_SKIP_TAGS=pumaguard)
+# - If both are empty, all tasks run
+# - ANSIBLE_TAGS takes precedence if both are set
+#
+# Examples:
+#   make configure-device                              # Run all tasks
+#   make configure-device ANSIBLE_SKIP_TAGS=pumaguard  # Skip pumaguard tag
+#   make configure-device ANSIBLE_TAGS=network         # Run only network tag
+#   make configure-device ANSIBLE_TAGS=users,ssh       # Run users and ssh tags
 LAPTOP ?= laptop
 DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
 ANSIBLE_ASK_VAULT_PASS ?= true
 ANSIBLE_VAULT_PASSWORD_FILE ?=
-ANSIBLE_SKIP_TAGS ?= pumaguard
+ANSIBLE_SKIP_TAGS ?=
+ANSIBLE_TAGS ?=
 NEW_MODEL ?=
 TEST_NAME ?= pumaguard-test
 
@@ -160,11 +172,27 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev build
-	ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --extra-vars "pumaguard_install_method=local" --skip-tags $(ANSIBLE_SKIP_TAGS) scripts/configure-device.yaml
+	@ANSIBLE_CMD="ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --extra-vars \"pumaguard_install_method=local\""; \
+	if [ -n "$(ANSIBLE_TAGS)" ]; then \
+		ANSIBLE_CMD="$$ANSIBLE_CMD --tags $(ANSIBLE_TAGS)"; \
+	fi; \
+	if [ -n "$(ANSIBLE_SKIP_TAGS)" ]; then \
+		ANSIBLE_CMD="$$ANSIBLE_CMD --skip-tags $(ANSIBLE_SKIP_TAGS)"; \
+	fi; \
+	ANSIBLE_CMD="$$ANSIBLE_CMD scripts/configure-device.yaml"; \
+	eval $$ANSIBLE_CMD
 
 .PHONY: configure-laptop
 configure-laptop: install-dev
-	uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass scripts/configure-laptop.yaml
+	@ANSIBLE_CMD="uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass"; \
+	if [ -n "$(ANSIBLE_TAGS)" ]; then \
+		ANSIBLE_CMD="$$ANSIBLE_CMD --tags $(ANSIBLE_TAGS)"; \
+	fi; \
+	if [ -n "$(ANSIBLE_SKIP_TAGS)" ]; then \
+		ANSIBLE_CMD="$$ANSIBLE_CMD --skip-tags $(ANSIBLE_SKIP_TAGS)"; \
+	fi; \
+	ANSIBLE_CMD="$$ANSIBLE_CMD scripts/configure-laptop.yaml"; \
+	eval $$ANSIBLE_CMD
 
 .PHONY: verify-poetry
 verify-poetry: install

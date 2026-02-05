@@ -90,6 +90,7 @@ class PlugInfo(TypedDict):
     mac_address: str
     last_seen: str
     status: str
+    mode: str
 
 
 class PhotoDict(TypedDict):
@@ -216,6 +217,7 @@ class WebUI:
                     mac_address=mac,
                     last_seen=plug.get("last_seen", ""),
                     status=plug.get("status", "disconnected"),
+                    mode=plug.get("mode", "off"),
                 )
 
         # mDNS/Zeroconf support

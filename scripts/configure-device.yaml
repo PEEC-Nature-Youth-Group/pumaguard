@@ -568,6 +568,17 @@
       tags:
         - networking
 
+    - name: Configure hostapd daemon options
+      ansible.builtin.lineinfile:
+        path: /etc/default/hostapd
+        line: 'DAEMON_OPTS="-d"'
+        regexp: "^DAEMON_OPTS="
+        create: true
+        mode: "0644"
+      notify: Restart hostapd
+      tags:
+        - networking
+
     - name: Unmask hostapd service
       ansible.builtin.systemd:
         name: hostapd

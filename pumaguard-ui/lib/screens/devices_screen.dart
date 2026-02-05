@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web/web.dart' as web;
@@ -18,11 +19,29 @@ class _DevicesScreenState extends State<DevicesScreen> {
   List<Plug> _plugs = [];
   bool _isLoading = true;
   String? _error;
+  final Map<String, Plug> _shellyStatus = {};
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadDevices();
+    _startAutoRefresh();
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    // Refresh Shelly status every 5 seconds
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted && _plugs.isNotEmpty) {
+        _loadShellyStatus();
+      }
+    });
   }
 
   Future<void> _loadDevices() async {
@@ -46,6 +65,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
           _plugs = results[1] as List<Plug>;
           _isLoading = false;
         });
+
+        // Load Shelly status for connected plugs
+        await _loadShellyStatus();
       }
     } catch (e) {
       if (mounted) {
@@ -53,6 +75,40 @@ class _DevicesScreenState extends State<DevicesScreen> {
           _error = e.toString();
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadShellyStatus() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+
+    for (final plug in _plugs) {
+      if (plug.isConnected) {
+        try {
+          final shellyPlug = await apiService.getShellyStatus(plug.macAddress);
+          if (mounted) {
+            setState(() {
+              _shellyStatus[plug.macAddress] = shellyPlug;
+            });
+          }
+        } catch (e) {
+          debugPrint(
+            '[DevicesScreen._loadShellyStatus] Error loading Shelly status for ${plug.macAddress}: $e',
+          );
+          // Remove stale status on error
+          if (mounted) {
+            setState(() {
+              _shellyStatus.remove(plug.macAddress);
+            });
+          }
+        }
+      } else {
+        // Remove status for disconnected plugs
+        if (mounted && _shellyStatus.containsKey(plug.macAddress)) {
+          setState(() {
+            _shellyStatus.remove(plug.macAddress);
+          });
+        }
       }
     }
   }
@@ -410,6 +466,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
     final statusColor = isConnected ? Colors.green : Colors.grey;
     final statusText = isConnected ? 'Connected' : 'Disconnected';
 
+    // Get Shelly status if available
+    final shellyPlug = _shellyStatus[plug.macAddress];
+    final hasShelly = shellyPlug != null;
+
     Color modeColor;
     IconData modeIcon;
 
@@ -430,6 +490,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
         modeColor = Colors.grey;
         modeIcon = Icons.power_off;
     }
+
+    // Determine actual output state from Shelly
+    final isOutputOn = hasShelly ? (shellyPlug.output ?? false) : false;
+    final outputColor = isOutputOn ? Colors.green : Colors.grey;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -475,6 +539,62 @@ class _DevicesScreenState extends State<DevicesScreen> {
               ),
             ],
           ),
+          if (hasShelly) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  isOutputOn ? Icons.lightbulb : Icons.lightbulb_outline,
+                  size: 14,
+                  color: outputColor,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  isOutputOn ? 'ON' : 'OFF',
+                  style: TextStyle(
+                    color: outputColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.flash_on, size: 14, color: Colors.orange),
+                const SizedBox(width: 4),
+                Text(
+                  '${shellyPlug.apower?.toStringAsFixed(1) ?? '0.0'}W',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                const SizedBox(width: 12),
+                Icon(Icons.electric_bolt, size: 14, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(
+                  '${shellyPlug.voltage?.toStringAsFixed(1) ?? '0.0'}V',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Icon(Icons.show_chart, size: 14, color: Colors.purple),
+                const SizedBox(width: 4),
+                Text(
+                  '${shellyPlug.current?.toStringAsFixed(2) ?? '0.00'}A',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                if (shellyPlug.temperature != null &&
+                    shellyPlug.temperature!['tC'] != null) ...[
+                  const SizedBox(width: 12),
+                  Icon(Icons.thermostat, size: 14, color: Colors.red),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${shellyPlug.temperature!['tC'].toStringAsFixed(1)}°C',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ],
         ],
       ),
       trailing: PopupMenuButton<String>(

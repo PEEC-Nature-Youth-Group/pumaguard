@@ -3,9 +3,11 @@
 import json
 from unittest.mock import (
     MagicMock,
+    patch,
 )
 
 import pytest
+import requests
 from flask import (
     Flask,
 )
@@ -785,3 +787,156 @@ def test_dhcp_event_unknown_device(test_app):
     # Verify device was not added to cameras or plugs
     assert "99:88:77:66:55:44" not in webui.cameras
     assert "99:88:77:66:55:44" not in webui.plugs
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_get_shelly_status_success(mock_get, test_app):
+    """Test getting Shelly status for a connected plug."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a connected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock the Shelly API response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "id": 0,
+        "output": True,
+        "apower": 125.5,
+        "voltage": 230.2,
+        "current": 0.55,
+        "temperature": {"tC": 45.3, "tF": 113.5},
+        "aenergy": {
+            "total": 1234.5,
+            "by_minute": [10.5, 11.2, 12.0],
+            "minute_ts": 1234567890,
+        },
+    }
+    mock_get.return_value = mock_response
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:66/shelly-status")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["mac_address"] == "11:22:33:44:55:66"
+    assert data["hostname"] == "ShellyPlug"
+    assert data["ip_address"] == "192.168.52.150"
+    assert data["output"] is True
+    assert data["apower"] == 125.5
+    assert data["voltage"] == 230.2
+    assert data["current"] == 0.55
+    assert data["temperature"]["tC"] == 45.3
+
+    # Verify the request was made to the correct URL
+    mock_get.assert_called_once_with(
+        "http://192.168.52.150/rpc/Switch.GetStatus?id=0", timeout=5
+    )
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_get_shelly_status_plug_not_found(mock_get, test_app):
+    """Test getting Shelly status for a non-existent plug."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    response = client.get("/api/dhcp/plugs/99:99:99:99:99:99/shelly-status")
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Plug not found"
+
+    # Verify no request was made
+    mock_get.assert_not_called()
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_get_shelly_status_plug_disconnected(mock_get, test_app):
+    """Test getting Shelly status for a disconnected plug."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a disconnected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "disconnected",
+        "mode": "off",
+    }
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:66/shelly-status")
+
+    assert response.status_code == 503
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Plug is not connected"
+
+    # Verify no request was made
+    mock_get.assert_not_called()
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_get_shelly_status_timeout(mock_get, test_app):
+    """Test getting Shelly status when request times out."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a connected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock a timeout
+    mock_get.side_effect = requests.exceptions.Timeout()
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:66/shelly-status")
+
+    assert response.status_code == 504
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Timeout connecting to plug"
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_get_shelly_status_connection_error(mock_get, test_app):
+    """Test getting Shelly status when connection fails."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a connected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock a connection error
+    mock_get.side_effect = requests.exceptions.ConnectionError(
+        "Connection refused"
+    )
+
+    response = client.get("/api/dhcp/plugs/11:22:33:44:55:66/shelly-status")
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Failed to fetch Shelly status" in data["error"]

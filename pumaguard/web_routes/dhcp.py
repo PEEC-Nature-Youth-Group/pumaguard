@@ -1,5 +1,7 @@
 """DHCP event routes for camera detection notifications."""
 
+# pylint: disable=too-many-lines
+
 from __future__ import (
     annotations,
 )
@@ -19,6 +21,7 @@ from typing import (
     TYPE_CHECKING,
 )
 
+import requests
 from flask import (
     Response,
     jsonify,
@@ -857,6 +860,142 @@ def register_dhcp_routes(
             ),
             200,
         )
+
+    @app.route("/api/dhcp/plugs/<mac_address>/shelly-status", methods=["GET"])
+    def get_shelly_status(mac_address: str):
+        """
+        Get real-time status from Shelly plug via its REST API.
+
+        Fetches status from the Shelly Gen2 Switch.GetStatus endpoint
+        including:
+        - output: on/off state
+        - apower: active power in watts
+        - voltage: voltage in volts
+        - current: current in amperes
+        - temperature: device temperature
+
+        Args:
+            mac_address: MAC address of the plug
+
+        Returns:
+            JSON with Shelly status or error
+        """
+        # pylint: disable=too-many-return-statements
+        # Normalize MAC address format
+        mac_address = mac_address.lower()
+
+        if mac_address not in webui.plugs:
+            return (
+                jsonify(
+                    {
+                        "error": "Plug not found",
+                        "mac_address": mac_address,
+                    }
+                ),
+                404,
+            )
+
+        plug = webui.plugs[mac_address]
+        ip_address = plug.get("ip_address")
+
+        if not ip_address:
+            return (
+                jsonify(
+                    {
+                        "error": "Plug IP address not available",
+                        "mac_address": mac_address,
+                    }
+                ),
+                400,
+            )
+
+        # Check if plug is connected
+        if plug.get("status") != "connected":
+            return (
+                jsonify(
+                    {
+                        "error": "Plug is not connected",
+                        "mac_address": mac_address,
+                        "status": plug.get("status"),
+                    }
+                ),
+                503,
+            )
+
+        try:
+            # Query Shelly Gen2 Switch.GetStatus API
+            shelly_url = f"http://{ip_address}/rpc/Switch.GetStatus?id=0"
+            logger.debug(
+                "Fetching Shelly status from %s",
+                shelly_url,
+            )
+
+            response = requests.get(shelly_url, timeout=5)
+            response.raise_for_status()
+
+            shelly_data = response.json()
+
+            # Extract relevant status information
+            status_info = {
+                "mac_address": mac_address,
+                "hostname": plug["hostname"],
+                "ip_address": ip_address,
+                "output": shelly_data.get("output", False),
+                "apower": shelly_data.get("apower", 0.0),
+                "voltage": shelly_data.get("voltage", 0.0),
+                "current": shelly_data.get("current", 0.0),
+                "temperature": shelly_data.get("temperature", {}),
+                "aenergy": shelly_data.get("aenergy", {}),
+            }
+
+            logger.debug(
+                "Shelly status fetched for plug %s",
+                "%s:xx:xx:xx:%s",
+            )
+
+            # Detailed status information is returned in the JSON response
+
+            return jsonify(status_info), 200
+
+        except requests.exceptions.Timeout:
+            logger.warning(
+                "Timeout connecting to Shelly plug at %s", ip_address
+            )
+            return (
+                jsonify(
+                    {
+                        "error": "Timeout connecting to plug",
+                        "mac_address": mac_address,
+                        "ip_address": ip_address,
+                    }
+                ),
+                504,
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Error fetching Shelly status from %s: %s", ip_address, e
+            )
+            return (
+                jsonify(
+                    {
+                        "error": "Failed to fetch Shelly status",
+                        "mac_address": mac_address,
+                        "ip_address": ip_address,
+                    }
+                ),
+                500,
+            )
+        except (ValueError, KeyError) as e:
+            logger.error("Error parsing Shelly response: %s", e)
+            return (
+                jsonify(
+                    {
+                        "error": "Invalid Shelly response",
+                        "mac_address": mac_address,
+                    }
+                ),
+                500,
+            )
 
     @app.route("/api/dhcp/cameras/events", methods=["GET"])
     def camera_events():

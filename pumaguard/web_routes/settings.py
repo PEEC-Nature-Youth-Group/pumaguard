@@ -6,6 +6,7 @@ from __future__ import (
 
 import logging
 import os
+import random
 import subprocess
 from typing import (
     TYPE_CHECKING,
@@ -178,12 +179,15 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
     def test_sound():
         """Test the configured deterrent sound."""
         try:
-            sound_file = webui.presets.deterrent_sound_file
-            if not sound_file:
+            sound_files = webui.presets.deterrent_sound_files
+            if not sound_files:
                 return (
                     jsonify({"error": "No sound file configured"}),
                     400,
                 )
+
+            # Randomly select one sound from the list
+            sound_file = random.choice(sound_files)
 
             # Combine sound_path with deterrent_sound_file
             sound_file_path = os.path.join(

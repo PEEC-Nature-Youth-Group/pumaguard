@@ -4,9 +4,12 @@ from __future__ import (
     annotations,
 )
 
+# pyright: reportImportCycles=false
+# pyright: reportUnusedFunction=false
 import os
 from typing import (
     TYPE_CHECKING,
+    cast,
 )
 
 from flask import (
@@ -75,7 +78,7 @@ def register_artifacts_routes(app: "Flask", webui: "WebUI") -> None:
                 )
         except OSError:
             return jsonify({"error": "Failed to read artifacts"}), 500
-        entries.sort(key=lambda x: x["modified"], reverse=True)  # type: ignore
+        entries.sort(key=lambda x: cast(float, x["modified"]), reverse=True)
         if limit is not None and limit > 0:
             entries = entries[:limit]
         return jsonify(

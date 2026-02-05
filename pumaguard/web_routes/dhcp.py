@@ -4,6 +4,14 @@ from __future__ import (
     annotations,
 )
 
+# pyright: reportImportCycles=false
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportAny=false
+# pyright: reportUnusedFunction=false
+# pyright: reportExplicitAny=false
 import json
 import logging
 import queue
@@ -17,6 +25,7 @@ from datetime import (
 )
 from typing import (
     TYPE_CHECKING,
+    Any,
 )
 
 from flask import (
@@ -40,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 def register_dhcp_routes(
     app: "Flask", webui: "WebUI"
-) -> Callable[[str, dict], None]:
+) -> Callable[[str, dict[str, Any]], None]:
     """
     Register DHCP event endpoints for camera detection.
 
@@ -49,10 +58,12 @@ def register_dhcp_routes(
     """
 
     # Queue for SSE notifications
-    sse_clients: list[queue.Queue] = []
+    sse_clients: list[queue.Queue[dict[str, Any]]] = []
     sse_clients_lock = threading.Lock()
 
-    def notify_camera_change(event_type: str, camera_data: dict) -> None:
+    def notify_camera_change(
+        event_type: str, camera_data: dict[str, Any]
+    ) -> None:
         """Notify all SSE clients about a camera status change."""
         message = {
             "type": event_type,
@@ -92,7 +103,7 @@ def register_dhcp_routes(
         }
         """
         try:
-            data = request.get_json()
+            data: Any = request.get_json()
 
             if not data:
                 return jsonify({"error": "No JSON data provided"}), 400
@@ -384,7 +395,7 @@ def register_dhcp_routes(
         }
         """
         try:
-            data = request.get_json()
+            data: Any = request.get_json()
 
             if not data:
                 return jsonify({"error": "No JSON data provided"}), 400
@@ -399,8 +410,8 @@ def register_dhcp_routes(
                 return (
                     jsonify(
                         {
-                            "error": "Missing required fields: hostname, "
-                            "ip_address, mac_address"
+                            "error": "Missing required fields: "
+                            "hostname, ip_address, mac_address"
                         }
                     ),
                     400,
@@ -598,7 +609,7 @@ def register_dhcp_routes(
         }
         """
         try:
-            data = request.get_json()
+            data: Any = request.get_json()
 
             if not data:
                 return jsonify({"error": "No JSON data provided"}), 400
@@ -613,8 +624,8 @@ def register_dhcp_routes(
                 return (
                     jsonify(
                         {
-                            "error": "Missing required fields: hostname, "
-                            "ip_address, mac_address"
+                            "error": "Missing required fields: "
+                            "hostname, ip_address, mac_address"
                         }
                     ),
                     400,
@@ -732,7 +743,7 @@ def register_dhcp_routes(
         - "automatic": Plug turns on when sound is playing
         """
         try:
-            data = request.get_json()
+            data: Any = request.get_json()
 
             if not data:
                 return jsonify({"error": "No JSON data provided"}), 400
@@ -879,7 +890,7 @@ def register_dhcp_routes(
 
         def event_stream():
             # Create a queue for this client
-            client_queue: queue.Queue = queue.Queue(maxsize=10)
+            client_queue: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=10)
 
             with sse_clients_lock:
                 sse_clients.append(client_queue)

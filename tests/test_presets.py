@@ -273,3 +273,144 @@ class TestSettingsFileLocation(unittest.TestCase):
                     )
                     self.assertEqual(settings_file, expected_snap_path)
                     self.assertNotIn(xdg_dir, settings_file)
+
+
+class TestDeterrentSoundFiles(unittest.TestCase):
+    """
+    Test the deterrent_sound_files property and backwards compatibility.
+    """
+
+    def setUp(self):
+        self.preset = Preset()
+
+    def test_default_sound_files_is_list(self):
+        """
+        Test that deterrent_sound_files defaults to a list.
+        """
+        self.assertIsInstance(self.preset.deterrent_sound_files, list)
+        self.assertEqual(len(self.preset.deterrent_sound_files), 1)
+        self.assertEqual(
+            self.preset.deterrent_sound_files[0], "deterrent_puma.mp3"
+        )
+
+    def test_set_multiple_sound_files(self):
+        """
+        Test setting multiple sound files.
+        """
+        sound_files = ["sound1.mp3", "sound2.mp3", "sound3.mp3"]
+        self.preset.deterrent_sound_files = sound_files
+        self.assertEqual(self.preset.deterrent_sound_files, sound_files)
+
+    def test_cannot_set_empty_list(self):
+        """
+        Test that setting an empty list raises ValueError.
+        """
+        with self.assertRaises(ValueError) as error:
+            self.preset.deterrent_sound_files = []
+        self.assertEqual(
+            str(error.exception), "At least one sound file must be provided"
+        )
+
+    def test_must_be_list(self):
+        """
+        Test that deterrent_sound_files must be a list.
+        """
+        with self.assertRaises(TypeError) as error:
+            # type: ignore
+            self.preset.deterrent_sound_files = "single_sound.mp3"
+        self.assertEqual(
+            str(error.exception), "deterrent_sound_files must be a list"
+        )
+
+    def test_all_elements_must_be_strings(self):
+        """
+        Test that all elements in the list must be strings.
+        """
+        with self.assertRaises(TypeError) as error:
+            self.preset.deterrent_sound_files = [
+                "sound1.mp3",
+                123,
+            ]  # type: ignore
+        self.assertEqual(
+            str(error.exception), "All sound files must be strings"
+        )
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+image-dimensions: [128, 128]
+deterrent-sound-files:
+    - sound1.mp3
+    - sound2.mp3
+    - sound3.mp3
+""",
+    )
+    def test_load_multiple_sound_files(self, mock_file):  # pylint: disable=unused-argument
+        """
+        Test loading multiple sound files from settings.
+        """
+        self.preset.load("/fake/path/to/settings.yaml")
+        self.assertEqual(len(self.preset.deterrent_sound_files), 3)
+        self.assertEqual(self.preset.deterrent_sound_files[0], "sound1.mp3")
+        self.assertEqual(self.preset.deterrent_sound_files[1], "sound2.mp3")
+        self.assertEqual(self.preset.deterrent_sound_files[2], "sound3.mp3")
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+image-dimensions: [128, 128]
+deterrent-sound-file: old_format_sound.mp3
+""",
+    )
+    def test_load_backwards_compatible_single_file(self, mock_file):  # pylint: disable=unused-argument
+        """
+        Test backwards compatibility with old single file format.
+        """
+        self.preset.load("/fake/path/to/settings.yaml")
+        self.assertIsInstance(self.preset.deterrent_sound_files, list)
+        self.assertEqual(len(self.preset.deterrent_sound_files), 1)
+        self.assertEqual(
+            self.preset.deterrent_sound_files[0], "old_format_sound.mp3"
+        )
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+image-dimensions: [128, 128]
+deterrent-sound-file: old_format_sound.mp3
+deterrent-sound-files:
+    - new_format1.mp3
+    - new_format2.mp3
+""",
+    )
+    def test_new_format_takes_precedence(self, mock_file):  # pylint: disable=unused-argument
+        """
+        Test that new format takes precedence when both are present.
+        """
+        self.preset.load("/fake/path/to/settings.yaml")
+        self.assertEqual(len(self.preset.deterrent_sound_files), 2)
+        self.assertEqual(
+            self.preset.deterrent_sound_files[0], "new_format1.mp3"
+        )
+        self.assertEqual(
+            self.preset.deterrent_sound_files[1], "new_format2.mp3"
+        )
+
+    def test_serialize_sound_files_list(self):
+        """
+        Test that sound files list is properly serialized.
+        """
+        self.preset.deterrent_sound_files = [
+            "sound1.mp3",
+            "sound2.mp3",
+            "sound3.mp3",
+        ]
+        serialized = dict(self.preset)
+        self.assertIn("deterrent-sound-files", serialized)
+        self.assertEqual(len(serialized["deterrent-sound-files"]), 3)
+        self.assertEqual(serialized["deterrent-sound-files"][0], "sound1.mp3")
+        self.assertEqual(serialized["deterrent-sound-files"][1], "sound2.mp3")
+        self.assertEqual(serialized["deterrent-sound-files"][2], "sound3.mp3")

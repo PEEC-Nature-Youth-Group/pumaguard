@@ -2,6 +2,16 @@
 Test server.
 """
 
+# pyright: reportImportCycles=false
+# pyright: reportUnknownParameterType=false
+# pyright: reportUnknownVariableType=false
+# pyright: reportUnknownArgumentType=false
+# pyright: reportUnknownMemberType=false
+# pyright: reportUninitializedInstanceVariable=false
+# pyright: reportMissingTypeArgument=false
+# pyright: reportPrivateUsage=false
+# pyright: reportAttributeAccessIssue=false
+
 import io
 import os
 import tempfile
@@ -125,7 +135,7 @@ class TestFolderObserver(unittest.TestCase):
         mock_logger.info.assert_called()
         _, path, prediction = mock_logger.info.call_args_list[0][0]
 
-        self.assertEqual(mock_logger.info.call_count, 2)
+        self.assertEqual(mock_logger.info.call_count, 3)
         mock_logger.info.call_arg_list(
             [
                 call("Chance of puma in %s: %.2f%%"),

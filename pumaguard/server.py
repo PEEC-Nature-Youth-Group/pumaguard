@@ -3,9 +3,11 @@ Pumaguard server watches folders for new images and returns the probability
 that the new images show pumas.
 """
 
+# pyright: reportImportCycles=false
 import argparse
 import logging
 import os
+import random
 import shutil
 import signal
 import subprocess
@@ -272,9 +274,12 @@ class FolderObserver:
         if prediction > 0.5:
             logger.info("Puma detected in %s", filepath)
             if self.presets.play_sound:
+                # Randomly select one sound from the list
+                sound_file = random.choice(self.presets.deterrent_sound_files)
                 sound_file_path = os.path.join(
-                    self.presets.sound_path, self.presets.deterrent_sound_file
+                    self.presets.sound_path, sound_file
                 )
+                logger.info("Playing sound: %s", sound_file)
                 playsound(sound_file_path, self.presets.volume)
         # Move original file into classification folder
         try:

@@ -33,7 +33,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
-          deterrentSoundFile: 'alarm.wav',
+          deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
           volume: 80,
@@ -46,7 +46,7 @@ void main() {
         expect(settings.yoloMaxDets, 10);
         expect(settings.yoloModelFilename, 'yolov8s_101425.pt');
         expect(settings.classifierModelFilename, 'colorbw_111325.h5');
-        expect(settings.deterrentSoundFile, 'alarm.wav');
+        expect(settings.deterrentSoundFiles, ['alarm.wav']);
         expect(settings.fileStabilizationExtraWait, 2.0);
         expect(settings.playSound, true);
         expect(settings.volume, 80);
@@ -61,7 +61,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,
@@ -116,7 +116,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s.pt',
           classifierModelFilename: 'classifier.h5',
-          deterrentSoundFile: 'sound.wav',
+          deterrentSoundFiles: ['sound.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
           volume: 80,
@@ -139,7 +139,7 @@ void main() {
           'YOLO-max-dets': 10,
           'YOLO-model-filename': 'yolov8s_101425.pt',
           'classifier-model-filename': 'colorbw_111325.h5',
-          'deterrent-sound-file': 'alarm.wav',
+          'deterrent-sound-files': ['alarm.wav'],
           'file-stabilization-extra-wait': 2.0,
           'play-sound': true,
           'volume': 80,
@@ -170,7 +170,7 @@ void main() {
         expect(settings.yoloMaxDets, 10);
         expect(settings.yoloModelFilename, 'yolov8s_101425.pt');
         expect(settings.classifierModelFilename, 'colorbw_111325.h5');
-        expect(settings.deterrentSoundFile, 'alarm.wav');
+        expect(settings.deterrentSoundFiles, ['alarm.wav']);
         expect(settings.fileStabilizationExtraWait, 2.0);
         expect(settings.playSound, true);
         expect(settings.volume, 80);
@@ -202,7 +202,7 @@ void main() {
         expect(settings.yoloMaxDets, 10);
         expect(settings.yoloModelFilename, '');
         expect(settings.classifierModelFilename, '');
-        expect(settings.deterrentSoundFile, '');
+        expect(settings.deterrentSoundFiles, ['']);
         expect(settings.fileStabilizationExtraWait, 2.0);
         expect(settings.playSound, false);
         expect(settings.volume, 80);
@@ -220,7 +220,7 @@ void main() {
         expect(settings.yoloMaxDets, 10);
         expect(settings.yoloModelFilename, '');
         expect(settings.classifierModelFilename, '');
-        expect(settings.deterrentSoundFile, '');
+        expect(settings.deterrentSoundFiles, ['']);
         expect(settings.fileStabilizationExtraWait, 2.0);
         expect(settings.playSound, false);
         expect(settings.volume, 80);
@@ -314,6 +314,46 @@ void main() {
         expect(settings.cameras.isEmpty, true);
         expect(settings.plugs.isEmpty, true);
       });
+
+      test('handles backwards compatibility with single sound file', () {
+        final json = {'deterrent-sound-file': 'old_format_sound.wav'};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deterrentSoundFiles, ['old_format_sound.wav']);
+      });
+
+      test('handles new format with multiple sound files', () {
+        final json = {
+          'deterrent-sound-files': ['sound1.mp3', 'sound2.mp3', 'sound3.mp3'],
+        };
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deterrentSoundFiles.length, 3);
+        expect(settings.deterrentSoundFiles[0], 'sound1.mp3');
+        expect(settings.deterrentSoundFiles[1], 'sound2.mp3');
+        expect(settings.deterrentSoundFiles[2], 'sound3.mp3');
+      });
+
+      test('prefers new format over old when both present', () {
+        final json = {
+          'deterrent-sound-file': 'old_sound.wav',
+          'deterrent-sound-files': ['new_sound.mp3'],
+        };
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deterrentSoundFiles, ['new_sound.mp3']);
+      });
+
+      test('ensures at least one sound file when empty', () {
+        final json = {'deterrent-sound-files': []};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deterrentSoundFiles, ['']);
+      });
     });
 
     group('toJson', () {
@@ -341,7 +381,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
-          deterrentSoundFile: 'alarm.wav',
+          deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
           volume: 80,
@@ -356,7 +396,7 @@ void main() {
         expect(json['YOLO-max-dets'], 10);
         expect(json['YOLO-model-filename'], 'yolov8s_101425.pt');
         expect(json['classifier-model-filename'], 'colorbw_111325.h5');
-        expect(json['deterrent-sound-file'], 'alarm.wav');
+        expect(json['deterrent-sound-files'], ['alarm.wav']);
         expect(json['file-stabilization-extra-wait'], 2.0);
         expect(json['play-sound'], true);
         expect(json['volume'], 80);
@@ -373,7 +413,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,
@@ -396,7 +436,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,
@@ -408,7 +448,7 @@ void main() {
 
         expect(json['YOLO-model-filename'], '');
         expect(json['classifier-model-filename'], '');
-        expect(json['deterrent-sound-file'], '');
+        expect(json['deterrent-sound-files'], ['']);
       });
     });
 
@@ -420,7 +460,7 @@ void main() {
           'YOLO-max-dets': 10,
           'YOLO-model-filename': 'yolov8s_101425.pt',
           'classifier-model-filename': 'colorbw_111325.h5',
-          'deterrent-sound-file': 'alarm.wav',
+          'deterrent-sound-files': ['alarm.wav'],
           'file-stabilization-extra-wait': 2.0,
           'play-sound': true,
           'volume': 80,
@@ -448,6 +488,15 @@ void main() {
         final resultJson = settings.toJson();
 
         expect(resultJson['YOLO-min-size'], originalJson['YOLO-min-size']);
+        expect(
+          resultJson['YOLO-conf-thresh'],
+          originalJson['YOLO-conf-thresh'],
+        );
+        expect(resultJson['YOLO-max-dets'], originalJson['YOLO-max-dets']);
+        expect(
+          resultJson['deterrent-sound-files'],
+          originalJson['deterrent-sound-files'],
+        );
         expect(
           resultJson['YOLO-conf-thresh'],
           originalJson['YOLO-conf-thresh'],
@@ -503,7 +552,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
-          deterrentSoundFile: 'alarm.wav',
+          deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
           volume: 80,
@@ -527,8 +576,8 @@ void main() {
           originalSettings.classifierModelFilename,
         );
         expect(
-          newSettings.deterrentSoundFile,
-          originalSettings.deterrentSoundFile,
+          newSettings.deterrentSoundFiles,
+          originalSettings.deterrentSoundFiles,
         );
         expect(
           newSettings.fileStabilizationExtraWait,
@@ -585,12 +634,12 @@ void main() {
         );
       });
 
-      test('updates deterrentSoundFile', () {
+      test('updates deterrentSoundFiles', () {
         final newSettings = originalSettings.copyWith(
-          deterrentSoundFile: 'new_sound.wav',
+          deterrentSoundFiles: ['new_sound.wav'],
         );
 
-        expect(newSettings.deterrentSoundFile, 'new_sound.wav');
+        expect(newSettings.deterrentSoundFiles, ['new_sound.wav']);
         expect(
           newSettings.yoloModelFilename,
           originalSettings.yoloModelFilename,
@@ -702,7 +751,7 @@ void main() {
           yoloMaxDets: 0,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 0.0,
           playSound: false,
           volume: 0,
@@ -724,7 +773,7 @@ void main() {
           yoloMaxDets: 1000,
           yoloModelFilename: 'model',
           classifierModelFilename: 'classifier',
-          deterrentSoundFile: 'sound',
+          deterrentSoundFiles: ['sound'],
           fileStabilizationExtraWait: 999.99,
           playSound: true,
           volume: 100,
@@ -746,7 +795,7 @@ void main() {
           yoloMaxDets: -10,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: -1.0,
           playSound: false,
           volume: -10,
@@ -769,7 +818,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: longFilename,
           classifierModelFilename: longFilename,
-          deterrentSoundFile: longFilename,
+          deterrentSoundFiles: [longFilename],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,
@@ -779,7 +828,7 @@ void main() {
 
         expect(settings.yoloModelFilename.length, 1000);
         expect(settings.classifierModelFilename.length, 1000);
-        expect(settings.deterrentSoundFile.length, 1000);
+        expect(settings.deterrentSoundFiles[0].length, 1000);
       });
 
       test('handles filenames with special characters', () {
@@ -789,7 +838,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'model@#\$%^&*.pt',
           classifierModelFilename: 'classifier!@#.h5',
-          deterrentSoundFile: 'sound-file_123.wav',
+          deterrentSoundFiles: ['sound-file_123.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,
@@ -799,7 +848,7 @@ void main() {
 
         expect(settings.yoloModelFilename, 'model@#\$%^&*.pt');
         expect(settings.classifierModelFilename, 'classifier!@#.h5');
-        expect(settings.deterrentSoundFile, 'sound-file_123.wav');
+        expect(settings.deterrentSoundFiles, ['sound-file_123.wav']);
       });
 
       test('handles very precise floating point values', () {
@@ -809,7 +858,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
-          deterrentSoundFile: '',
+          deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 1.23456789,
           playSound: false,
           volume: 80,
@@ -874,7 +923,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
-          deterrentSoundFile: 'alarm.wav',
+          deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
           volume: 80,

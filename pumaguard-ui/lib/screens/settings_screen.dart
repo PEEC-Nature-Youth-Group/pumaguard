@@ -28,8 +28,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _yoloMaxDetsController;
   late TextEditingController _yoloModelController;
   late TextEditingController _classifierModelController;
-  late TextEditingController _soundFileController;
   late TextEditingController _fileStabilizationController;
+  List<String> _selectedSoundFiles = [];
   bool _playSound = false;
   double _volume = 80.0;
   List<Map<String, dynamic>> _availableModels = [];
@@ -50,7 +50,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloMaxDetsController = TextEditingController();
     _yoloModelController = TextEditingController();
     _classifierModelController = TextEditingController();
-    _soundFileController = TextEditingController();
     _fileStabilizationController = TextEditingController();
     _loadSettings();
     _initializeCameraEvents();
@@ -68,7 +67,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloMaxDetsController.dispose();
     _yoloModelController.dispose();
     _classifierModelController.dispose();
-    _soundFileController.dispose();
     _fileStabilizationController.dispose();
     super.dispose();
   }
@@ -129,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _yoloMaxDetsController.text = settings.yoloMaxDets.toString();
         _yoloModelController.text = settings.yoloModelFilename;
         _classifierModelController.text = settings.classifierModelFilename;
-        _soundFileController.text = settings.deterrentSoundFile;
+        _selectedSoundFiles = List.from(settings.deterrentSoundFiles);
         _fileStabilizationController.text = settings.fileStabilizationExtraWait
             .toString();
         _playSound = settings.playSound;
@@ -169,7 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         yoloMaxDets: int.tryParse(_yoloMaxDetsController.text) ?? 10,
         yoloModelFilename: _yoloModelController.text,
         classifierModelFilename: _classifierModelController.text,
-        deterrentSoundFile: _soundFileController.text,
+        deterrentSoundFiles: _selectedSoundFiles,
         fileStabilizationExtraWait:
             double.tryParse(_fileStabilizationController.text) ?? 2.0,
         playSound: _playSound,
@@ -366,7 +364,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final uploadedFilename = response['filename'] as String?;
         if (uploadedFilename != null) {
           setState(() {
-            _soundFileController.text = uploadedFilename;
+            if (!_selectedSoundFiles.contains(uploadedFilename)) {
+              _selectedSoundFiles.add(uploadedFilename);
+            }
           });
           await _saveSettings();
         }
@@ -550,7 +550,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Icons.music_note,
                             color: Colors.blue,
                           ),
-                          trailing: soundName == _soundFileController.text
+                          trailing: _selectedSoundFiles.contains(soundName)
                               ? const Icon(Icons.check, color: Colors.blue)
                               : null,
                           onTap: () {
@@ -578,7 +578,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await _uploadSoundFile();
       } else if (selectedSound != null) {
         setState(() {
-          _soundFileController.text = selectedSound;
+          // Toggle sound selection
+          if (_selectedSoundFiles.contains(selectedSound)) {
+            // Don't allow removing the last sound file
+            if (_selectedSoundFiles.length > 1) {
+              _selectedSoundFiles.remove(selectedSound);
+            }
+          } else {
+            _selectedSoundFiles.add(selectedSound);
+          }
         });
         // Persist the change immediately
         await _saveSettings();
@@ -872,20 +880,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _soundFileController,
-              decoration: InputDecoration(
-                labelText: 'Deterrent Sound File',
-                hintText: 'deterrent.wav',
-                helperText: 'Path to sound file to play when puma detected',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.folder_open),
-                  onPressed: _showSoundPicker,
-                  tooltip: 'Browse available sounds',
-                ),
+            // Display selected sound files as chips
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey),
+                borderRadius: BorderRadius.circular(4),
               ),
-              readOnly: false,
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Deterrent Sound Files',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_selectedSoundFiles.isEmpty)
+                    const Text(
+                      'No sound files selected',
+                      style: TextStyle(color: Colors.grey),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: _selectedSoundFiles.map((soundFile) {
+                        return Chip(
+                          label: Text(soundFile),
+                          deleteIcon: _selectedSoundFiles.length > 1
+                              ? const Icon(Icons.close, size: 18)
+                              : null,
+                          onDeleted: _selectedSoundFiles.length > 1
+                              ? () {
+                                  setState(() {
+                                    _selectedSoundFiles.remove(soundFile);
+                                  });
+                                  _saveSettings();
+                                }
+                              : null,
+                        );
+                      }).toList(),
+                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'One sound will be randomly selected when a puma is detected. At least one sound must be selected.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             Row(

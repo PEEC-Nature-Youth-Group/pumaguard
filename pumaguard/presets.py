@@ -130,7 +130,7 @@ class Preset:
         self.sound_path = os.path.join(
             os.path.dirname(__file__), "../pumaguard-sounds"
         )
-        self.deterrent_sound_file = "deterrent_puma.mp3"
+        self.deterrent_sound_files = ["deterrent_puma.mp3"]
         self.verification_path = "data/stable/stable_test"
         self.batch_size = 16
         self.notebook_number = 1
@@ -236,9 +236,24 @@ class Preset:
         self.sound_path = settings.get(
             "sound-path", os.path.dirname(__file__) + "../pumaguard-sounds"
         )
-        self.deterrent_sound_file = settings.get(
-            "deterrent-sound-file", "cougar_call.mp3"
-        )
+        # Support both old single file (string) and new multiple files (list)
+        deterrent_sound = settings.get("deterrent-sound-files", None)
+        if deterrent_sound is None:
+            # Backwards compatibility: check for old single file setting
+            deterrent_sound = settings.get(
+                "deterrent-sound-file", "cougar_call.mp3"
+            )
+
+        if isinstance(deterrent_sound, str):
+            self.deterrent_sound_files = (
+                [deterrent_sound] if deterrent_sound else ["cougar_call.mp3"]
+            )
+        elif isinstance(deterrent_sound, list):
+            self.deterrent_sound_files = (
+                deterrent_sound if deterrent_sound else ["cougar_call.mp3"]
+            )
+        else:
+            self.deterrent_sound_files = ["cougar_call.mp3"]
         self.volume = settings.get("volume", 80)
         self.notebook_number = settings.get("notebook", 1)
         self.epochs = settings.get("epochs", 1)
@@ -331,7 +346,7 @@ class Preset:
             "YOLO-model-filename": self.yolo_model_filename,
             "classifier-model-filename": self.classifier_model_filename,
             "sound-path": self.sound_path,
-            "deterrent-sound-file": self.deterrent_sound_file,
+            "deterrent-sound-files": self.deterrent_sound_files,
             "play-sound": self.play_sound,
             "volume": self.volume,
             "alpha": self.alpha,
@@ -564,18 +579,25 @@ class Preset:
         self._sound_path = sound_path
 
     @property
-    def deterrent_sound_file(self):
+    def deterrent_sound_files(self):
         """
-        Get the deterrent sound file.
+        Get the list of deterrent sound files.
         """
-        return self._deterrent_sound_file
+        return self._deterrent_sound_files
 
-    @deterrent_sound_file.setter
-    def deterrent_sound_file(self, sound_file: str):
+    @deterrent_sound_files.setter
+    def deterrent_sound_files(self, sound_files: list[str]):
         """
-        Set the deterrent sound file.
+        Set the list of deterrent sound files.
+        At least one sound file must be provided.
         """
-        self._deterrent_sound_file = sound_file
+        if not isinstance(sound_files, list):
+            raise TypeError("deterrent_sound_files must be a list")
+        if not sound_files:
+            raise ValueError("At least one sound file must be provided")
+        if not all(isinstance(f, str) for f in sound_files):
+            raise TypeError("All sound files must be strings")
+        self._deterrent_sound_files = sound_files
 
     @property
     def model_file(self):

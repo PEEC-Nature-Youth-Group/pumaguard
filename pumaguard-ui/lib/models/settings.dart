@@ -7,7 +7,7 @@ class Settings {
   final int yoloMaxDets;
   final String yoloModelFilename;
   final String classifierModelFilename;
-  final String deterrentSoundFile;
+  final List<String> deterrentSoundFiles;
   final double fileStabilizationExtraWait;
   final bool playSound;
   final int volume;
@@ -20,7 +20,7 @@ class Settings {
     required this.yoloMaxDets,
     required this.yoloModelFilename,
     required this.classifierModelFilename,
-    required this.deterrentSoundFile,
+    required this.deterrentSoundFiles,
     required this.fileStabilizationExtraWait,
     required this.playSound,
     required this.volume,
@@ -47,6 +47,24 @@ class Settings {
           .toList();
     }
 
+    // Parse deterrent sound files list (with backwards compatibility)
+    List<String> soundFilesList = [];
+    if (json['deterrent-sound-files'] is List) {
+      soundFilesList = (json['deterrent-sound-files'] as List)
+          .map((e) => e.toString())
+          .toList();
+    } else if (json['deterrent-sound-file'] is String) {
+      // Backwards compatibility: convert single file to list
+      final singleFile = json['deterrent-sound-file'] as String;
+      if (singleFile.isNotEmpty) {
+        soundFilesList = [singleFile];
+      }
+    }
+    // Ensure at least one sound file
+    if (soundFilesList.isEmpty) {
+      soundFilesList = [''];
+    }
+
     return Settings(
       yoloMinSize: (json['YOLO-min-size'] as num?)?.toDouble() ?? 0.01,
       yoloConfThresh: (json['YOLO-conf-thresh'] as num?)?.toDouble() ?? 0.25,
@@ -54,7 +72,7 @@ class Settings {
       yoloModelFilename: json['YOLO-model-filename'] as String? ?? '',
       classifierModelFilename:
           json['classifier-model-filename'] as String? ?? '',
-      deterrentSoundFile: json['deterrent-sound-file'] as String? ?? '',
+      deterrentSoundFiles: soundFilesList,
       fileStabilizationExtraWait:
           (json['file-stabilization-extra-wait'] as num?)?.toDouble() ?? 2.0,
       playSound: json['play-sound'] as bool? ?? false,
@@ -71,7 +89,7 @@ class Settings {
       'YOLO-max-dets': yoloMaxDets,
       'YOLO-model-filename': yoloModelFilename,
       'classifier-model-filename': classifierModelFilename,
-      'deterrent-sound-file': deterrentSoundFile,
+      'deterrent-sound-files': deterrentSoundFiles,
       'file-stabilization-extra-wait': fileStabilizationExtraWait,
       'play-sound': playSound,
       'volume': volume,
@@ -86,7 +104,7 @@ class Settings {
     int? yoloMaxDets,
     String? yoloModelFilename,
     String? classifierModelFilename,
-    String? deterrentSoundFile,
+    List<String>? deterrentSoundFiles,
     double? fileStabilizationExtraWait,
     bool? playSound,
     int? volume,
@@ -100,7 +118,7 @@ class Settings {
       yoloModelFilename: yoloModelFilename ?? this.yoloModelFilename,
       classifierModelFilename:
           classifierModelFilename ?? this.classifierModelFilename,
-      deterrentSoundFile: deterrentSoundFile ?? this.deterrentSoundFile,
+      deterrentSoundFiles: deterrentSoundFiles ?? this.deterrentSoundFiles,
       fileStabilizationExtraWait:
           fileStabilizationExtraWait ?? this.fileStabilizationExtraWait,
       playSound: playSound ?? this.playSound,

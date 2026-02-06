@@ -7,7 +7,6 @@ import '../models/status.dart';
 import '../models/camera.dart';
 import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
-import '../version.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
 import 'image_browser_screen.dart';
@@ -515,9 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Backend Version', _status?.version ?? 'Unknown'),
-            const SizedBox(height: 12),
-            _buildInfoRow('UI Version', appVersion),
+            _buildInfoRow('Version', _status?.version ?? 'Unknown'),
             const SizedBox(height: 12),
             _buildInfoRow(
               'Host',

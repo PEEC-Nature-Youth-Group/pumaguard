@@ -29,7 +29,7 @@
     # dnsmasq configuration for wlan0 access point
     dnsmasq_dhcp_start: 192.168.52.50
     dnsmasq_dhcp_end: 192.168.52.150
-    dnsmasq_lease_time: 30m
+    dnsmasq_lease_time: 10m
     dnsmasq_gateway: 192.168.52.1
     dnsmasq_dns_server: 192.168.52.1
     dnsmasq_wired_gateway: 192.168.51.1

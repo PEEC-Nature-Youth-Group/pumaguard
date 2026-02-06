@@ -691,6 +691,42 @@ class ApiService {
     }
   }
 
+  /// Get Shelly plug real-time status
+  Future<Plug> getShellyStatus(String macAddress) async {
+    try {
+      final url = getApiUrl('/api/dhcp/plugs/$macAddress/shelly-status');
+      debugPrint('[ApiService.getShellyStatus] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getShellyStatus] Response status: ${response.statusCode}',
+      );
+      debugPrint(
+        '[ApiService.getShellyStatus] Response body: ${response.body}',
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        final plug = Plug.fromJson(json);
+        debugPrint(
+          '[ApiService.getShellyStatus] Parsed plug with output=${plug.output}, power=${plug.apower}W',
+        );
+        return plug;
+      } else {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.getShellyStatus] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to get Shelly status');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getShellyStatus] Exception: $e');
+      throw Exception('Failed to get Shelly status: $e');
+    }
+  }
+
   /// Scan for available WiFi networks
   Future<Map<String, dynamic>> scanWifiNetworks() async {
     try {

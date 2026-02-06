@@ -77,6 +77,7 @@ build: install build-ui
 
 .PHONY: lint
 lint: black pylint isort mypy bashate
+	@echo "done linting"
 
 .PHONY: black
 black: install-dev

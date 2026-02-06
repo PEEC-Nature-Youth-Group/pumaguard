@@ -109,6 +109,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         break;
 
+      case CameraEventType.plugConnected:
+      case CameraEventType.plugDisconnected:
+      case CameraEventType.plugAdded:
+        // Plug status changed - reload camera list (which includes checking for new devices)
+        _loadCameras();
+        break;
+
       case CameraEventType.unknown:
         debugPrint('[HomeScreen] Unknown camera event type');
         break;

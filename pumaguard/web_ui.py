@@ -36,6 +36,9 @@ from zeroconf import (
 from pumaguard.camera_heartbeat import (
     CameraHeartbeat,
 )
+from pumaguard.plug_heartbeat import (
+    PlugHeartbeat,
+)
 from pumaguard.presets import (
     Preset,
 )
@@ -195,6 +198,16 @@ class WebUI:
             status_change_callback=None,
         )
 
+        # Plug heartbeat monitoring (callback set after routes registered)
+        self.plug_heartbeat: PlugHeartbeat = PlugHeartbeat(
+            webui=self,
+            interval=presets.plug_heartbeat_interval,
+            enabled=presets.plug_heartbeat_enabled,
+            timeout=presets.plug_heartbeat_timeout,
+            # Will be set after routes are registered
+            status_change_callback=None,
+        )
+
         # Load cameras from persisted settings
         for camera in presets.cameras:
             mac = camera.get("mac_address")
@@ -320,8 +333,11 @@ class WebUI:
         # Register DHCP routes and get the SSE notification callback
         camera_notification_callback = register_dhcp_routes(self.app, self)
 
-        # Wire the callback to the heartbeat monitor
+        # Wire the callback to the heartbeat monitors
         self.heartbeat.status_change_callback = camera_notification_callback
+        self.plug_heartbeat.status_change_callback = (
+            camera_notification_callback
+        )
 
         @self.app.route("/<path:path>")
         def serve_static(path: str):
@@ -508,6 +524,9 @@ class WebUI:
         # Start camera heartbeat monitoring
         self.heartbeat.start()
 
+        # Start plug heartbeat monitoring
+        self.plug_heartbeat.start()
+
         if self.debug:
             self._run_server()
         else:
@@ -529,6 +548,9 @@ class WebUI:
 
         # Stop camera heartbeat monitoring
         self.heartbeat.stop()
+
+        # Stop plug heartbeat monitoring
+        self.plug_heartbeat.stop()
 
         # Stop mDNS service
         self._stop_mdns()

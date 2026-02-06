@@ -60,6 +60,14 @@ pumaguard.model\_downloader module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.plug\_heartbeat module
+--------------------------------
+
+.. automodule:: pumaguard.plug_heartbeat
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.presets module
 ------------------------
 

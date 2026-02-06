@@ -314,7 +314,7 @@ Potential improvements:
 1. Verify dnsmasq is running: `systemctl status dnsmasq`
 2. Check dnsmasq config: `/etc/dnsmasq.d/dnsmasq-wlan0.conf`
 3. Verify script is executable: `ls -la /usr/local/bin/pumaguard-dhcp-notify.sh`
-4. Check script logs: `tail -f /var/log/pumaguard-dhcp-notify.log`
+4. Check script logs: `journalctl -f -t pumaguard-dhcp-notify`
 
 ### Camera URLs not opening
 

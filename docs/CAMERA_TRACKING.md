@@ -36,7 +36,7 @@ Bash script that:
 - Receives DHCP events (add, old, del) from dnsmasq
 - Filters for devices with hostname matching `CAMERA_HOSTNAME` variable
 - POSTs JSON payload to PumaGuard API
-- Logs all events to `/var/log/pumaguard-dhcp-notify.log`
+- Logs all events to journald (systemd journal)
 
 **Default tracked hostname:** `Microseven`
 
@@ -191,17 +191,22 @@ fi
 ## Logging
 
 ### DHCP Event Log
-**Location:** `/var/log/pumaguard-dhcp-notify.log`
+**Location:** systemd journal (journald)
 
 **View logs:**
 ```bash
-tail -f /var/log/pumaguard-dhcp-notify.log
+journalctl -f -t pumaguard-dhcp-notify
+```
+
+**View recent logs:**
+```bash
+journalctl -t pumaguard-dhcp-notify -n 50
 ```
 
 **Example log entries:**
 ```
-2024-01-15 10:30:00 - DHCP add: hostname=Microseven, mac=aa:bb:cc:dd:ee:ff, ip=192.168.52.123
-2024-01-15 10:30:01 - Camera detected: Microseven at 192.168.52.123
+Jan 15 10:30:00 pumaguard pumaguard-dhcp-notify[1234]: DHCP add: hostname=Microseven, mac=aa:bb:cc:dd:ee:ff, ip=192.168.52.123
+Jan 15 10:30:01 pumaguard pumaguard-dhcp-notify[1234]: Camera detected: Microseven at 192.168.52.123
 ```
 
 ### PumaGuard Application Log
@@ -223,7 +228,7 @@ curl http://192.168.52.1:5000/api/dhcp/cameras
 
 3. **View logs:**
 ```bash
-tail /var/log/pumaguard-dhcp-notify.log
+journalctl -t pumaguard-dhcp-notify -n 20
 ```
 
 ### Monitor dnsmasq Events
@@ -257,7 +262,7 @@ sudo systemctl restart dnsmasq
 **Check hostname sent by camera:**
 ```bash
 # View recent DHCP requests
-tail -n 50 /var/log/pumaguard-dhcp-notify.log | grep DHCP
+journalctl -t pumaguard-dhcp-notify -n 50 | grep DHCP
 ```
 
 **Verify camera hostname matches script:**
@@ -285,10 +290,9 @@ sudo ufw status | grep 5000
 sudo chmod +x /usr/local/bin/pumaguard-dhcp-notify.sh
 ```
 
-**Log file must be writable:**
+**Verify systemd-cat is available:**
 ```bash
-sudo touch /var/log/pumaguard-dhcp-notify.log
-sudo chmod 644 /var/log/pumaguard-dhcp-notify.log
+which systemd-cat
 ```
 
 ## Security Considerations

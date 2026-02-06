@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:web/web.dart' as web;
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/camera_events_service.dart';
 import '../models/camera.dart';
 import '../models/plug.dart';
 
@@ -21,18 +22,74 @@ class _DevicesScreenState extends State<DevicesScreen> {
   String? _error;
   final Map<String, Plug> _shellyStatus = {};
   Timer? _refreshTimer;
+  CameraEventsService? _cameraEventsService;
+  StreamSubscription<CameraEvent>? _eventsSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadDevices();
     _startAutoRefresh();
+    _initializeCameraEvents();
   }
 
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _eventsSubscription?.cancel();
+    _cameraEventsService?.dispose();
     super.dispose();
+  }
+
+  void _initializeCameraEvents() {
+    try {
+      final apiService = context.read<ApiService>();
+      final baseUrl = apiService.getApiUrl('').replaceAll('/api/', '');
+
+      _cameraEventsService = CameraEventsService(baseUrl);
+
+      // Subscribe to camera events
+      _eventsSubscription = _cameraEventsService!.events.listen(
+        _handleCameraEvent,
+        onError: (error) {
+          debugPrint('[DevicesScreen] Camera events error: $error');
+        },
+      );
+
+      // Start listening for events
+      _cameraEventsService!.startListening();
+      debugPrint('[DevicesScreen] Camera events service initialized');
+    } catch (e) {
+      debugPrint('[DevicesScreen] Error initializing camera events: $e');
+    }
+  }
+
+  void _handleCameraEvent(CameraEvent event) {
+    debugPrint('[DevicesScreen] Camera event received: ${event.type}');
+
+    // Handle different event types
+    switch (event.type) {
+      case CameraEventType.connected:
+        // SSE connection established
+        debugPrint('[DevicesScreen] Connected to camera events stream');
+        break;
+
+      case CameraEventType.cameraConnected:
+      case CameraEventType.cameraDisconnected:
+      case CameraEventType.cameraAdded:
+      case CameraEventType.cameraStatusChangedOnline:
+      case CameraEventType.cameraStatusChangedOffline:
+      case CameraEventType.plugConnected:
+      case CameraEventType.plugDisconnected:
+      case CameraEventType.plugAdded:
+        // Camera or plug status changed - reload device list
+        _loadDevices();
+        break;
+
+      case CameraEventType.unknown:
+        debugPrint('[DevicesScreen] Unknown camera event type');
+        break;
+    }
   }
 
   void _startAutoRefresh() {

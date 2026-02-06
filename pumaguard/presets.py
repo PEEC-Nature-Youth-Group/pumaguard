@@ -160,6 +160,11 @@ class Preset:
         self.camera_heartbeat_tcp_port = 80  # TCP port to check
         self.camera_heartbeat_tcp_timeout = 3  # TCP timeout in seconds
         self.camera_heartbeat_icmp_timeout = 2  # ICMP timeout in seconds
+
+        # Plug heartbeat monitoring settings
+        self.plug_heartbeat_enabled = True
+        self.plug_heartbeat_interval = 60  # Check interval in seconds
+        self.plug_heartbeat_timeout = 5  # HTTP timeout in seconds
         if version.parse(tf.__version__) < version.parse("2.17"):
             self.tf_compat = "2.15"
         else:
@@ -198,6 +203,8 @@ class Preset:
         Load settings from YAML file.
         """
         logger.info("loading settings from %s", filename)
+        # Update settings_file to the file we're loading from
+        self.settings_file = filename
         try:
             with open(filename, encoding="utf-8") as fd:
                 settings = yaml.safe_load(fd)
@@ -322,11 +329,23 @@ class Preset:
         self.cameras = settings.get("cameras", [])
         self.plugs = settings.get("plugs", [])
 
+        # Load plug heartbeat settings
+        self.plug_heartbeat_enabled = settings.get(
+            "plug-heartbeat-enabled", True
+        )
+        self.plug_heartbeat_interval = settings.get(
+            "plug-heartbeat-interval", 60
+        )
+        self.plug_heartbeat_timeout = settings.get("plug-heartbeat-timeout", 5)
+
     def save(self):
         """
-        Write presets to standard output.
+        Write presets to settings file.
         """
-        yaml.dump(self)
+        settings_dict = dict(self)
+        with open(self.settings_file, "w", encoding="utf-8") as f:
+            yaml.dump(settings_dict, f, default_flow_style=False)
+        logger.info("Settings saved to %s", self.settings_file)
 
     def _relative_paths(self, base: str, paths: list[str]) -> list[str]:
         """
@@ -366,6 +385,9 @@ class Preset:
             "with-augmentation": self.with_augmentation,
             "cameras": self.cameras,
             "plugs": self.plugs,
+            "plug-heartbeat-enabled": self.plug_heartbeat_enabled,
+            "plug-heartbeat-interval": self.plug_heartbeat_interval,
+            "plug-heartbeat-timeout": self.plug_heartbeat_timeout,
         }.items()
 
     def __str__(self):

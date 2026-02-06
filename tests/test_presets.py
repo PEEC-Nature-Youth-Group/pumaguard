@@ -13,6 +13,8 @@ from unittest.mock import (
     patch,
 )
 
+import yaml
+
 from pumaguard.presets import (
     Preset,
     get_default_settings_file,
@@ -414,3 +416,199 @@ deterrent-sound-files:
         self.assertEqual(serialized["deterrent-sound-files"][0], "sound1.mp3")
         self.assertEqual(serialized["deterrent-sound-files"][1], "sound2.mp3")
         self.assertEqual(serialized["deterrent-sound-files"][2], "sound3.mp3")
+
+
+class TestPresetSave(unittest.TestCase):
+    """
+    Test the Preset.save() method writes to disk correctly.
+    """
+
+    def setUp(self):
+        self.preset = Preset()
+
+    def test_save_writes_to_settings_file(self):
+        """Test that save() writes settings to the configured file."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            settings_file = f.name
+
+        try:
+            self.preset.settings_file = settings_file
+            self.preset.yolo_min_size = 0.05
+            self.preset.yolo_conf_thresh = 0.30
+            self.preset.epochs = 100
+
+            # Save settings
+            self.preset.save()
+
+            # Verify file exists
+            self.assertTrue(Path(settings_file).exists())
+
+            # Load and verify contents
+            with open(settings_file, encoding="utf-8") as f:
+                saved_data = yaml.safe_load(f)
+
+            self.assertEqual(saved_data["YOLO-min-size"], 0.05)
+            self.assertEqual(saved_data["YOLO-conf-thresh"], 0.30)
+            self.assertEqual(saved_data["epochs"], 100)
+
+        finally:
+            # Cleanup
+            if Path(settings_file).exists():
+                Path(settings_file).unlink()
+
+    def test_save_persists_cameras(self):
+        """Test that save() persists camera list."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            settings_file = f.name
+
+        try:
+            self.preset.settings_file = settings_file
+            self.preset.cameras = [
+                {
+                    "hostname": "camera1",
+                    "ip_address": "192.168.1.100",
+                    "mac_address": "aa:bb:cc:dd:ee:01",
+                    "last_seen": "2024-01-15T10:00:00Z",
+                    "status": "connected",
+                },
+                {
+                    "hostname": "camera2",
+                    "ip_address": "192.168.1.101",
+                    "mac_address": "aa:bb:cc:dd:ee:02",
+                    "last_seen": "2024-01-15T10:05:00Z",
+                    "status": "disconnected",
+                },
+            ]
+
+            # Save settings
+            self.preset.save()
+
+            # Load and verify contents
+            with open(settings_file, encoding="utf-8") as f:
+                saved_data = yaml.safe_load(f)
+
+            self.assertEqual(len(saved_data["cameras"]), 2)
+            self.assertEqual(saved_data["cameras"][0]["hostname"], "camera1")
+            self.assertEqual(
+                saved_data["cameras"][0]["mac_address"], "aa:bb:cc:dd:ee:01"
+            )
+            self.assertEqual(saved_data["cameras"][1]["hostname"], "camera2")
+
+        finally:
+            # Cleanup
+            if Path(settings_file).exists():
+                Path(settings_file).unlink()
+
+    def test_save_persists_plugs(self):
+        """Test that save() persists plug list."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            settings_file = f.name
+
+        try:
+            self.preset.settings_file = settings_file
+            self.preset.plugs = [
+                {
+                    "hostname": "plug1",
+                    "ip_address": "192.168.1.200",
+                    "mac_address": "ff:ee:dd:cc:bb:01",
+                    "last_seen": "2024-01-15T09:00:00Z",
+                    "status": "connected",
+                    "mode": "off",
+                }
+            ]
+
+            # Save settings
+            self.preset.save()
+
+            # Load and verify contents
+            with open(settings_file, encoding="utf-8") as f:
+                saved_data = yaml.safe_load(f)
+
+            self.assertEqual(len(saved_data["plugs"]), 1)
+            self.assertEqual(saved_data["plugs"][0]["hostname"], "plug1")
+            self.assertEqual(
+                saved_data["plugs"][0]["mac_address"], "ff:ee:dd:cc:bb:01"
+            )
+            self.assertEqual(saved_data["plugs"][0]["mode"], "off")
+
+        finally:
+            # Cleanup
+            if Path(settings_file).exists():
+                Path(settings_file).unlink()
+
+    def test_save_and_load_roundtrip(self):
+        """Test that save() and load() work correctly together."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            settings_file = f.name
+
+        try:
+            # Save with first preset
+            preset1 = Preset()
+            preset1.settings_file = settings_file
+            preset1.yolo_min_size = 0.03
+            preset1.epochs = 250
+            preset1.cameras = [
+                {
+                    "hostname": "test-camera",
+                    "ip_address": "192.168.1.50",
+                    "mac_address": "11:22:33:44:55:66",
+                    "last_seen": "2024-01-15T12:00:00Z",
+                    "status": "connected",
+                }
+            ]
+            preset1.save()
+
+            # Load with second preset
+            preset2 = Preset()
+            preset2.load(settings_file)
+
+            # Verify all settings were persisted
+            self.assertEqual(preset2.yolo_min_size, 0.03)
+            self.assertEqual(preset2.epochs, 250)
+            self.assertEqual(len(preset2.cameras), 1)
+            self.assertEqual(preset2.cameras[0]["hostname"], "test-camera")
+            self.assertEqual(
+                preset2.cameras[0]["mac_address"], "11:22:33:44:55:66"
+            )
+
+        finally:
+            # Cleanup
+            if Path(settings_file).exists():
+                Path(settings_file).unlink()
+
+    def test_save_persists_plug_heartbeat_settings(self):
+        """Test that save() persists plug heartbeat settings."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as f:
+            settings_file = f.name
+
+        try:
+            self.preset.settings_file = settings_file
+            self.preset.plug_heartbeat_enabled = False
+            self.preset.plug_heartbeat_interval = 120
+            self.preset.plug_heartbeat_timeout = 10
+
+            # Save settings
+            self.preset.save()
+
+            # Load and verify contents
+            with open(settings_file, encoding="utf-8") as f:
+                saved_data = yaml.safe_load(f)
+
+            self.assertEqual(saved_data["plug-heartbeat-enabled"], False)
+            self.assertEqual(saved_data["plug-heartbeat-interval"], 120)
+            self.assertEqual(saved_data["plug-heartbeat-timeout"], 10)
+
+        finally:
+            # Cleanup
+            if Path(settings_file).exists():
+                Path(settings_file).unlink()

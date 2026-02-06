@@ -255,6 +255,7 @@ def register_dhcp_routes(
                                 "mac_address": plug_info["mac_address"],
                                 "last_seen": plug_info["last_seen"],
                                 "status": plug_info["status"],
+                                "mode": plug_info.get("mode", "off"),
                             }
                         )
 
@@ -296,6 +297,7 @@ def register_dhcp_routes(
                                     "mac_address": plug_info["mac_address"],
                                     "last_seen": plug_info["last_seen"],
                                     "status": plug_info["status"],
+                                    "mode": plug_info.get("mode", "off"),
                                 }
                             )
 

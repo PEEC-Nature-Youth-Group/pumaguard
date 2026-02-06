@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/camera.dart';
 
-/// Event types for camera status changes
+/// Event types for camera and plug status changes
 enum CameraEventType {
   connected,
   cameraConnected,
@@ -12,6 +12,9 @@ enum CameraEventType {
   cameraAdded,
   cameraStatusChangedOnline,
   cameraStatusChangedOffline,
+  plugConnected,
+  plugDisconnected,
+  plugAdded,
   unknown,
 }
 
@@ -57,6 +60,12 @@ class CameraEvent {
         return CameraEventType.cameraStatusChangedOnline;
       case 'camera_status_changed_offline':
         return CameraEventType.cameraStatusChangedOffline;
+      case 'plug_connected':
+        return CameraEventType.plugConnected;
+      case 'plug_disconnected':
+        return CameraEventType.plugDisconnected;
+      case 'plug_added':
+        return CameraEventType.plugAdded;
       default:
         return CameraEventType.unknown;
     }

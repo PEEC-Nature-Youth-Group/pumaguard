@@ -15,6 +15,10 @@ enum CameraEventType {
   plugConnected,
   plugDisconnected,
   plugAdded,
+  plugStatusChangedOnline,
+  plugStatusChangedOffline,
+  plugModeChanged,
+  plugSwitchChanged,
   unknown,
 }
 
@@ -66,6 +70,14 @@ class CameraEvent {
         return CameraEventType.plugDisconnected;
       case 'plug_added':
         return CameraEventType.plugAdded;
+      case 'plug_status_changed_online':
+        return CameraEventType.plugStatusChangedOnline;
+      case 'plug_status_changed_offline':
+        return CameraEventType.plugStatusChangedOffline;
+      case 'plug_mode_changed':
+        return CameraEventType.plugModeChanged;
+      case 'plug_switch_changed':
+        return CameraEventType.plugSwitchChanged;
       default:
         return CameraEventType.unknown;
     }

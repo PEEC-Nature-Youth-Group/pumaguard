@@ -123,7 +123,6 @@ class Settings:
         self.yolo_max_dets = 2
         self.yolo_model_filename = "yolov8s_101425.pt"
         self.classifier_model_filename = "colorbw_111325.h5"
-        self.alpha = 1e-5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"
         )
@@ -316,7 +315,6 @@ class Settings:
         self.validation_no_lion_directories = validation_no_lions
         self.with_augmentation = settings.get("with-augmentation", False)
         self.batch_size = settings.get("batch-size", 1)
-        self.alpha = float(settings.get("alpha", 1e-5))
         self.color_mode = settings.get("color-mode", "rgb")
         self.file_stabilization_extra_wait = settings.get(
             "file-stabilization-extra-wait", 0
@@ -368,7 +366,6 @@ class Settings:
             "deterrent-sound-files": self.deterrent_sound_files,
             "play-sound": self.play_sound,
             "volume": self.volume,
-            "alpha": self.alpha,
             "batch-size": self.batch_size,
             "color-mode": self.color_mode,
             "file-stabilization-extra-wait": self.file_stabilization_extra_wait,
@@ -485,24 +482,6 @@ class Settings:
         if not isinstance(classifier_model_filename, str):
             raise TypeError("classifier_model_filename needs to be a string")
         self._classifier_model_filename = classifier_model_filename
-
-    @property
-    def alpha(self) -> float:
-        """
-        Get the stepsize alpha.
-        """
-        return self._alpha
-
-    @alpha.setter
-    def alpha(self, alpha: float):
-        """
-        Set the stepsize alpha.
-        """
-        if not isinstance(alpha, float):
-            raise TypeError("alpha needs to be a floating point number")
-        if alpha <= 0:
-            raise ValueError("the stepsize needs to be positive")
-        self._alpha = alpha
 
     @property
     def base_output_directory(self) -> str:

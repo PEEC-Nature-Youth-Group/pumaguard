@@ -90,7 +90,7 @@ no-lion-directories:
         self.assertIn("/path/to/no_lion", self.base_preset.no_lion_directories)
         self.assertTrue(hasattr(self.base_preset, "with_augmentation"))
         self.assertEqual(self.base_preset.batch_size, 2)
-        self.assertEqual(self.base_preset.alpha, 1e-3)
+
         self.assertEqual(self.base_preset.model_function_name, "xception")
         self.assertEqual(self.base_preset.validation_lion_directories, [])
         self.assertEqual(self.base_preset.validation_no_lion_directories, [])

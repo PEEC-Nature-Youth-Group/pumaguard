@@ -13,7 +13,7 @@ from flask import (
 )
 
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.web_routes.dhcp import (
     register_dhcp_routes,
@@ -29,7 +29,7 @@ from pumaguard.web_ui import (
 @pytest.fixture
 def mock_preset():
     """Create a mock Preset instance."""
-    preset = MagicMock(spec=Preset)
+    preset = MagicMock(spec=Settings)
     preset.cameras = []
     preset.save = MagicMock()
     return preset

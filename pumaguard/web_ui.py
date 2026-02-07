@@ -40,7 +40,7 @@ from pumaguard.plug_heartbeat import (
     PlugHeartbeat,
 )
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.web_routes.artifacts import (
     register_artifacts_routes,
@@ -126,7 +126,7 @@ class WebUI:
 
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
-        presets: Preset,
+        presets: Settings,
         host: str = "127.0.0.1",
         port: int = 5000,
         debug: bool = False,
@@ -170,7 +170,7 @@ class WebUI:
 
         self.server_thread: threading.Thread | None = None
         self._running: bool = False
-        self.presets: Preset = presets
+        self.presets: Settings = presets
         self.image_directories: list[str] = []
         self.classification_directories: list[str] = []
 
@@ -602,7 +602,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     # Load presets if specified
-    presets = Preset()
+    presets = Settings()
     if args.settings:
         presets.load(args.settings)
 

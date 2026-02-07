@@ -10,7 +10,7 @@ import math
 import os
 
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.utils import (
     classify_image,
@@ -106,7 +106,7 @@ def get_mean_squared_error(predictions: list[tuple[str, float, int]]) -> float:
     return error / len(predictions)
 
 
-def verify_model(presets: Preset):
+def verify_model(presets: Settings):
     """
     Verify a model by calculating its accuracy across a standard set of images.
     """
@@ -164,7 +164,7 @@ def verify_model(presets: Preset):
 
 
 def main(
-    args: argparse.Namespace, presets: Preset
+    args: argparse.Namespace, presets: Settings
 ):  # pylint: disable=unused-argument
     """
     Main entry point

@@ -8,7 +8,7 @@ import argparse
 import logging
 
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.utils import (
     classify_image_two_stage,
@@ -30,7 +30,7 @@ def configure_subparser(parser: argparse.ArgumentParser):
     )
 
 
-def main(options: argparse.Namespace, presets: Preset):
+def main(options: argparse.Namespace, presets: Settings):
     """
     Main entry point
     """

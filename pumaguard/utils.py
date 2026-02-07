@@ -34,7 +34,7 @@ from pumaguard.model_downloader import (
     ensure_model_available,
 )
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 
 logger = logging.getLogger("PumaGuard")
@@ -126,7 +126,7 @@ def copy_images(work_directory, lion_images, no_lion_images):
 
 
 def organize_data(
-    presets: Preset, work_directory: str, validation_directory: str
+    presets: Settings, work_directory: str, validation_directory: str
 ):
     """
     Organizes the data and splits it into training and validation datasets.
@@ -207,7 +207,7 @@ def image_augmentation(image, with_augmentation: bool, augmentation_layers):
 
 
 def create_datasets(
-    presets: Preset,
+    presets: Settings,
     training_directory: str,
     validation_directory: str,
     color_mode: str,
@@ -305,7 +305,7 @@ def get_sha256(filepath: str) -> str:
     return hasher.hexdigest()
 
 
-def classify_image(presets: Preset, image_path: str) -> float:
+def classify_image(presets: Settings, image_path: str) -> float:
     """
     Classify the image and print out the result.
 
@@ -410,7 +410,7 @@ def cache_model_two_stage(
 
 
 def classify_image_two_stage(
-    presets: Preset,
+    presets: Settings,
     image_path: str,
     print_progress: bool = True,
     intermediate_dir: str | None = None,

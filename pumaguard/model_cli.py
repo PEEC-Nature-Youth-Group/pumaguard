@@ -12,7 +12,7 @@ from pumaguard.model_downloader import (
     list_available_models,
 )
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 
 logger = logging.getLogger("PumaGuard")
@@ -42,7 +42,7 @@ def configure_subparser(parser: argparse.ArgumentParser):
 
 
 def main(
-    args: argparse.Namespace, presets: Preset
+    args: argparse.Namespace, presets: Settings
 ):  # pylint: disable=unused-argument
     """
     Main entry point.

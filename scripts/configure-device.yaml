@@ -526,18 +526,6 @@
       tags:
         - networking
 
-    - name: Ensure log file for DHCP notifications exists
-      ansible.builtin.file:
-        path: /var/log/pumaguard-dhcp-notify.log
-        state: touch
-        owner: root
-        group: root
-        mode: "0644"
-        modification_time: preserve
-        access_time: preserve
-      tags:
-        - networking
-
     - name: Configure dnsmasq for wlan0 hotspot (captive portal)
       ansible.builtin.template:
         lstrip_blocks: true

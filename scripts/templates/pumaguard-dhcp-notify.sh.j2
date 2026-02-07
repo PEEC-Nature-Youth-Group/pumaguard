@@ -20,12 +20,9 @@ PUMAGUARD_API="http://{{ dnsmasq_gateway }}:5000/api"
 CAMERA_HOSTNAME_PREFIX="Microseven"
 PLUG_HOSTNAME_PREFIX="shellyplug"
 
-# Log file
-LOG_FILE="/var/log/pumaguard-dhcp-notify.log"
-
-# Function to log messages
+# Function to log messages to journald
 log_message() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - $*" >> "$LOG_FILE"
+    echo "$*" | systemd-cat -t pumaguard-dhcp-notify -p info
 }
 
 # Function to notify PumaGuard API
@@ -54,7 +51,7 @@ EOF
         "$PUMAGUARD_API/dhcp/event" \
         --silent \
         --max-time 5 \
-        >> "$LOG_FILE" 2>&1
+        2>&1 | systemd-cat -t pumaguard-dhcp-notify -p debug
 }
 
 # Main logic

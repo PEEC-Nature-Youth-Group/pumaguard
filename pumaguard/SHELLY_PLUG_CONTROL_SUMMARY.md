@@ -193,7 +193,11 @@ curl -X PUT http://localhost:5000/api/dhcp/plugs/aa:bb:cc:dd:ee:ff/switch \
 - Switch state changes are immediate
 - Default timeout is 5 seconds for Shelly API calls
 - The `was_on` field indicates the previous state before the change
-- Direct switch control bypasses the plug mode setting
+- The plug mode setting (from `/mode` endpoint) is automatically enforced when changed to "on" or "off"
+  - Setting mode to "on" immediately turns the plug on
+  - Setting mode to "off" immediately turns the plug off
+  - Setting mode to "automatic" does not change the current switch state
+- This direct switch control allows manual override of the plug state
 - All switch state changes are logged to the server log
 
 ## Documentation

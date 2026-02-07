@@ -302,4 +302,8 @@ GET http://<plug_ip>/rpc/Switch.Set?id=0&on=true
 - The `was_on` field in the response indicates the previous state
 - Network latency may cause a slight delay
 - If the plug is unreachable, a timeout error will be returned after 5 seconds
-- The plug mode setting (from `/mode` endpoint) does not affect this direct switch control
+- The plug mode setting (from `/mode` endpoint) is automatically enforced when changed to "on" or "off"
+  - Setting mode to "on" immediately turns the plug on
+  - Setting mode to "off" immediately turns the plug off
+  - Setting mode to "automatic" does not change the current switch state
+- This direct switch control allows manual override of the plug state

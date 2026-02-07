@@ -112,7 +112,6 @@ class Settings:
     Base class for Presets
     """
 
-    _alpha: float = 0
     _base_output_directory: str = ""
     _model_file: str = ""
 

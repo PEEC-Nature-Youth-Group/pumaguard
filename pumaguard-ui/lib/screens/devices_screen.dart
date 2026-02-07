@@ -82,6 +82,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
       case CameraEventType.plugConnected:
       case CameraEventType.plugDisconnected:
       case CameraEventType.plugAdded:
+      case CameraEventType.plugStatusChangedOnline:
+      case CameraEventType.plugStatusChangedOffline:
+      case CameraEventType.plugModeChanged:
+      case CameraEventType.plugSwitchChanged:
         // Camera or plug status changed - reload device list
         _loadDevices();
         break;

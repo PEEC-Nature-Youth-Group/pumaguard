@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:web/web.dart' as web;
 import '../models/status.dart';
 import '../models/camera.dart';
+import '../models/plug.dart';
 import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
 import 'settings_screen.dart';
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _error;
   List<Camera> _cameras = [];
+  List<Plug> _plugs = [];
   Timer? _cameraPollingTimer;
   CameraEventsService? _cameraEventsService;
   StreamSubscription<CameraEvent>? _eventsSubscription;
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadStatus();
     _loadCameras();
+    _loadPlugs();
     _startCameraPolling();
     _initializeCameraEvents();
   }
@@ -112,8 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
       case CameraEventType.plugConnected:
       case CameraEventType.plugDisconnected:
       case CameraEventType.plugAdded:
-        // Plug status changed - reload camera list (which includes checking for new devices)
-        _loadCameras();
+      case CameraEventType.plugStatusChangedOnline:
+      case CameraEventType.plugStatusChangedOffline:
+      case CameraEventType.plugModeChanged:
+      case CameraEventType.plugSwitchChanged:
+        // Plug status changed - reload plug list
+        _loadPlugs();
         break;
 
       case CameraEventType.unknown:
@@ -126,12 +133,15 @@ class _HomeScreenState extends State<HomeScreen> {
     // Set up periodic timer to check for camera status changes
     _cameraPollingTimer = Timer.periodic(
       const Duration(seconds: _cameraPollingInterval),
-      (_) => _loadCameras(),
+      (_) {
+        _loadCameras();
+        _loadPlugs();
+      },
     );
   }
 
   Future<void> _refresh() async {
-    await Future.wait([_loadStatus(), _loadCameras()]);
+    await Future.wait([_loadStatus(), _loadCameras(), _loadPlugs()]);
   }
 
   Future<void> _loadStatus() async {
@@ -190,6 +200,49 @@ class _HomeScreenState extends State<HomeScreen> {
       if (oldCamera.status != newCamera.status ||
           oldCamera.ipAddress != newCamera.ipAddress ||
           oldCamera.hostname != newCamera.hostname) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  Future<void> _loadPlugs() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final plugs = await apiService.getPlugs();
+
+      // Only update state if plugs have changed to avoid unnecessary rebuilds
+      if (_plugsChanged(plugs)) {
+        setState(() {
+          _plugs = plugs;
+        });
+        debugPrint(
+          '[HomeScreen._loadPlugs] Plug list updated: ${plugs.length} plugs',
+        );
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen._loadPlugs] Error loading plugs: $e');
+    }
+  }
+
+  bool _plugsChanged(List<Plug> newPlugs) {
+    if (_plugs.length != newPlugs.length) {
+      return true;
+    }
+
+    // Check if any plug status has changed
+    for (int i = 0; i < _plugs.length; i++) {
+      final oldPlug = _plugs[i];
+      final newPlug = newPlugs.firstWhere(
+        (p) => p.macAddress == oldPlug.macAddress,
+        orElse: () => newPlugs[i],
+      );
+
+      if (oldPlug.status != newPlug.status ||
+          oldPlug.mode != newPlug.mode ||
+          oldPlug.ipAddress != newPlug.ipAddress ||
+          oldPlug.hostname != newPlug.hostname) {
         return true;
       }
     }
@@ -400,6 +453,43 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => _openCameraByIp(camera.ipAddress),
                     ),
                     if (camera != _cameras.last) const Divider(),
+                  ],
+                );
+              }),
+            ],
+            // Show detected plugs if any
+            if (_plugs.isNotEmpty) ...[
+              const Divider(),
+              const SizedBox(height: 16),
+              const Divider(thickness: 2),
+              const SizedBox(height: 8),
+              Text(
+                'Detected Plugs',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ..._plugs.map((plug) {
+                final isOnline = plug.isConnected;
+                final statusIcon = isOnline ? Icons.power : Icons.power_off;
+
+                return Column(
+                  children: [
+                    _buildActionButton(
+                      icon: statusIcon,
+                      label: plug.displayName,
+                      description:
+                          'IP: ${plug.ipAddress} • ${plug.status} • Mode: ${plug.mode}',
+                      onTap: () {
+                        // Navigate to devices screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const DevicesScreen(),
+                          ),
+                        ).then((_) => _refresh());
+                      },
+                    ),
+                    if (plug != _plugs.last) const Divider(),
                   ],
                 );
               }),

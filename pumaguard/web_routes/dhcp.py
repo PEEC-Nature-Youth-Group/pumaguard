@@ -1010,6 +1010,188 @@ def register_dhcp_routes(
                 500,
             )
 
+    @app.route("/api/dhcp/plugs/<mac_address>/switch", methods=["PUT"])
+    def set_plug_switch(mac_address: str):
+        """
+        Turn Shelly plug switch on or off using the Shelly Gen2 Switch.Set API.
+
+        Expected JSON payload:
+        {
+            "on": true | false
+        }
+
+        Args:
+            mac_address: MAC address of the plug
+
+        Returns:
+            JSON with operation result or error
+        """
+        # pylint: disable=too-many-return-statements
+        try:
+            data: Any = request.get_json()
+
+            if not data:
+                return jsonify({"error": "No JSON data provided"}), 400
+
+            # Validate 'on' parameter
+            if "on" not in data:
+                return jsonify({"error": "Missing 'on' parameter"}), 400
+
+            on_state = data.get("on")
+            if not isinstance(on_state, bool):
+                return (
+                    jsonify({"error": "'on' parameter must be a boolean"}),
+                    400,
+                )
+
+            # Normalize MAC address format
+            mac_address = mac_address.lower()
+
+            if mac_address not in webui.plugs:
+                return (
+                    jsonify(
+                        {
+                            "error": "Plug not found",
+                            "mac_address": mac_address,
+                        }
+                    ),
+                    404,
+                )
+
+            plug = webui.plugs[mac_address]
+            ip_address = plug.get("ip_address")
+
+            if not ip_address:
+                return (
+                    jsonify(
+                        {
+                            "error": "Plug IP address not available",
+                            "mac_address": mac_address,
+                        }
+                    ),
+                    400,
+                )
+
+            # Check if plug is connected
+            if plug.get("status") != "connected":
+                return (
+                    jsonify(
+                        {
+                            "error": "Plug is not connected",
+                            "mac_address": mac_address,
+                            "status": plug.get("status"),
+                        }
+                    ),
+                    503,
+                )
+
+            try:
+                # Call Shelly Gen2 Switch.Set API
+                # Convert Python bool to JSON boolean string
+                on_param = "true" if on_state else "false"
+                shelly_url = (
+                    f"http://{ip_address}/rpc/Switch.Set?id=0&on={on_param}"
+                )
+                logger.info(
+                    "Setting plug '%s' switch to %s at %s",
+                    plug["hostname"],
+                    "ON" if on_state else "OFF",
+                    ip_address,
+                )
+
+                response = requests.get(shelly_url, timeout=5)
+                response.raise_for_status()
+
+                shelly_data = response.json()
+
+                # Extract the response data
+                was_on = shelly_data.get("was_on", False)
+
+                logger.info(
+                    "Successfully set plug '%s' switch to %s (was: %s)",
+                    plug["hostname"],
+                    "ON" if on_state else "OFF",
+                    "ON" if was_on else "OFF",
+                )
+
+                # Notify SSE clients about the switch change
+                notify_camera_change(
+                    "plug_switch_changed",
+                    {
+                        **dict(plug),
+                        "switch_state": on_state,
+                        "was_on": was_on,
+                    },
+                )
+
+                return (
+                    jsonify(
+                        {
+                            "status": "success",
+                            "message": (
+                                f"Plug switch set to "
+                                f"{'ON' if on_state else 'OFF'}"
+                            ),
+                            "mac_address": mac_address,
+                            "hostname": plug["hostname"],
+                            "on": on_state,
+                            "was_on": was_on,
+                        }
+                    ),
+                    200,
+                )
+
+            except requests.exceptions.Timeout:
+                logger.warning(
+                    "Timeout connecting to Shelly plug at %s", ip_address
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": "Timeout connecting to plug",
+                            "mac_address": mac_address,
+                            "ip_address": ip_address,
+                        }
+                    ),
+                    504,
+                )
+            except requests.exceptions.RequestException as e:
+                logger.error(
+                    "Error setting Shelly switch at %s: %s", ip_address, e
+                )
+                return (
+                    jsonify(
+                        {
+                            "error": "Failed to set Shelly switch",
+                            "mac_address": mac_address,
+                            "ip_address": ip_address,
+                        }
+                    ),
+                    500,
+                )
+            except (ValueError, KeyError) as e:
+                logger.error("Error parsing Shelly response: %s", e)
+                return (
+                    jsonify(
+                        {
+                            "error": "Invalid Shelly response",
+                            "mac_address": mac_address,
+                        }
+                    ),
+                    500,
+                )
+
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error in set_plug_switch")
+            return (
+                jsonify(
+                    {
+                        "error": "Internal server error",
+                    }
+                ),
+                500,
+            )
+
     @app.route("/api/dhcp/cameras/events", methods=["GET"])
     def camera_events():
         """

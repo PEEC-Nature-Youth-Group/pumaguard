@@ -20,7 +20,7 @@ from pumaguard.camera_heartbeat import (
     CameraHeartbeat,
 )
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.web_ui import (
     WebUI,
@@ -30,7 +30,7 @@ from pumaguard.web_ui import (
 @pytest.fixture
 def mock_webui():
     """Create a mock WebUI instance with test cameras."""
-    presets = MagicMock(spec=Preset)
+    presets = MagicMock(spec=Settings)
     presets.cameras = []
     presets.save = MagicMock()
     webui = MagicMock(spec=WebUI)

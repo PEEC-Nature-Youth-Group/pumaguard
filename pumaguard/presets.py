@@ -107,7 +107,7 @@ class PresetError(Exception):
 
 
 # pylint: disable=too-many-public-methods
-class Preset:
+class Settings:
     """
     Base class for Presets
     """

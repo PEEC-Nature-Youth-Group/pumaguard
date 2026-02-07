@@ -15,8 +15,8 @@ from pumaguard import (
     verify,
 )
 from pumaguard.presets import (
-    Preset,
     PresetError,
+    Settings,
     get_default_settings_file,
     get_xdg_cache_home,
 )
@@ -81,7 +81,7 @@ def create_global_parser() -> argparse.ArgumentParser:
     return global_parser
 
 
-def configure_presets(args: argparse.Namespace, presets: Preset):
+def configure_presets(args: argparse.Namespace, presets: Settings):
     """
     Configure the settings based on commandline arguments.
     """
@@ -233,7 +233,7 @@ def main():
         print_bash_completion(command=args.command, shell=args.completion)
         sys.exit(0)
 
-    presets = Preset()
+    presets = Settings()
 
     configure_presets(args, presets)
 

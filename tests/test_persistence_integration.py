@@ -16,7 +16,7 @@ from unittest.mock import (
 import yaml
 
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.web_ui import (
     WebUI,
@@ -45,7 +45,7 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_camera_persistence_across_restart(self):
         """Test that cameras persist across server restarts."""
         # First instance - add cameras
-        presets1 = Preset()
+        presets1 = Settings()
         presets1.settings_file = self.settings_file
         presets1.cameras = [
             {
@@ -69,7 +69,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         self.assertTrue(Path(self.settings_file).exists())
 
         # Second instance - load cameras (simulating restart)
-        presets2 = Preset()
+        presets2 = Settings()
         presets2.load(self.settings_file)
 
         # Verify cameras were loaded
@@ -88,7 +88,7 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_plug_persistence_across_restart(self):
         """Test that plugs persist across server restarts."""
         # First instance - add plugs
-        presets1 = Preset()
+        presets1 = Settings()
         presets1.settings_file = self.settings_file
         presets1.plugs = [
             {
@@ -114,7 +114,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         self.assertTrue(Path(self.settings_file).exists())
 
         # Second instance - load plugs (simulating restart)
-        presets2 = Preset()
+        presets2 = Settings()
         presets2.load(self.settings_file)
 
         # Verify plugs were loaded
@@ -133,7 +133,7 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_cameras_and_plugs_persistence_together(self):
         """Test that cameras and plugs persist together."""
         # First instance - add both cameras and plugs
-        presets1 = Preset()
+        presets1 = Settings()
         presets1.settings_file = self.settings_file
         presets1.cameras = [
             {
@@ -157,7 +157,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets1.save()
 
         # Second instance - load both (simulating restart)
-        presets2 = Preset()
+        presets2 = Settings()
         presets2.load(self.settings_file)
 
         # Verify both were loaded
@@ -169,14 +169,14 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_empty_cameras_and_plugs_persistence(self):
         """Test that empty lists persist correctly."""
         # First instance - save empty lists
-        presets1 = Preset()
+        presets1 = Settings()
         presets1.settings_file = self.settings_file
         presets1.cameras = []
         presets1.plugs = []
         presets1.save()
 
         # Second instance - load (simulating restart)
-        presets2 = Preset()
+        presets2 = Settings()
         presets2.load(self.settings_file)
 
         # Verify empty lists were preserved
@@ -186,7 +186,7 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_partial_update_preserves_other_settings(self):
         """Test that updating cameras doesn't lose plugs and vice versa."""
         # First instance - save both
-        presets1 = Preset()
+        presets1 = Settings()
         presets1.settings_file = self.settings_file
         presets1.cameras = [
             {
@@ -211,7 +211,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
         # Second instance - load and modify only cameras
         # Real code creates a new list and assigns it
-        presets2 = Preset()
+        presets2 = Settings()
         presets2.load(self.settings_file)
         camera_list = list(presets2.cameras)  # Copy existing
         camera_list.append(
@@ -227,7 +227,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets2.save()
 
         # Third instance - verify plugs still exist
-        presets3 = Preset()
+        presets3 = Settings()
         presets3.load(self.settings_file)
         self.assertEqual(len(presets3.cameras), 2)
         self.assertEqual(len(presets3.plugs), 1)
@@ -235,7 +235,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
     def test_dhcp_event_persistence_simulation(self):
         """Simulate DHCP events updating and persisting device info."""
-        presets = Preset()
+        presets = Settings()
         presets.settings_file = self.settings_file
 
         # Simulate DHCP "add" event for camera
@@ -252,7 +252,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
         # Simulate DHCP "del" event - camera goes offline
         # Real code creates a new list and assigns it
-        presets_updated = Preset()
+        presets_updated = Settings()
         presets_updated.load(self.settings_file)
         camera_list = []
         for cam in presets_updated.cameras:
@@ -269,7 +269,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets_updated.save()
 
         # Verify status was persisted
-        presets_verify = Preset()
+        presets_verify = Settings()
         presets_verify.load(self.settings_file)
         self.assertEqual(len(presets_verify.cameras), 1)
         self.assertEqual(presets_verify.cameras[0]["status"], "disconnected")
@@ -279,7 +279,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
     def test_heartbeat_status_update_persistence(self):
         """Simulate heartbeat monitor updating and persisting status."""
-        presets = Preset()
+        presets = Settings()
         presets.settings_file = self.settings_file
 
         # Initial state - camera connected
@@ -296,7 +296,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
         # Simulate heartbeat check - camera becomes unreachable
         # Real code creates a new list and assigns it
-        presets_hb = Preset()
+        presets_hb = Settings()
         presets_hb.load(self.settings_file)
         camera_list = []
         for cam in presets_hb.cameras:
@@ -313,7 +313,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets_hb.save()
 
         # Verify heartbeat update was persisted
-        presets_verify = Preset()
+        presets_verify = Settings()
         presets_verify.load(self.settings_file)
         self.assertEqual(presets_verify.cameras[0]["status"], "disconnected")
         self.assertEqual(
@@ -322,7 +322,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
     def test_plug_mode_persistence(self):
         """Test that plug mode changes persist across restarts."""
-        presets = Preset()
+        presets = Settings()
         presets.settings_file = self.settings_file
 
         # Initial state
@@ -340,7 +340,7 @@ class TestPersistenceIntegration(unittest.TestCase):
 
         # Change mode to automatic
         # Real code creates a new list and assigns it
-        presets_mode = Preset()
+        presets_mode = Settings()
         presets_mode.load(self.settings_file)
         plug_list = []
         for plug in presets_mode.plugs:
@@ -358,13 +358,13 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets_mode.save()
 
         # Verify mode change persisted
-        presets_verify = Preset()
+        presets_verify = Settings()
         presets_verify.load(self.settings_file)
         self.assertEqual(presets_verify.plugs[0]["mode"], "automatic")
 
     def test_file_format_is_valid_yaml(self):
         """Test that saved file is valid YAML."""
-        presets = Preset()
+        presets = Settings()
         presets.settings_file = self.settings_file
         presets.cameras = [
             {
@@ -388,7 +388,7 @@ class TestPersistenceIntegration(unittest.TestCase):
     def test_webui_loads_persisted_devices(self):
         """Test that WebUI loads cameras and plugs from settings on init."""
         # Create settings file with devices
-        presets = Preset()
+        presets = Settings()
         presets.settings_file = self.settings_file
         presets.cameras = [
             {
@@ -412,7 +412,7 @@ class TestPersistenceIntegration(unittest.TestCase):
         presets.save()
 
         # Load settings and create WebUI instance
-        presets_for_webui = Preset()
+        presets_for_webui = Settings()
         presets_for_webui.load(self.settings_file)
 
         # Mock folder_manager to avoid file system operations

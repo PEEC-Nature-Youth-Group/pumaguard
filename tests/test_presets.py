@@ -16,7 +16,7 @@ from unittest.mock import (
 import yaml
 
 from pumaguard.presets import (
-    Preset,
+    Settings,
     get_default_settings_file,
 )
 
@@ -27,7 +27,7 @@ class TestBasePreset(unittest.TestCase):
     """
 
     def setUp(self):
-        self.base_preset = Preset()
+        self.base_preset = Settings()
 
     def test_image_dimensions_default(self):
         """
@@ -283,7 +283,7 @@ class TestDeterrentSoundFiles(unittest.TestCase):
     """
 
     def setUp(self):
-        self.preset = Preset()
+        self.preset = Settings()
 
     def test_default_sound_files_is_list(self):
         """
@@ -424,7 +424,7 @@ class TestPresetSave(unittest.TestCase):
     """
 
     def setUp(self):
-        self.preset = Preset()
+        self.preset = Settings()
 
     def test_save_writes_to_settings_file(self):
         """Test that save() writes settings to the configured file."""
@@ -551,7 +551,7 @@ class TestPresetSave(unittest.TestCase):
 
         try:
             # Save with first preset
-            preset1 = Preset()
+            preset1 = Settings()
             preset1.settings_file = settings_file
             preset1.yolo_min_size = 0.03
             preset1.epochs = 250
@@ -567,7 +567,7 @@ class TestPresetSave(unittest.TestCase):
             preset1.save()
 
             # Load with second preset
-            preset2 = Preset()
+            preset2 = Settings()
             preset2.load(settings_file)
 
             # Verify all settings were persisted

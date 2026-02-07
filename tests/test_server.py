@@ -31,7 +31,7 @@ from pumaguard.server import (
     FolderObserver,
 )
 from pumaguard.utils import (
-    Preset,
+    Settings,
 )
 
 
@@ -43,7 +43,7 @@ class TestFolderObserver(unittest.TestCase):
     def setUp(self):
         self.folder = "test_folder"
         self.notebook = 6
-        self.presets = Preset()
+        self.presets = Settings()
         self.presets.notebook_number = self.notebook
         self.presets.model_version = "pre-trained"
         self.presets.image_dimensions = (512, 512)
@@ -303,7 +303,7 @@ class TestFolderManager(unittest.TestCase):
 
     def setUp(self):
         self.notebook = 6
-        self.presets = Preset()
+        self.presets = Settings()
         self.presets.notebook_number = self.notebook
         self.presets.model_version = "pre-trained"
         self.presets.image_dimensions = (512, 512)

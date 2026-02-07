@@ -29,7 +29,7 @@ from pumaguard.lock_manager import (
     acquire_lock,
 )
 from pumaguard.presets import (
-    Preset,
+    Settings,
 )
 from pumaguard.sound import (
     playsound,
@@ -94,10 +94,10 @@ class FolderObserver:
     FolderObserver watches a folder for new files.
     """
 
-    def __init__(self, folder: str, method: str, presets: Preset):
+    def __init__(self, folder: str, method: str, presets: Settings):
         self.folder: str = folder
         self.method: str = method
-        self.presets: Preset = presets
+        self.presets: Settings = presets
         self._stop_event: threading.Event = threading.Event()
 
     def start(self):
@@ -309,7 +309,7 @@ class FolderManager:
     FolderManager manages the folders to observe.
     """
 
-    def __init__(self, presets: Preset):
+    def __init__(self, presets: Settings):
         self.presets = presets
         self.observers: list[FolderObserver] = []
 
@@ -346,7 +346,7 @@ class FolderManager:
             observer.stop()
 
 
-def main(options: argparse.Namespace, presets: Preset):
+def main(options: argparse.Namespace, presets: Settings):
     """
     Main entry point.
     """

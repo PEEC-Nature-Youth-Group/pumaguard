@@ -214,7 +214,7 @@ Potential improvements:
 1. Batch operations for multiple plugs
 2. Toggle endpoint (flip current state)
 3. Scheduled switch operations
-4. Integration with plug mode system
+4. ~~Integration with plug mode system~~ (✓ Implemented - mode changes to "on"/"off" now automatically enforce plug state)
 5. Switch state caching
 6. Retry logic for failed operations
 

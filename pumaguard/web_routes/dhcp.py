@@ -812,6 +812,52 @@ def register_dhcp_routes(
             except Exception as e:  # pylint: disable=broad-except
                 logger.error("Failed to save plug settings: %s", str(e))
 
+            # Enforce the mode by actually turning the plug on/off
+            plug = webui.plugs[mac_address]
+            if mode in ["on", "off"] and plug.get("status") == "connected":
+                ip_address = plug.get("ip_address")
+                if ip_address:
+                    try:
+                        # Determine desired state
+                        desired_state = mode == "on"
+                        on_param = "true" if desired_state else "false"
+                        shelly_url = (
+                            f"http://{ip_address}/rpc/Switch.Set?"
+                            f"id=0&on={on_param}"
+                        )
+
+                        logger.info(
+                            "Enforcing mode: turning plug '%s' %s",
+                            plug["hostname"],
+                            "ON" if desired_state else "OFF",
+                        )
+
+                        response = requests.get(shelly_url, timeout=5)
+                        response.raise_for_status()
+
+                        logger.info(
+                            "Successfully enforced mode for plug '%s'",
+                            plug["hostname"],
+                        )
+                    except requests.exceptions.Timeout:
+                        logger.warning(
+                            "Timeout enforcing mode for plug '%s' at %s",
+                            plug["hostname"],
+                            ip_address,
+                        )
+                    except requests.exceptions.RequestException as e:
+                        logger.warning(
+                            "Failed to enforce mode for plug '%s': %s",
+                            plug["hostname"],
+                            str(e),
+                        )
+                    except Exception as e:  # pylint: disable=broad-except
+                        logger.error(
+                            "Error enforcing mode for plug '%s': %s",
+                            plug["hostname"],
+                            str(e),
+                        )
+
             # Notify SSE clients
             notify_camera_change(
                 "plug_mode_changed", dict(webui.plugs[mac_address])

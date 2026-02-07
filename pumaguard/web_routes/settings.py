@@ -178,9 +178,13 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
     @app.route("/api/settings/test-sound", methods=["POST"])
     def test_sound():
         """Test the configured deterrent sound."""
+        logger.info("=== Test sound endpoint called ===")
         try:
             sound_files = webui.presets.deterrent_sound_files
+            logger.info("Configured sound files: %s", sound_files)
+
             if not sound_files:
+                logger.warning("No sound files configured")
                 return (
                     jsonify({"error": "No sound file configured"}),
                     400,
@@ -188,14 +192,17 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
             # Randomly select one sound from the list
             sound_file = random.choice(sound_files)
+            logger.info("Selected sound file: %s", sound_file)
 
             # Combine sound_path with deterrent_sound_file
             sound_file_path = os.path.join(
                 webui.presets.sound_path, sound_file
             )
+            logger.info("Full sound file path: %s", sound_file_path)
 
             # Check if file exists
             if not os.path.exists(sound_file_path):
+                logger.error("Sound file not found: %s", sound_file_path)
                 return (
                     jsonify(
                         {"error": (f"Sound file not found: {sound_file_path}")}
@@ -206,15 +213,30 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
             # Play the sound with configured volume (non-blocking)
             volume = webui.presets.volume
             logger.info(
-                "Testing sound playback: file=%s, volume=%d",
+                "Starting sound playback: file=%s, volume=%d, play_sound=%s",
                 sound_file_path,
                 volume,
+                webui.presets.play_sound,
             )
-            logger.debug(
-                "Current presets.volume value before playsound: %d",
-                webui.presets.volume,
-            )
+
+            if not webui.presets.play_sound:
+                logger.warning(
+                    "Sound playback is disabled in settings (play_sound=False)"
+                )
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Sound playback is disabled "
+                            + "in settings",
+                        }
+                    ),
+                    400,
+                )
+
             playsound(sound_file_path, volume, blocking=False)
+            logger.info("Sound playback command sent successfully")
+
             return jsonify(
                 {
                     "success": True,
@@ -222,7 +244,7 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 }
             )
         except Exception as e:  # pylint: disable=broad-except
-            logger.exception("Error testing sound")
+            logger.exception("Error testing sound: %s", str(e))
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/settings/stop-sound", methods=["POST"])

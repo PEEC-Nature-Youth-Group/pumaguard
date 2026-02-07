@@ -506,87 +506,103 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (!mounted) return;
 
-      final selectedSound = await showDialog<String>(
+      final result = await showDialog<dynamic>(
         context: context,
         builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Select Sound File'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      Navigator.of(context).pop('__upload__');
-                    },
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text('Upload New Sound File'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _availableSounds.length,
-                      itemBuilder: (context, index) {
-                        final sound = _availableSounds[index];
-                        final soundName = sound['name'] as String;
-                        final sizeMb = sound['size_mb'] as double?;
+          // Create a local copy of selected sounds for the dialog
+          final tempSelectedSounds = List<String>.from(_selectedSoundFiles);
 
-                        return ListTile(
-                          title: Text(soundName),
-                          subtitle: Text(
-                            sizeMb != null
-                                ? '${sizeMb.toStringAsFixed(2)} MB'
-                                : '',
-                            style: const TextStyle(color: Colors.blue),
-                          ),
-                          leading: const Icon(
-                            Icons.music_note,
-                            color: Colors.blue,
-                          ),
-                          trailing: _selectedSoundFiles.contains(soundName)
-                              ? const Icon(Icons.check, color: Colors.blue)
-                              : null,
-                          onTap: () {
-                            Navigator.of(context).pop(soundName);
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Select Sound Files'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          Navigator.of(context).pop('__upload__');
+                        },
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Upload New Sound File'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 48),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      Flexible(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _availableSounds.length,
+                          itemBuilder: (context, index) {
+                            final sound = _availableSounds[index];
+                            final soundName = sound['name'] as String;
+                            final sizeMb = sound['size_mb'] as double?;
+                            final isSelected = tempSelectedSounds.contains(
+                              soundName,
+                            );
+
+                            return CheckboxListTile(
+                              title: Text(soundName),
+                              subtitle: Text(
+                                sizeMb != null
+                                    ? '${sizeMb.toStringAsFixed(2)} MB'
+                                    : '',
+                                style: const TextStyle(color: Colors.blue),
+                              ),
+                              secondary: const Icon(
+                                Icons.music_note,
+                                color: Colors.blue,
+                              ),
+                              value: isSelected,
+                              onChanged: (bool? value) {
+                                setDialogState(() {
+                                  if (value == true) {
+                                    tempSelectedSounds.add(soundName);
+                                  } else {
+                                    // Don't allow removing the last sound file
+                                    if (tempSelectedSounds.length > 1) {
+                                      tempSelectedSounds.remove(soundName);
+                                    }
+                                  }
+                                });
+                              },
+                            );
                           },
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop(tempSelectedSounds);
+                    },
+                    child: const Text('Done'),
                   ),
                 ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
-            ],
+              );
+            },
           );
         },
       );
 
-      if (selectedSound == '__upload__') {
+      if (result == '__upload__') {
         // User selected upload option
         await _uploadSoundFile();
-      } else if (selectedSound != null) {
+      } else if (result is List<String>) {
+        // User clicked Done - update the selected sounds
         setState(() {
-          // Toggle sound selection
-          if (_selectedSoundFiles.contains(selectedSound)) {
-            // Don't allow removing the last sound file
-            if (_selectedSoundFiles.length > 1) {
-              _selectedSoundFiles.remove(selectedSound);
-            }
-          } else {
-            _selectedSoundFiles.add(selectedSound);
-          }
+          _selectedSoundFiles = result;
         });
         // Persist the change immediately
         await _saveSettings();

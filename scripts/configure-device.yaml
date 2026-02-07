@@ -852,6 +852,13 @@
       tags:
         - pumaguard
 
+    - name: Get user UID
+      ansible.builtin.command: id -u {{ pumaguard_user | default(ansible_user) }}
+      register: user_uid_result
+      changed_when: false
+      tags:
+        - pumaguard
+
     - name: Install pumaguard systemd service
       ansible.builtin.template:
         lstrip_blocks: true

@@ -16,6 +16,11 @@ Environment="XDG_CONFIG_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/
 Environment="XDG_CACHE_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/.cache"
 Environment="XDG_DATA_HOME=/home/{{ pumaguard_user | default(ansible_user) }}/.local/share"
 
+# Set PulseAudio/PipeWire environment variables for audio playback
+Environment="XDG_RUNTIME_DIR=/run/user/{{ pumaguard_uid | default('1000') }}"
+Environment="PULSE_RUNTIME_PATH=/run/user/{{ pumaguard_uid | default('1000') }}/pulse"
+Environment="DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{{ pumaguard_uid | default('1000') }}/bus"
+
 ExecStart=/opt/pumaguard/bin/pumaguard server --debug {{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}
 Restart=always
 RestartSec=10

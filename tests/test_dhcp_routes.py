@@ -1,4 +1,5 @@
 """Tests for DHCP camera management routes."""
+# pylint: disable=too-many-lines
 
 import json
 from unittest.mock import (
@@ -940,3 +941,267 @@ def test_get_shelly_status_connection_error(mock_get, test_app):
     data = json.loads(response.data)
     assert "error" in data
     assert "Failed to fetch Shelly status" in data["error"]
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_switch_on_success(mock_get, test_app):
+    """Test turning plug switch ON successfully."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a connected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock the Shelly API response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"was_on": False}
+    mock_get.return_value = mock_response
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": True}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["mac_address"] == "11:22:33:44:55:66"
+    assert data["hostname"] == "ShellyPlug"
+    assert data["on"] is True
+    assert data["was_on"] is False
+
+    # Verify the request was made to the correct URL
+    mock_get.assert_called_once_with(
+        "http://192.168.52.150/rpc/Switch.Set?id=0&on=true", timeout=5
+    )
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_switch_off_success(mock_get, test_app):
+    """Test turning plug switch OFF successfully."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a connected plug
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock the Shelly API response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"was_on": True}
+    mock_get.return_value = mock_response
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": False}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["on"] is False
+    assert data["was_on"] is True
+
+    # Verify the request was made to the correct URL
+    mock_get.assert_called_once_with(
+        "http://192.168.52.150/rpc/Switch.Set?id=0&on=false", timeout=5
+    )
+
+
+def test_set_plug_switch_no_json_data(test_app):
+    """Test setting plug switch without JSON data."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data="",
+        content_type="text/plain",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    assert "error" in data
+
+
+def test_set_plug_switch_missing_on_parameter(test_app):
+    """Test setting plug switch without 'on' parameter."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"something": "else"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Missing 'on' parameter" in data["error"]
+
+
+def test_set_plug_switch_invalid_on_parameter(test_app):
+    """Test setting plug switch with invalid 'on' parameter."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": "true"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "'on' parameter must be a boolean" in data["error"]
+
+
+def test_set_plug_switch_plug_not_found(test_app):
+    """Test setting plug switch for non-existent plug."""
+    app, _ = test_app
+    client = app.test_client()
+
+    response = client.put(
+        "/api/dhcp/plugs/99:99:99:99:99:99/switch",
+        data=json.dumps({"on": True}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Plug not found" in data["error"]
+
+
+def test_set_plug_switch_plug_disconnected(test_app):
+    """Test setting plug switch when plug is disconnected."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "disconnected",
+        "mode": "on",
+    }
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": True}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 503
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Plug is not connected" in data["error"]
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_switch_timeout(mock_get, test_app):
+    """Test setting plug switch when connection times out."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock a timeout
+    mock_get.side_effect = requests.exceptions.Timeout()
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": True}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 504
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Timeout connecting to plug" in data["error"]
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_switch_connection_error(mock_get, test_app):
+    """Test setting plug switch when connection fails."""
+    app, webui = test_app
+    client = app.test_client()
+
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "on",
+    }
+
+    # Mock a connection error
+    mock_get.side_effect = requests.exceptions.ConnectionError(
+        "Connection refused"
+    )
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/switch",
+        data=json.dumps({"on": True}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    data = json.loads(response.data)
+    assert "error" in data
+    assert "Failed to set Shelly switch" in data["error"]

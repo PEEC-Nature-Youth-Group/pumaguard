@@ -138,7 +138,6 @@ class Settings:
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
         self.validation_lion_directories: list[str] = []
-        self.load_history_from_file = False
         self.load_model_from_file = False
         self.model_function_name = "xception"
         self.model_version = "undefined"
@@ -715,20 +714,6 @@ class Settings:
         if not all(x > 0 for x in dimensions):
             raise ValueError("image dimensions need to be positive")
         self._image_dimensions = copy.deepcopy(dimensions)
-
-    @property
-    def load_history_from_file(self) -> bool:
-        """
-        Load history from file.
-        """
-        return self._load_history_from_file
-
-    @load_history_from_file.setter
-    def load_history_from_file(self, load_history: bool):
-        """
-        Load history from file.
-        """
-        self._load_history_from_file = load_history
 
     @property
     def load_model_from_file(self) -> bool:

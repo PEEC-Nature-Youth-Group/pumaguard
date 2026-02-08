@@ -11,12 +11,6 @@ import shutil
 from pathlib import (
     Path,
 )
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Union,
-)
 
 import requests
 import yaml
@@ -33,9 +27,9 @@ if not _settings_file.exists():
     raise FileNotFoundError("Could not open model registry")
 
 with open(_settings_file, encoding="utf-8") as fd_registry:
-    MODEL_REGISTRY: Dict[
-        str, Dict[str, Union[str, Dict[str, Dict[str, str]]]]
-    ] = yaml.load(fd_registry, Loader=yaml.SafeLoader)
+    MODEL_REGISTRY: dict[str, dict[str, str | dict[str, dict[str, str]]]] = (
+        yaml.load(fd_registry, Loader=yaml.SafeLoader)
+    )
 
 
 def create_registry(models_dir: Path):
@@ -97,7 +91,7 @@ def verify_file_checksum(file_path: Path, expected_sha256: str) -> bool:
 def download_file(
     url: str,
     destination: Path,
-    expected_sha256: Optional[str] = None,
+    expected_sha256: str | None = None,
     print_progress: bool = True,
 ) -> bool:
     """
@@ -115,7 +109,7 @@ def download_file(
         logger.info("Downloading %s to %s", url, destination)
 
         # Respect custom CA bundle if provided via environment or system path
-        ca_bundle: Optional[str] = None
+        ca_bundle: str | None = None
         # Priority:
         # 1. explicit PumaGuard var
         # 2. then common envs
@@ -157,7 +151,7 @@ def download_file(
                         # pylint: disable=line-too-long
                         print(
                             f"\rDownload progress: {percent:.1f}% "
-                            f"({downloaded/1024/1024:.1f}/{total_size/1024/1024:.1f} MB)",
+                            + f"({downloaded / 1024 / 1024:.1f}/{total_size / 1024 / 1024:.1f} MB)",
                             end="",
                             flush=True,
                         )
@@ -188,9 +182,9 @@ def download_file(
 
 
 def assemble_model_fragments(
-    fragment_paths: List[Path],
+    fragment_paths: list[Path],
     output_path: Path,
-    expected_sha256: Optional[str] = None,
+    expected_sha256: str | None = None,
 ) -> bool:
     """
     Assemble model fragments into a single file (equivalent
@@ -250,10 +244,10 @@ def assemble_model_fragments(
 
 
 def download_model_fragments(
-    fragment_urls: List[str],
+    fragment_urls: list[str],
     models_dir: Path,
     print_progress: bool = True,
-) -> List[Path]:
+) -> list[Path]:
     """
     Download all fragments for a split model.
 
@@ -264,7 +258,7 @@ def download_model_fragments(
     Returns:
         List[Path]: Paths to downloaded fragment files
     """
-    fragment_paths: List[Path] = []
+    fragment_paths: list[Path] = []
 
     for _, url in enumerate(fragment_urls):
         # Extract fragment filename from URL
@@ -333,9 +327,9 @@ def ensure_model_available(
 
     # Handle fragmented models
     if "fragments" in model_info:
-        fragment_urls: Dict[str, Dict[str, str]] = model_info[
+        fragment_urls: str | dict[str, dict[str, str]] = model_info[
             "fragments"
-        ]  # type: ignore
+        ]
         logger.info(
             "Downloading fragmented model %s (%d fragments)",
             model_name,
@@ -345,7 +339,9 @@ def ensure_model_available(
         logger.debug("fragment_urls = %s", fragment_urls)
 
         # Download all fragments
-        fragment_paths: List[Path] = []
+        fragment_paths: list[Path] = []
+        if not isinstance(fragment_urls, dict):
+            raise RuntimeError("Unexpected type for fragment_urls")
         for fragment_name, fragment_data in fragment_urls.items():
             url = MODEL_BASE_URI + "/" + MODEL_TAG + "/" + fragment_name
             if not download_file(
@@ -382,7 +378,7 @@ def ensure_model_available(
     return model_path
 
 
-def list_available_models() -> List[str]:
+def list_available_models() -> list[str]:
     """
     List all available models in the registry.
 

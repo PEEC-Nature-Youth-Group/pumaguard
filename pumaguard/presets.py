@@ -138,7 +138,6 @@ class Settings:
         self.image_dimensions: tuple[int, int] = (128, 128)
         self.lion_directories: list[str] = []
         self.validation_lion_directories: list[str] = []
-        self.load_model_from_file = False
         self.model_function_name = "xception"
         self.model_version = "undefined"
         self.play_sound = True
@@ -714,20 +713,6 @@ class Settings:
         if not all(x > 0 for x in dimensions):
             raise ValueError("image dimensions need to be positive")
         self._image_dimensions = copy.deepcopy(dimensions)
-
-    @property
-    def load_model_from_file(self) -> bool:
-        """
-        Load model from file.
-        """
-        return self._load_model_from_file
-
-    @load_model_from_file.setter
-    def load_model_from_file(self, load_model: bool):
-        """
-        Load model from file.
-        """
-        self._load_model_from_file = load_model
 
     @property
     def epochs(self) -> int:

@@ -7,7 +7,6 @@ Some utility functions.
 import csv
 import datetime
 import gc
-import glob
 import hashlib
 import logging
 import os
@@ -27,7 +26,6 @@ import numpy as np
 import PIL
 
 matplotlib.use("Agg")
-import tensorflow as tf  # type: ignore
 import ultralytics
 
 from pumaguard.model_downloader import (
@@ -123,158 +121,6 @@ def copy_images(work_directory, lion_images, no_lion_images):
     for image in no_lion_images:
         shutil.copy(image, f"{work_directory}/no_lion")
     print("Copied all images")
-
-
-def organize_data(
-    presets: Settings, work_directory: str, validation_directory: str
-):
-    """
-    Organizes the data and splits it into training and validation datasets.
-    """
-    logger.debug(
-        "organizing training data, work directory is %s, "
-        + "validation directory is %s",
-        work_directory,
-        validation_directory,
-    )
-
-    logger.debug("lion images in    %s", presets.lion_directories)
-    logger.debug("no-lion images in %s", presets.no_lion_directories)
-    lion_images = []
-    for lion in presets.lion_directories:
-        lion_images += glob.glob(os.path.join(lion, "*"))
-    no_lion_images = []
-    for no_lion in presets.no_lion_directories:
-        no_lion_images += glob.glob(os.path.join(no_lion, "*"))
-
-    print(f"Found {len(lion_images)} images tagged as `lion`")
-    print(f"Found {len(no_lion_images)} images tagged as `no-lion`")
-    print(f"In total {len(lion_images) + len(no_lion_images)} images")
-
-    shutil.rmtree(work_directory, ignore_errors=True)
-    os.makedirs(f"{work_directory}/lion")
-    os.makedirs(f"{work_directory}/no_lion")
-
-    copy_images(
-        work_directory=work_directory,
-        lion_images=lion_images,
-        no_lion_images=no_lion_images,
-    )
-
-    if (
-        len(presets.validation_lion_directories) == 0
-        and len(presets.validation_no_lion_directories) == 0
-    ):
-        return
-
-    logger.debug(
-        "validation lion images in    %s", presets.validation_lion_directories
-    )
-    logger.debug(
-        "validation no-lion images in %s",
-        presets.validation_no_lion_directories,
-    )
-    lion_images = []
-    for lion in presets.validation_lion_directories:
-        lion_images += glob.glob(os.path.join(lion, "*"))
-    no_lion_images = []
-    for no_lion in presets.validation_no_lion_directories:
-        no_lion_images += glob.glob(os.path.join(no_lion, "*"))
-
-    print(f"Found {len(lion_images)} images tagged as `lion`")
-    print(f"Found {len(no_lion_images)} images tagged as `no-lion`")
-    print(f"In total {len(lion_images) + len(no_lion_images)} images")
-
-    shutil.rmtree(validation_directory, ignore_errors=True)
-    os.makedirs(f"{validation_directory}/lion")
-    os.makedirs(f"{validation_directory}/no_lion")
-
-    copy_images(
-        work_directory=validation_directory,
-        lion_images=lion_images,
-        no_lion_images=no_lion_images,
-    )
-
-
-def image_augmentation(image, with_augmentation: bool, augmentation_layers):
-    """
-    Use augmentation if `with_augmentation` is set to True
-    """
-    if with_augmentation:
-        for layer in augmentation_layers:
-            image = layer(image)
-    return image
-
-
-def create_datasets(
-    presets: Settings,
-    training_directory: str,
-    validation_directory: str,
-    color_mode: str,
-):
-    """
-    Create the training and validation datasets.
-    """
-    # Define augmentation layers which are used in some of the runs
-    augmentation_layers = [
-        keras.layers.RandomFlip("horizontal"),
-        keras.layers.RandomRotation(0.01),
-        keras.layers.RandomZoom(0.05),
-        keras.layers.RandomBrightness((-0.1, 0.1)),
-        keras.layers.RandomContrast(0.1),
-        # keras.layers.RandomCrop(200, 200),
-        # keras.layers.Rescaling(1./255),
-    ]
-
-    with_validation_split = (
-        len(presets.validation_lion_directories) == 0
-        and len(presets.validation_no_lion_directories) == 0
-    )
-
-    # Create datasets(training, validation)
-    datasets = keras.preprocessing.image_dataset_from_directory(
-        training_directory,
-        batch_size=presets.batch_size,
-        validation_split=(0.2 if with_validation_split else None),
-        subset=("both" if with_validation_split else None),
-        # Seed is always the same in order to ensure that we can reproduce
-        # the same training session
-        seed=123,
-        shuffle=True,
-        image_size=presets.image_dimensions,
-        color_mode=color_mode,
-    )
-
-    if with_validation_split:
-        training_dataset = datasets[0]
-        validation_dataset = datasets[1]
-    else:
-        training_dataset = datasets
-        validation_dataset = keras.preprocessing.image_dataset_from_directory(
-            validation_directory,
-            batch_size=presets.batch_size,
-            seed=123,
-            shuffle=True,
-            image_size=presets.image_dimensions,
-            color_mode=color_mode,
-        )
-
-    training_dataset = training_dataset.map(
-        lambda img, label: (
-            image_augmentation(
-                image=img,
-                with_augmentation=presets.with_augmentation,
-                augmentation_layers=augmentation_layers,
-            ),
-            label,
-        ),
-        num_parallel_calls=tf.data.AUTOTUNE,
-    )
-
-    training_dataset = training_dataset.prefetch(tf.data.AUTOTUNE)
-    validation_dataset = validation_dataset.prefetch(tf.data.AUTOTUNE)
-
-    return training_dataset, validation_dataset
 
 
 def get_md5(filepath: str) -> str:

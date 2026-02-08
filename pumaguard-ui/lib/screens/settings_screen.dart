@@ -42,6 +42,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Camera refresh interval (in seconds)
   static const int _cameraRefreshInterval = 30;
 
+  // Server time synchronization
+  String? _serverTime;
+  bool _isSyncingTime = false;
+
   @override
   void initState() {
     super.initState();
@@ -51,9 +55,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloModelController = TextEditingController();
     _classifierModelController = TextEditingController();
     _fileStabilizationController = TextEditingController();
+
     _loadSettings();
     _initializeCameraEvents();
     _startCameraRefresh();
+    _refreshServerTime();
   }
 
   @override
@@ -139,6 +145,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _refreshServerTime() async {
+    try {
+      final apiService = context.read<ApiService>();
+      final timeData = await apiService.getServerTime();
+      if (mounted) {
+        setState(() {
+          final serverDateTime = DateTime.parse(timeData['iso'] as String);
+          _serverTime = serverDateTime.toLocal().toString().substring(0, 19);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to get server time: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _syncTime() async {
+    setState(() {
+      _isSyncingTime = true;
+    });
+
+    try {
+      final apiService = context.read<ApiService>();
+      final result = await apiService.syncServerTime();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message'] as String? ?? 'Time synced successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh to show new server time
+        await _refreshServerTime();
+      }
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = e.toString().replaceFirst('Exception: ', '');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMsg),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncingTime = false;
+        });
+      }
     }
   }
 
@@ -1107,6 +1175,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 24),
+            // Server Time Section
+            Row(
+              children: [
+                Icon(
+                  Icons.access_time,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Server Time',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Synchronize or view server time',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current Server Time',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _serverTime ?? 'Loading...',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _isSyncingTime ? null : _refreshServerTime,
+                      tooltip: 'Refresh server time',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _isSyncingTime ? null : _syncTime,
+              icon: _isSyncingTime
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.sync),
+              label: Text(
+                _isSyncingTime ? 'Syncing...' : 'Sync Time from This Device',
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
             ),
             const SizedBox(height: 24),
             // WiFi Settings Button

@@ -68,6 +68,14 @@ pumaguard.web\_routes.sync module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.web\_routes.system module
+-----------------------------------
+
+.. automodule:: pumaguard.web_routes.system
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

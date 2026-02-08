@@ -854,4 +854,71 @@ class ApiService {
       throw Exception('Failed to forget WiFi network: $e');
     }
   }
+
+  /// Get server time
+  Future<Map<String, dynamic>> getServerTime() async {
+    try {
+      final url = getApiUrl('/api/system/time');
+      final uri = Uri.parse(url);
+
+      final response = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception(
+          'Failed to get server time: ${response.statusCode} ${response.body}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to get server time: $e');
+    }
+  }
+
+  /// Set server time using client's current time
+  Future<Map<String, dynamic>> syncServerTime() async {
+    // Get current device time as Unix timestamp
+    final now = DateTime.now().toUtc();
+    return setServerTime(timestamp: now.millisecondsSinceEpoch / 1000.0);
+  }
+
+  /// Set server time
+  ///
+  /// Either [timestamp] (Unix seconds) or [iso] (ISO 8601 string) must be provided
+  Future<Map<String, dynamic>> setServerTime({
+    double? timestamp,
+    String? iso,
+  }) async {
+    try {
+      final url = getApiUrl('/api/system/time');
+      final uri = Uri.parse(url);
+
+      final body = <String, dynamic>{};
+      if (timestamp != null) {
+        body['timestamp'] = timestamp;
+      } else if (iso != null) {
+        body['iso'] = iso;
+      } else {
+        throw Exception('Either timestamp or iso must be provided');
+      }
+
+      final response = await http.put(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(body),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        final errorBody = json.decode(response.body) as Map<String, dynamic>;
+        throw Exception(errorBody['error'] ?? 'Failed to set server time');
+      }
+    } catch (e) {
+      throw Exception('Failed to set server time: $e');
+    }
+  }
 }

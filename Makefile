@@ -56,7 +56,7 @@ install-dev: .venv
 
 .PHONY: test
 test: install-dev
-	uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
+	timeout 300 uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: lint-ui
 lint-ui:

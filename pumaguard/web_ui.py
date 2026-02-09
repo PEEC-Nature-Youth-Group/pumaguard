@@ -66,6 +66,9 @@ from pumaguard.web_routes.settings import (
 from pumaguard.web_routes.sync import (
     register_sync_routes,
 )
+from pumaguard.web_routes.system import (
+    register_system_routes,
+)
 
 if TYPE_CHECKING:
     from pumaguard.server import (
@@ -329,6 +332,8 @@ class WebUI:
         register_directories_routes(self.app, self)
 
         register_diagnostics_routes(self.app, self)
+
+        register_system_routes(self.app, self)
 
         # Register DHCP routes and get the SSE notification callback
         camera_notification_callback = register_dhcp_routes(self.app, self)

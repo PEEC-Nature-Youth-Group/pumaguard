@@ -1,4 +1,5 @@
 """Tests for system time synchronization routes."""
+
 # pylint: disable=redefined-outer-name
 # pylint: disable=import-outside-toplevel
 # Pytest fixtures intentionally redefine names

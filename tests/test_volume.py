@@ -31,7 +31,9 @@ class TestPlaysound(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = None  # pylint: disable=protected-access
+            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+                None
+            )
 
     @patch("pumaguard.sound.subprocess.Popen")
     def test_playsound_basic(self, mock_popen):
@@ -158,7 +160,9 @@ class TestStopSound(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = None  # pylint: disable=protected-access
+            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+                None
+            )
 
     @patch("pumaguard.sound.subprocess.Popen")
     def test_stop_sound_when_playing(self, mock_popen):
@@ -338,7 +342,9 @@ class TestIsPlaying(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = None  # pylint: disable=protected-access
+            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+                None
+            )
 
     @patch("pumaguard.sound.subprocess.Popen")
     def test_is_playing_when_sound_playing(self, mock_popen):
@@ -399,7 +405,9 @@ class TestThreadSafety(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = None  # pylint: disable=protected-access
+            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+                None
+            )
 
     @patch("pumaguard.sound.subprocess.Popen")
     def test_concurrent_playsound_calls(self, mock_popen):
@@ -483,7 +491,9 @@ class TestMain(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = None  # pylint: disable=protected-access
+            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+                None
+            )
 
     @patch("pumaguard.sound.sys.argv", ["pumaguard-sound"])
     @patch("builtins.print")

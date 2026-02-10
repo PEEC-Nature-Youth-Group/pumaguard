@@ -18,6 +18,7 @@ from pathlib import (
     Path,
 )
 
+import requests
 from PIL import (
     Image,
 )
@@ -39,6 +40,7 @@ from pumaguard.utils import (
     classify_image_two_stage,
 )
 from pumaguard.web_ui import (
+    PlugInfo,
     WebUI,
 )
 
@@ -94,10 +96,13 @@ class FolderObserver:
     FolderObserver watches a folder for new files.
     """
 
-    def __init__(self, folder: str, method: str, presets: Settings):
+    def __init__(
+        self, folder: str, method: str, presets: Settings, webui: WebUI
+    ):
         self.folder: str = folder
         self.method: str = method
         self.presets: Settings = presets
+        self.webui: WebUI = webui
         self._stop_event: threading.Event = threading.Event()
 
     def start(self):
@@ -274,6 +279,9 @@ class FolderObserver:
         if prediction > 0.5:
             logger.info("Puma detected in %s", filepath)
             if self.presets.play_sound:
+                # Turn on automatic plugs before playing sound
+                self._turn_on_automatic_plugs()
+
                 # Randomly select one sound from the list
                 sound_file = random.choice(self.presets.deterrent_sound_files)
                 sound_file_path = os.path.join(
@@ -281,6 +289,9 @@ class FolderObserver:
                 )
                 logger.info("Playing sound: %s", sound_file)
                 playsound(sound_file_path, self.presets.volume)
+
+                # Turn off automatic plugs after sound finishes
+                self._turn_off_automatic_plugs()
         # Move original file into classification folder
         try:
             dest_root = (
@@ -303,14 +314,106 @@ class FolderObserver:
         lock.release()
         logger.debug("Exiting (%s)", me.name)
 
+    def _turn_on_automatic_plugs(self):
+        """
+        Turn on all plugs that are set to automatic mode.
+        """
+        automatic_plugs = [
+            plug
+            for plug in self.webui.plugs.values()
+            if plug.get("mode") == "automatic"
+            and plug.get("status") == "connected"
+        ]
+
+        if not automatic_plugs:
+            logger.debug("No automatic plugs to turn on")
+            return
+
+        logger.info("Turning on %d automatic plug(s)", len(automatic_plugs))
+        for plug in automatic_plugs:
+            self._control_plug_switch(plug, True)
+
+    def _turn_off_automatic_plugs(self):
+        """
+        Turn off all plugs that are set to automatic mode.
+        """
+        automatic_plugs = [
+            plug
+            for plug in self.webui.plugs.values()
+            if plug.get("mode") == "automatic"
+            and plug.get("status") == "connected"
+        ]
+
+        if not automatic_plugs:
+            logger.debug("No automatic plugs to turn off")
+            return
+
+        logger.info("Turning off %d automatic plug(s)", len(automatic_plugs))
+        for plug in automatic_plugs:
+            self._control_plug_switch(plug, False)
+
+    def _control_plug_switch(self, plug: PlugInfo, on_state: bool):
+        """
+        Control a Shelly plug switch.
+
+        Arguments:
+            plug -- The plug information dictionary
+            on_state -- True to turn on, False to turn off
+        """
+        ip_address = plug.get("ip_address")
+        hostname = plug.get("hostname", "unknown")
+
+        if not ip_address:
+            logger.warning("Cannot control plug '%s': no IP address", hostname)
+            return
+
+        try:
+            # Call Shelly Gen2 Switch.Set API
+            on_param = "true" if on_state else "false"
+            shelly_url = (
+                f"http://{ip_address}/rpc/Switch.Set?id=0&on={on_param}"
+            )
+            logger.info(
+                "Setting plug '%s' switch to %s at %s",
+                hostname,
+                "ON" if on_state else "OFF",
+                ip_address,
+            )
+
+            response = requests.get(shelly_url, timeout=5)
+            response.raise_for_status()
+
+            logger.info(
+                "Successfully set plug '%s' switch to %s",
+                hostname,
+                "ON" if on_state else "OFF",
+            )
+
+        except requests.exceptions.Timeout:
+            logger.warning(
+                "Timeout connecting to plug '%s' at %s", hostname, ip_address
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                "Error setting plug '%s' switch at %s: %s",
+                hostname,
+                ip_address,
+                e,
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error(
+                "Unexpected error controlling plug '%s': %s", hostname, e
+            )
+
 
 class FolderManager:
     """
     FolderManager manages the folders to observe.
     """
 
-    def __init__(self, presets: Settings):
-        self.presets = presets
+    def __init__(self, presets: Settings, webui: WebUI):
+        self.presets: Settings = presets
+        self.webui: WebUI = webui
         self.observers: list[FolderObserver] = []
 
     def register_folder(self, folder: str, method: str, start: bool = True):
@@ -322,7 +425,7 @@ class FolderManager:
             method -- The watch method to use (inotify or os).
             start -- Whether to start watching immediately (default: True).
         """
-        observer = FolderObserver(folder, method, self.presets)
+        observer = FolderObserver(folder, method, self.presets, self.webui)
         self.observers.append(observer)
         logger.info("registered %s", folder)
         if start:
@@ -368,17 +471,20 @@ def main(options: argparse.Namespace, presets: Settings):
         logger.debug("Will not print out download progress")
         presets.print_download_progress = False
 
-    logger.debug("Getting folder manager")
-    manager = FolderManager(presets)
-
     logger.debug("Starting web UI")
     webui = WebUI(
         presets=presets,
         host="0.0.0.0",
-        folder_manager=manager,
+        folder_manager=None,  # Will be set after manager is created
         watch_method=options.watch_method,
     )
     webui.start()
+
+    logger.debug("Getting folder manager")
+    manager = FolderManager(presets, webui)
+
+    # Update webui with the manager
+    webui.folder_manager = manager
 
     # Determine folders to watch: user-specified or default
     if options.FOLDER and len(options.FOLDER) > 0:

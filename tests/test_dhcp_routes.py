@@ -1,4 +1,5 @@
 """Tests for DHCP camera management routes."""
+
 # pylint: disable=too-many-lines
 
 import json

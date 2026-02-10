@@ -599,6 +599,16 @@
       tags:
         - networking
 
+    - name: Configure USB wireless adapter (wlx*)
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/netplan-wireless.j2
+        dest: /etc/netplan/91-pumaguard-wireless.yaml
+        mode: "0600"
+      tags:
+        - networking
+
     - name: Disable cloud-init network configuration
       ansible.builtin.copy:
         dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg

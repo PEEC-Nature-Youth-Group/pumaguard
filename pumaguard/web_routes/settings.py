@@ -96,6 +96,7 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "YOLO-model-filename",
                 "classifier-model-filename",
                 "deterrent-sound-file",
+                "deterrent-sound-files",
                 "file-stabilization-extra-wait",
                 "play-sound",
                 "volume",

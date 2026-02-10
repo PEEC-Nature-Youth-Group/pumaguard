@@ -20,9 +20,9 @@
     # Path to local wheel files (used when pumaguard_install_method is "local")
     pumaguard_local_wheel_path: "{{ playbook_dir }}/../dist"
     # hostapd configuration for wlan0 access point
-    hostapd_ssid: pumaguard
-    hostapd_passphrase: pumaguard
-    hostapd_channel: 6
+    hostapd_ssid: "{{ pumaguard_ap.ssid }}"
+    hostapd_passphrase: "{{ pumaguard_ap.password }}"
+    hostapd_channel: "{{ pumaguard_ap.channel }}"
     # vsftpd passive mode configuration
     vsftpd_pasv_min_port: 40000
     vsftpd_pasv_max_port: 50000

@@ -2,9 +2,12 @@ network:
   version: 2
   renderer: NetworkManager
   wifis:
-    wlx*:
+    wifi1:
       optional: true
       dhcp4: true
+      match:
+        name: wlx8c86dd781eed
+      set-name: wifi1
       access-points:
         {% for network in wireless_networks %}
         "{{ network.ssid }}":

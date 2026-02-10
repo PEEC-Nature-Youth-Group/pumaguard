@@ -25,7 +25,7 @@ class TestPickFiles(unittest.TestCase):
         for i, src_dir in enumerate(self.src_dirs):
             for j in range(5):
                 file_path = os.path.join(src_dir, f"file_{i}_{j}.txt")
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, "w", encoding="utf-8") as f:
                     f.write(f"content of file {i}_{j}")
                 self.files.append(file_path)
 

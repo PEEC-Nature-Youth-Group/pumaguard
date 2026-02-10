@@ -47,7 +47,11 @@ class TestFolderObserver(unittest.TestCase):
         self.presets.notebook_number = self.notebook
         self.presets.model_version = "pre-trained"
         self.presets.image_dimensions = (512, 512)
-        self.observer = FolderObserver(self.folder, "inotify", self.presets)
+        self.mock_webui = MagicMock()
+        self.mock_webui.plugs = {}
+        self.observer = FolderObserver(
+            self.folder, "inotify", self.presets, self.mock_webui
+        )
 
     @patch("pumaguard.server.acquire_lock")
     @patch("pumaguard.server.cache_model_two_stage")
@@ -143,6 +147,165 @@ class TestFolderObserver(unittest.TestCase):
         )
         self.assertEqual(path, "fake_image.jpg")
         self.assertAlmostEqual(prediction, 70, places=2)
+
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.7)
+    @patch("pumaguard.server.playsound")
+    @patch("pumaguard.server.requests.get")
+    def test_handle_new_file_automatic_plugs_on_off(
+        self, mock_requests_get, mock_playsound, mock_classify
+    ):
+        """
+        Test that automatic plugs are turned on before sound plays
+        and turned off after sound finishes.
+        """
+        # Setup automatic plugs
+        self.mock_webui.plugs = {
+            "aa:bb:cc:dd:ee:01": {
+                "hostname": "plug-auto-1",
+                "ip_address": "192.168.52.101",
+                "mac_address": "aa:bb:cc:dd:ee:01",
+                "status": "connected",
+                "mode": "automatic",
+                "last_seen": "2024-01-15T10:00:00Z",
+            },
+            "aa:bb:cc:dd:ee:02": {
+                "hostname": "plug-auto-2",
+                "ip_address": "192.168.52.102",
+                "mac_address": "aa:bb:cc:dd:ee:02",
+                "status": "connected",
+                "mode": "automatic",
+                "last_seen": "2024-01-15T10:00:00Z",
+            },
+            "aa:bb:cc:dd:ee:03": {
+                "hostname": "plug-manual",
+                "ip_address": "192.168.52.103",
+                "mac_address": "aa:bb:cc:dd:ee:03",
+                "status": "connected",
+                "mode": "on",  # Not automatic
+                "last_seen": "2024-01-15T10:00:00Z",
+            },
+        }
+
+        # Mock successful Shelly API responses
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"was_on": False}
+        mock_requests_get.return_value = mock_response
+
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="fake_puma_image.jpg"
+        )
+
+        # Verify classify was called
+        mock_classify.assert_called_once()
+
+        # Verify sound was played
+        mock_playsound.assert_called_once()
+
+        # Verify requests.get was called 4 times:
+        # 2 for turning on automatic plugs, 2 for turning off
+        self.assertEqual(mock_requests_get.call_count, 4)
+
+        # Verify the order: ON calls before playsound, OFF calls after
+        calls = mock_requests_get.call_args_list
+
+        # First two calls should turn plugs ON
+        self.assertIn("on=true", calls[0][0][0])
+        self.assertIn("on=true", calls[1][0][0])
+
+        # Last two calls should turn plugs OFF
+        self.assertIn("on=false", calls[2][0][0])
+        self.assertIn("on=false", calls[3][0][0])
+
+        # Verify only automatic plugs were controlled (not the manual one)
+        controlled_ips = {call_info[0][0].split("/")[2] for call_info in calls}
+        self.assertIn("192.168.52.101", controlled_ips)
+        self.assertIn("192.168.52.102", controlled_ips)
+        self.assertNotIn("192.168.52.103", controlled_ips)
+
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.3)
+    @patch("pumaguard.server.playsound")
+    @patch("pumaguard.server.requests.get")
+    def test_handle_new_file_no_puma_no_plug_control(
+        self, mock_requests_get, mock_playsound, mock_classify
+    ):
+        """
+        Test that plugs are NOT controlled when no puma is detected.
+        """
+        # Setup automatic plugs
+        self.mock_webui.plugs = {
+            "aa:bb:cc:dd:ee:01": {
+                "hostname": "plug-auto-1",
+                "ip_address": "192.168.52.101",
+                "mac_address": "aa:bb:cc:dd:ee:01",
+                "status": "connected",
+                "mode": "automatic",
+                "last_seen": "2024-01-15T10:00:00Z",
+            },
+        }
+
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="fake_no_puma_image.jpg"
+        )
+
+        # Verify classify was called
+        mock_classify.assert_called_once()
+
+        # Verify sound was NOT played (prediction < 0.5)
+        mock_playsound.assert_not_called()
+
+        # Verify plugs were NOT controlled
+        mock_requests_get.assert_not_called()
+
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.7)
+    @patch("pumaguard.server.playsound")
+    @patch("pumaguard.server.requests.get")
+    def test_handle_new_file_disconnected_plugs_not_controlled(
+        self, mock_requests_get, mock_playsound, mock_classify
+    ):
+        """
+        Test that disconnected automatic plugs are not controlled.
+        """
+        # Setup plugs with one disconnected
+        self.mock_webui.plugs = {
+            "aa:bb:cc:dd:ee:01": {
+                "hostname": "plug-auto-connected",
+                "ip_address": "192.168.52.101",
+                "mac_address": "aa:bb:cc:dd:ee:01",
+                "status": "connected",
+                "mode": "automatic",
+                "last_seen": "2024-01-15T10:00:00Z",
+            },
+            "aa:bb:cc:dd:ee:02": {
+                "hostname": "plug-auto-disconnected",
+                "ip_address": "192.168.52.102",
+                "mac_address": "aa:bb:cc:dd:ee:02",
+                "status": "disconnected",
+                "mode": "automatic",
+                "last_seen": "2024-01-15T09:00:00Z",
+            },
+        }
+
+        # Mock successful Shelly API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"was_on": False}
+        mock_requests_get.return_value = mock_response
+
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="fake_puma_image.jpg"
+        )
+
+        # Verify classify and sound playback
+        mock_classify.assert_called_once()
+        mock_playsound.assert_called_once()
+
+        # Verify only the connected plug was controlled (2 calls: on + off)
+        self.assertEqual(mock_requests_get.call_count, 2)
+
+        # Verify only the connected plug's IP was used
+        calls = mock_requests_get.call_args_list
+        for call_info in calls:
+            self.assertIn("192.168.52.101", call_info[0][0])
+            self.assertNotIn("192.168.52.102", call_info[0][0])
 
     @patch("pumaguard.server.Image.open")
     @patch("pumaguard.server.FolderObserver._get_time")
@@ -307,17 +470,23 @@ class TestFolderManager(unittest.TestCase):
         self.presets.notebook_number = self.notebook
         self.presets.model_version = "pre-trained"
         self.presets.image_dimensions = (512, 512)
-        self.manager = FolderManager(self.presets)
+        self.mock_webui = MagicMock()
+        self.mock_webui.plugs = {}
+        self.manager = FolderManager(self.presets, self.mock_webui)
 
     @patch("pumaguard.server.FolderObserver")
-    def test_register_folder(self, MockFolderObserver):  # pylint: disable=invalid-name
+    def test_register_folder(
+        self, MockFolderObserver
+    ):  # pylint: disable=invalid-name
         """
         Test register folder.
         """
         folder = "test_folder"
         self.manager.register_folder(folder, "inotify")
         self.assertEqual(len(self.manager.observers), 1)
-        MockFolderObserver.assert_called_with(folder, "inotify", self.presets)
+        MockFolderObserver.assert_called_with(
+            folder, "inotify", self.presets, self.mock_webui
+        )
 
     @patch.object(FolderObserver, "start")
     def test_start_all(self, mock_start):

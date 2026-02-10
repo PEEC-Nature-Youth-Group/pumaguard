@@ -120,7 +120,9 @@ plugs:
       mode: off
 """,
     )
-    def test_load_cameras_and_plugs(self, mock_file):  # pylint: disable=unused-argument
+    def test_load_cameras_and_plugs(
+        self, mock_file
+    ):  # pylint: disable=unused-argument
         """
         Test loading cameras and plugs from settings file.
         """
@@ -348,7 +350,9 @@ deterrent-sound-files:
     - sound3.mp3
 """,
     )
-    def test_load_multiple_sound_files(self, mock_file):  # pylint: disable=unused-argument
+    def test_load_multiple_sound_files(
+        self, mock_file
+    ):  # pylint: disable=unused-argument
         """
         Test loading multiple sound files from settings.
         """
@@ -366,7 +370,9 @@ image-dimensions: [128, 128]
 deterrent-sound-file: old_format_sound.mp3
 """,
     )
-    def test_load_backwards_compatible_single_file(self, mock_file):  # pylint: disable=unused-argument
+    def test_load_backwards_compatible_single_file(
+        self, mock_file
+    ):  # pylint: disable=unused-argument
         """
         Test backwards compatibility with old single file format.
         """
@@ -388,7 +394,9 @@ deterrent-sound-files:
     - new_format2.mp3
 """,
     )
-    def test_new_format_takes_precedence(self, mock_file):  # pylint: disable=unused-argument
+    def test_new_format_takes_precedence(
+        self, mock_file
+    ):  # pylint: disable=unused-argument
         """
         Test that new format takes precedence when both are present.
         """

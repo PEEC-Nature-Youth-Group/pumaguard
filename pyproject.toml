@@ -52,6 +52,12 @@ dev = [
     "pylint ~= 3.3",
     "pytest-cov ~= 7.0",
     "pytest ~= 8.3",
+    "types-Flask-Cors",
+    "types-protobuf",
+    "types-PyYAML",
+    "types-requests",
+    "types-setuptools",
+    "types-tensorflow",
 ]
 extra-dev = [
     "ipykernel ~= 6.29",

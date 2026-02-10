@@ -38,6 +38,10 @@ from flask import (
     stream_with_context,
 )
 
+from pumaguard.shelly_control import (
+    set_shelly_switch,
+)
+
 if TYPE_CHECKING:
     from flask import (
         Flask,
@@ -1131,103 +1135,70 @@ def register_dhcp_routes(
                     503,
                 )
 
-            try:
-                # Call Shelly Gen2 Switch.Set API
-                # Convert Python bool to JSON boolean string
-                on_param = "true" if on_state else "false"
-                shelly_url = (
-                    f"http://{ip_address}/rpc/Switch.Set?id=0&on={on_param}"
-                )
-                logger.info(
-                    "Setting plug '%s' switch to %s at %s",
-                    plug["hostname"],
-                    "ON" if on_state else "OFF",
-                    ip_address,
-                )
+            # Use shared Shelly control function
+            success, shelly_data, error = set_shelly_switch(
+                ip_address, on_state, plug["hostname"]
+            )
 
-                response = requests.get(shelly_url, timeout=5)
-                response.raise_for_status()
+            if not success:
+                # Determine appropriate error code based on error message
+                if error and "Timeout" in error:
+                    status_code = 504
+                    error_type = "Timeout connecting to plug"
+                else:
+                    status_code = 500
+                    error_type = "Failed to set Shelly switch"
 
-                shelly_data = response.json()
+                # Error details are already logged by set_shelly_switch()
 
-                # Extract the response data
-                was_on = shelly_data.get("was_on", False)
-
-                logger.info(
-                    "Successfully set plug '%s' switch to %s (was: %s)",
-                    plug["hostname"],
-                    "ON" if on_state else "OFF",
-                    "ON" if was_on else "OFF",
+                return (
+                    jsonify(
+                        {
+                            "error": error_type,
+                            "mac_address": mac_address,
+                            "ip_address": ip_address,
+                        }
+                    ),
+                    status_code,
                 )
 
-                # Notify SSE clients about the switch change
-                notify_camera_change(
-                    "plug_switch_changed",
+            # Extract the response data
+            was_on = shelly_data.get("was_on", False) if shelly_data else False
+
+            logger.info(
+                "Successfully set plug '%s' switch to %s (was: %s)",
+                plug["hostname"],
+                "ON" if on_state else "OFF",
+                "ON" if was_on else "OFF",
+            )
+
+            # Notify SSE clients about the switch change
+            notify_camera_change(
+                "plug_switch_changed",
+                {
+                    **dict(plug),
+                    "switch_state": on_state,
+                    "was_on": was_on,
+                },
+            )
+
+            return (
+                jsonify(
                     {
-                        **dict(plug),
-                        "switch_state": on_state,
+                        "status": "success",
+                        "message": (
+                            f"Plug switch set to {'ON' if on_state else 'OFF'}"
+                        ),
+                        "mac_address": mac_address,
+                        "hostname": plug["hostname"],
+                        "on": on_state,
                         "was_on": was_on,
-                    },
-                )
+                    }
+                ),
+                200,
+            )
 
-                return (
-                    jsonify(
-                        {
-                            "status": "success",
-                            "message": (
-                                f"Plug switch set to "
-                                f"{'ON' if on_state else 'OFF'}"
-                            ),
-                            "mac_address": mac_address,
-                            "hostname": plug["hostname"],
-                            "on": on_state,
-                            "was_on": was_on,
-                        }
-                    ),
-                    200,
-                )
-
-            except requests.exceptions.Timeout:
-                logger.warning(
-                    "Timeout connecting to Shelly plug at %s", ip_address
-                )
-                return (
-                    jsonify(
-                        {
-                            "error": "Timeout connecting to plug",
-                            "mac_address": mac_address,
-                            "ip_address": ip_address,
-                        }
-                    ),
-                    504,
-                )
-            except requests.exceptions.RequestException as e:
-                logger.error(
-                    "Error setting Shelly switch at %s: %s", ip_address, e
-                )
-                return (
-                    jsonify(
-                        {
-                            "error": "Failed to set Shelly switch",
-                            "mac_address": mac_address,
-                            "ip_address": ip_address,
-                        }
-                    ),
-                    500,
-                )
-            except (ValueError, KeyError) as e:
-                logger.error("Error parsing Shelly response: %s", e)
-                return (
-                    jsonify(
-                        {
-                            "error": "Invalid Shelly response",
-                            "mac_address": mac_address,
-                        }
-                    ),
-                    500,
-                )
-
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             logger.exception("Error in set_plug_switch")
             return (
                 jsonify(

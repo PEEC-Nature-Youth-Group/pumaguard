@@ -18,7 +18,6 @@ from pathlib import (
     Path,
 )
 
-import requests
 from PIL import (
     Image,
 )
@@ -31,6 +30,9 @@ from pumaguard.lock_manager import (
 )
 from pumaguard.presets import (
     Settings,
+)
+from pumaguard.shelly_control import (
+    set_shelly_switch,
 )
 from pumaguard.sound import (
     playsound,
@@ -363,47 +365,8 @@ class FolderObserver:
         ip_address = plug.get("ip_address")
         hostname = plug.get("hostname", "unknown")
 
-        if not ip_address:
-            logger.warning("Cannot control plug '%s': no IP address", hostname)
-            return
-
-        try:
-            # Call Shelly Gen2 Switch.Set API
-            on_param = "true" if on_state else "false"
-            shelly_url = (
-                f"http://{ip_address}/rpc/Switch.Set?id=0&on={on_param}"
-            )
-            logger.info(
-                "Setting plug '%s' switch to %s at %s",
-                hostname,
-                "ON" if on_state else "OFF",
-                ip_address,
-            )
-
-            response = requests.get(shelly_url, timeout=5)
-            response.raise_for_status()
-
-            logger.info(
-                "Successfully set plug '%s' switch to %s",
-                hostname,
-                "ON" if on_state else "OFF",
-            )
-
-        except requests.exceptions.Timeout:
-            logger.warning(
-                "Timeout connecting to plug '%s' at %s", hostname, ip_address
-            )
-        except requests.exceptions.RequestException as e:
-            logger.error(
-                "Error setting plug '%s' switch at %s: %s",
-                hostname,
-                ip_address,
-                e,
-            )
-        except Exception as e:  # pylint: disable=broad-except
-            logger.error(
-                "Unexpected error controlling plug '%s': %s", hostname, e
-            )
+        # Use shared Shelly control function
+        set_shelly_switch(ip_address, on_state, hostname)
 
 
 class FolderManager:

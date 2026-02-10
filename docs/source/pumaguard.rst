@@ -84,6 +84,14 @@ pumaguard.server module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.shelly\_control module
+--------------------------------
+
+.. automodule:: pumaguard.shelly_control
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.sound module
 ----------------------
 

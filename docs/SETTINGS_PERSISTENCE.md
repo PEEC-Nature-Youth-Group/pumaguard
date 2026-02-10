@@ -96,9 +96,12 @@ Content-Type: application/json
 - `YOLO-max-dets`
 - `YOLO-model-filename`
 - `classifier-model-filename`
-- `deterrent-sound-file`
+- `deterrent-sound-file` (deprecated, use `deterrent-sound-files`)
+- `deterrent-sound-files` (list of sound filenames)
 - `file-stabilization-extra-wait`
 - `play-sound`
+- `volume` (0-100)
+- `camera-url`
 
 ### POST /api/settings/save
 

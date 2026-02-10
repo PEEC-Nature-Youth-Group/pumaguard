@@ -142,8 +142,10 @@ Update PumaGuard settings.
 - `YOLO-model-filename` (string): YOLO model file
 - `classifier-model-filename` (string): Classifier model file
 - `sound-path` (string): Path to sound files
-- `deterrent-sound-file` (string): Deterrent sound filename
+- `deterrent-sound-file` (string): Deterrent sound filename (deprecated, use deterrent-sound-files)
+- `deterrent-sound-files` (array of strings): List of deterrent sound filenames
 - `play-sound` (boolean): Enable/disable sound playback
+- `volume` (int): Playback volume (0-100)
 
 **Response:**
 ```json

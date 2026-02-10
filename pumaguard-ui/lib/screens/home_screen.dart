@@ -1,13 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
-import 'package:web/web.dart' as web;
 import '../models/status.dart';
-import '../models/camera.dart';
-import '../models/plug.dart';
 import '../services/api_service.dart';
-import '../services/camera_events_service.dart';
 import 'settings_screen.dart';
 import 'directories_screen.dart';
 import 'image_browser_screen.dart';
@@ -24,124 +18,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Status? _status;
   bool _isLoading = true;
   String? _error;
-  List<Camera> _cameras = [];
-  List<Plug> _plugs = [];
-  Timer? _cameraPollingTimer;
-  CameraEventsService? _cameraEventsService;
-  StreamSubscription<CameraEvent>? _eventsSubscription;
-
-  // Polling interval for camera status updates (in seconds)
-  // This serves as a fallback if SSE connection fails
-  static const int _cameraPollingInterval = 30;
 
   @override
   void initState() {
     super.initState();
     _loadStatus();
-    _loadCameras();
-    _loadPlugs();
-    _startCameraPolling();
-    _initializeCameraEvents();
   }
 
   @override
   void dispose() {
-    _cameraPollingTimer?.cancel();
-    _eventsSubscription?.cancel();
-    _cameraEventsService?.dispose();
     super.dispose();
   }
 
-  void _initializeCameraEvents() {
-    try {
-      final apiService = context.read<ApiService>();
-      final baseUrl = apiService.getApiUrl('').replaceAll('/api/', '');
-
-      _cameraEventsService = CameraEventsService(baseUrl);
-
-      // Subscribe to camera events
-      _eventsSubscription = _cameraEventsService!.events.listen(
-        _handleCameraEvent,
-        onError: (error) {
-          debugPrint('[HomeScreen] Camera events error: $error');
-        },
-      );
-
-      // Start listening for events
-      _cameraEventsService!.startListening();
-      debugPrint('[HomeScreen] Camera events service initialized');
-    } catch (e) {
-      debugPrint('[HomeScreen] Error initializing camera events: $e');
-      // Fallback to polling only if SSE fails
-    }
-  }
-
-  void _handleCameraEvent(CameraEvent event) {
-    debugPrint('[HomeScreen] Camera event received: ${event.type}');
-
-    // Handle different event types
-    switch (event.type) {
-      case CameraEventType.connected:
-        // SSE connection established
-        debugPrint('[HomeScreen] Connected to camera events stream');
-        break;
-
-      case CameraEventType.cameraConnected:
-      case CameraEventType.cameraDisconnected:
-      case CameraEventType.cameraAdded:
-      case CameraEventType.cameraStatusChangedOnline:
-      case CameraEventType.cameraStatusChangedOffline:
-        // Camera status changed - reload camera list
-        _loadCameras();
-
-        // Show a subtle notification
-        if (mounted && event.camera != null) {
-          final isOnline =
-              event.type == CameraEventType.cameraConnected ||
-              event.type == CameraEventType.cameraStatusChangedOnline;
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '${event.camera!.hostname} is now ${isOnline ? "online" : "offline"}',
-              ),
-              duration: const Duration(seconds: 2),
-              backgroundColor: isOnline ? Colors.green : Colors.orange,
-            ),
-          );
-        }
-        break;
-
-      case CameraEventType.plugConnected:
-      case CameraEventType.plugDisconnected:
-      case CameraEventType.plugAdded:
-      case CameraEventType.plugStatusChangedOnline:
-      case CameraEventType.plugStatusChangedOffline:
-      case CameraEventType.plugModeChanged:
-      case CameraEventType.plugSwitchChanged:
-        // Plug status changed - reload plug list
-        _loadPlugs();
-        break;
-
-      case CameraEventType.unknown:
-        debugPrint('[HomeScreen] Unknown camera event type');
-        break;
-    }
-  }
-
-  void _startCameraPolling() {
-    // Set up periodic timer to check for camera status changes
-    _cameraPollingTimer = Timer.periodic(
-      const Duration(seconds: _cameraPollingInterval),
-      (_) {
-        _loadCameras();
-        _loadPlugs();
-      },
-    );
-  }
-
   Future<void> _refresh() async {
-    await Future.wait([_loadStatus(), _loadCameras(), _loadPlugs()]);
+    await _loadStatus();
   }
 
   Future<void> _loadStatus() async {
@@ -163,91 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoading = false;
       });
     }
-  }
-
-  Future<void> _loadCameras() async {
-    try {
-      final apiService = context.read<ApiService>();
-      final cameras = await apiService.getCameras();
-
-      // Only update state if cameras have changed to avoid unnecessary rebuilds
-      if (_camerasChanged(cameras)) {
-        setState(() {
-          _cameras = cameras;
-        });
-        debugPrint(
-          '[HomeScreen._loadCameras] Camera list updated: ${cameras.length} cameras',
-        );
-      }
-    } catch (e) {
-      debugPrint('[HomeScreen._loadCameras] Error loading cameras: $e');
-    }
-  }
-
-  bool _camerasChanged(List<Camera> newCameras) {
-    if (_cameras.length != newCameras.length) {
-      return true;
-    }
-
-    // Check if any camera status has changed
-    for (int i = 0; i < _cameras.length; i++) {
-      final oldCamera = _cameras[i];
-      final newCamera = newCameras.firstWhere(
-        (c) => c.macAddress == oldCamera.macAddress,
-        orElse: () => newCameras[i],
-      );
-
-      if (oldCamera.status != newCamera.status ||
-          oldCamera.ipAddress != newCamera.ipAddress ||
-          oldCamera.hostname != newCamera.hostname) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  Future<void> _loadPlugs() async {
-    try {
-      final apiService = context.read<ApiService>();
-      final plugs = await apiService.getPlugs();
-
-      // Only update state if plugs have changed to avoid unnecessary rebuilds
-      if (_plugsChanged(plugs)) {
-        setState(() {
-          _plugs = plugs;
-        });
-        debugPrint(
-          '[HomeScreen._loadPlugs] Plug list updated: ${plugs.length} plugs',
-        );
-      }
-    } catch (e) {
-      debugPrint('[HomeScreen._loadPlugs] Error loading plugs: $e');
-    }
-  }
-
-  bool _plugsChanged(List<Plug> newPlugs) {
-    if (_plugs.length != newPlugs.length) {
-      return true;
-    }
-
-    // Check if any plug status has changed
-    for (int i = 0; i < _plugs.length; i++) {
-      final oldPlug = _plugs[i];
-      final newPlug = newPlugs.firstWhere(
-        (p) => p.macAddress == oldPlug.macAddress,
-        orElse: () => newPlugs[i],
-      );
-
-      if (oldPlug.status != newPlug.status ||
-          oldPlug.mode != newPlug.mode ||
-          oldPlug.ipAddress != newPlug.ipAddress ||
-          oldPlug.hostname != newPlug.hostname) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   @override
@@ -432,124 +237,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ).then((_) => _refresh());
               },
             ),
-            // Show detected cameras if any
-            if (_cameras.isNotEmpty) ...[
-              const Divider(),
-              const SizedBox(height: 16),
-              const Divider(thickness: 2),
-              const SizedBox(height: 8),
-              Text(
-                'Detected Cameras',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ..._cameras.map((camera) {
-                return Column(
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.videocam,
-                      label: camera.displayName,
-                      description: 'IP: ${camera.ipAddress} • ${camera.status}',
-                      onTap: () => _openCameraByIp(camera.ipAddress),
-                    ),
-                    if (camera != _cameras.last) const Divider(),
-                  ],
-                );
-              }),
-            ],
-            // Show detected plugs if any
-            if (_plugs.isNotEmpty) ...[
-              const Divider(),
-              const SizedBox(height: 16),
-              const Divider(thickness: 2),
-              const SizedBox(height: 8),
-              Text(
-                'Detected Plugs',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ..._plugs.map((plug) {
-                final isOnline = plug.isConnected;
-                final statusIcon = isOnline ? Icons.power : Icons.power_off;
-
-                return Column(
-                  children: [
-                    _buildActionButton(
-                      icon: statusIcon,
-                      label: plug.displayName,
-                      description:
-                          'IP: ${plug.ipAddress} • ${plug.status} • Mode: ${plug.mode}',
-                      onTap: () {
-                        // Navigate to devices screen
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const DevicesScreen(),
-                          ),
-                        ).then((_) => _refresh());
-                      },
-                    ),
-                    if (plug != _plugs.last) const Divider(),
-                  ],
-                );
-              }),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _openCameraByIp(String ipAddress) async {
-    try {
-      debugPrint('[HomeScreen._openCameraByIp] Opening camera at: $ipAddress');
-
-      if (ipAddress.isEmpty) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid camera IP address.'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
-      }
-
-      // Add http:// if no scheme is present
-      String urlToOpen = ipAddress;
-      if (!ipAddress.startsWith('http://') &&
-          !ipAddress.startsWith('https://')) {
-        urlToOpen = 'http://$ipAddress';
-      }
-      debugPrint('[HomeScreen._openCameraByIp] URL to open: "$urlToOpen"');
-
-      // On web, use native JavaScript window.open()
-      if (kIsWeb) {
-        web.window.open(urlToOpen, '_blank');
-        debugPrint('[HomeScreen._openCameraByIp] URL opened successfully');
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Opening camera URL is only supported on web currently.',
-            ),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      debugPrint('[HomeScreen._openCameraByIp] Error: $e');
-      debugPrint('[HomeScreen._openCameraByIp] Stack trace: $stackTrace');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error opening camera: $e'),
-          duration: const Duration(seconds: 3),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 
   Widget _buildActionButton({

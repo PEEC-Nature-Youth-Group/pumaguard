@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
+import '../models/plug.dart';
 import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
 import 'dart:developer' as developer;
@@ -36,8 +37,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
   Timer? _cameraRefreshTimer;
+  Timer? _shellyRefreshTimer;
   CameraEventsService? _cameraEventsService;
   StreamSubscription<CameraEvent>? _eventsSubscription;
+  final Map<String, Plug> _shellyStatus = {};
 
   // Camera refresh interval (in seconds)
   static const int _cameraRefreshInterval = 30;
@@ -59,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadSettings();
     _initializeCameraEvents();
     _startCameraRefresh();
+    _startShellyRefresh();
     _refreshServerTime();
   }
 
@@ -66,6 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _debounceTimer?.cancel();
     _cameraRefreshTimer?.cancel();
+    _shellyRefreshTimer?.cancel();
     _eventsSubscription?.cancel();
     _cameraEventsService?.dispose();
     _yoloMinSizeController.dispose();
@@ -117,6 +122,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _startShellyRefresh() {
+    // Refresh Shelly status every 5 seconds
+    _shellyRefreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted && _settings != null && _settings!.plugs.isNotEmpty) {
+        _loadShellyStatus();
+      }
+    });
+  }
+
+  Future<void> _loadShellyStatus() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+
+    for (final plug in _settings!.plugs) {
+      if (plug.isConnected) {
+        try {
+          final shellyPlug = await apiService.getShellyStatus(plug.macAddress);
+          if (mounted) {
+            setState(() {
+              _shellyStatus[plug.macAddress] = shellyPlug;
+            });
+          }
+        } catch (e) {
+          debugPrint(
+            '[SettingsScreen._loadShellyStatus] Error loading Shelly status for ${plug.macAddress}: $e',
+          );
+          // Remove stale status on error
+          if (mounted) {
+            setState(() {
+              _shellyStatus.remove(plug.macAddress);
+            });
+          }
+        }
+      } else {
+        // Remove status for disconnected plugs
+        if (mounted && _shellyStatus.containsKey(plug.macAddress)) {
+          setState(() {
+            _shellyStatus.remove(plug.macAddress);
+          });
+        }
+      }
+    }
+  }
+
   Future<void> _loadSettings() async {
     setState(() {
       _isLoading = true;
@@ -140,6 +188,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _volume = settings.volume.toDouble();
         _isLoading = false;
       });
+
+      // Load Shelly status for connected plugs
+      await _loadShellyStatus();
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -1291,30 +1342,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               ..._settings!.cameras.map((camera) {
+                final isConnected = camera.isConnected;
+                final statusColor = isConnected ? Colors.green : Colors.grey;
+                final statusText = isConnected ? 'Connected' : 'Disconnected';
+
                 return Card(
                   child: ListTile(
-                    leading: Icon(
-                      Icons.videocam,
-                      color: camera.isConnected ? Colors.green : Colors.grey,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    title: Text(camera.displayName),
+                    leading: CircleAvatar(
+                      backgroundColor: statusColor.withValues(alpha: 0.2),
+                      child: Icon(Icons.videocam, color: statusColor),
+                    ),
+                    title: Text(
+                      camera.displayName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SizedBox(height: 4),
                         Text('IP: ${camera.ipAddress}'),
-                        Text(
-                          'Status: ${camera.status}',
-                          style: TextStyle(
-                            color: camera.isConnected
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    trailing: Icon(
-                      camera.isConnected ? Icons.check_circle : Icons.cancel,
-                      color: camera.isConnected ? Colors.green : Colors.grey,
                     ),
                   ),
                 );
@@ -1336,30 +1408,167 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
               ..._settings!.plugs.map((plug) {
+                final isConnected = plug.isConnected;
+                final statusColor = isConnected ? Colors.green : Colors.grey;
+                final statusText = isConnected ? 'Connected' : 'Disconnected';
+
+                // Get Shelly status if available
+                final shellyPlug = _shellyStatus[plug.macAddress];
+                final hasShelly = shellyPlug != null;
+
+                Color modeColor;
+                IconData modeIcon;
+
+                switch (plug.mode) {
+                  case 'on':
+                    modeColor = Colors.green;
+                    modeIcon = Icons.power_settings_new;
+                    break;
+                  case 'off':
+                    modeColor = Colors.grey;
+                    modeIcon = Icons.power_off;
+                    break;
+                  case 'automatic':
+                    modeColor = Colors.orange;
+                    modeIcon = Icons.auto_mode;
+                    break;
+                  default:
+                    modeColor = Colors.grey;
+                    modeIcon = Icons.power_off;
+                }
+
+                // Determine actual output state from Shelly
+                final isOutputOn = hasShelly
+                    ? (shellyPlug.output ?? false)
+                    : false;
+                final outputColor = isOutputOn ? Colors.green : Colors.grey;
+
                 return Card(
                   child: ListTile(
-                    leading: Icon(
-                      Icons.power,
-                      color: plug.isConnected ? Colors.green : Colors.grey,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    title: Text(plug.displayName),
+                    leading: CircleAvatar(
+                      backgroundColor: modeColor.withValues(alpha: 0.2),
+                      child: Icon(Icons.power, color: modeColor),
+                    ),
+                    title: Text(
+                      plug.displayName,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        const SizedBox(height: 4),
                         Text('IP: ${plug.ipAddress}'),
-                        Text(
-                          'Status: ${plug.status}',
-                          style: TextStyle(
-                            color: plug.isConnected
-                                ? Colors.green
-                                : Colors.grey,
-                          ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: statusColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                color: statusColor,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(modeIcon, size: 14, color: modeColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              plug.mode.toUpperCase(),
+                              style: TextStyle(
+                                color: modeColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
+                        if (hasShelly) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                isOutputOn
+                                    ? Icons.lightbulb
+                                    : Icons.lightbulb_outline,
+                                size: 14,
+                                color: outputColor,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                isOutputOn ? 'ON' : 'OFF',
+                                style: TextStyle(
+                                  color: outputColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(
+                                Icons.flash_on,
+                                size: 14,
+                                color: Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${shellyPlug.apower?.toStringAsFixed(1) ?? '0.0'}W',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(
+                                Icons.electric_bolt,
+                                size: 14,
+                                color: Colors.blue,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${shellyPlug.voltage?.toStringAsFixed(1) ?? '0.0'}V',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.show_chart,
+                                size: 14,
+                                color: Colors.purple,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${shellyPlug.current?.toStringAsFixed(2) ?? '0.00'}A',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              if (shellyPlug.temperature != null &&
+                                  shellyPlug.temperature!['tC'] != null) ...[
+                                const SizedBox(width: 12),
+                                Icon(
+                                  Icons.thermostat,
+                                  size: 14,
+                                  color: Colors.red,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${shellyPlug.temperature!['tC'].toStringAsFixed(1)}°C',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
                       ],
-                    ),
-                    trailing: Icon(
-                      plug.isConnected ? Icons.check_circle : Icons.cancel,
-                      color: plug.isConnected ? Colors.green : Colors.grey,
                     ),
                   ),
                 );

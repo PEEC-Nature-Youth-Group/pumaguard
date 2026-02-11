@@ -652,18 +652,17 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Image Browser'),
-        leading: isNarrowScreen && _selectedFolder != null
-            ? IconButton(
-                icon: const Icon(Icons.folder_outlined),
-                onPressed: () {
-                  setState(() {
-                    _showFolderPanel = true;
-                  });
-                },
-                tooltip: 'Show folders',
-              )
-            : null,
         actions: [
+          if (isNarrowScreen && _selectedFolder != null)
+            IconButton(
+              icon: const Icon(Icons.folder_outlined),
+              onPressed: () {
+                setState(() {
+                  _showFolderPanel = true;
+                });
+              },
+              tooltip: 'Show folders',
+            ),
           if (_selectedImages.isNotEmpty)
             Padding(
               padding: const EdgeInsets.all(8.0),

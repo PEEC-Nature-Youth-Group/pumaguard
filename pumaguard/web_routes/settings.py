@@ -30,6 +30,9 @@ from pumaguard.model_downloader import (
     list_available_models,
     verify_file_checksum,
 )
+from pumaguard.shelly_control import (
+    set_shelly_switch,
+)
 from pumaguard.sound import (
     is_playing,
     playsound,
@@ -283,6 +286,109 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
             )
         except Exception as e:  # pylint: disable=broad-except
             logger.exception("Error checking sound status")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/settings/test-detection", methods=["POST"])
+    def test_detection():
+        """Simulate a puma detection with sound and plug control."""
+        logger.info("=== Test detection endpoint called ===")
+        try:
+            sound_files = webui.presets.deterrent_sound_files
+            logger.info("Configured sound files: %s", sound_files)
+
+            if not sound_files:
+                logger.warning("No sound files configured")
+                return (
+                    jsonify({"error": "No sound file configured"}),
+                    400,
+                )
+
+            # Randomly select one sound from the list
+            sound_file = random.choice(sound_files)
+            logger.info("Selected sound file: %s", sound_file)
+
+            # Combine sound_path with deterrent_sound_file
+            sound_file_path = os.path.join(
+                webui.presets.sound_path, sound_file
+            )
+            logger.info("Full sound file path: %s", sound_file_path)
+
+            # Check if file exists
+            if not os.path.exists(sound_file_path):
+                logger.error("Sound file not found: %s", sound_file_path)
+                return (
+                    jsonify(
+                        {"error": (f"Sound file not found: {sound_file_path}")}
+                    ),
+                    404,
+                )
+
+            # Check if sound playback is enabled
+            if not webui.presets.play_sound:
+                logger.warning(
+                    "Sound playback is disabled in settings (play_sound=False)"
+                )
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Sound playback is disabled "
+                            + "in settings",
+                        }
+                    ),
+                    400,
+                )
+
+            # Turn on automatic plugs before playing sound
+            automatic_plugs = [
+                plug
+                for plug in webui.plugs.values()
+                if plug.get("mode") == "automatic"
+                and plug.get("status") == "connected"
+            ]
+
+            if automatic_plugs:
+                logger.info(
+                    "Turning on %d automatic plug(s)", len(automatic_plugs)
+                )
+                for plug in automatic_plugs:
+                    ip_address = plug.get("ip_address")
+                    hostname = plug.get("hostname", "unknown")
+                    set_shelly_switch(ip_address, True, hostname)
+            else:
+                logger.debug("No automatic plugs to turn on")
+
+            # Play the sound with configured volume (blocking)
+            volume = webui.presets.volume
+            logger.info(
+                "Starting sound playback: file=%s, volume=%d",
+                sound_file_path,
+                volume,
+            )
+
+            playsound(sound_file_path, volume, blocking=True)
+            logger.info("Sound playback completed")
+
+            # Turn off automatic plugs after sound finishes
+            if automatic_plugs:
+                logger.info(
+                    "Turning off %d automatic plug(s)", len(automatic_plugs)
+                )
+                for plug in automatic_plugs:
+                    ip_address = plug.get("ip_address")
+                    hostname = plug.get("hostname", "unknown")
+                    set_shelly_switch(ip_address, False, hostname)
+            else:
+                logger.debug("No automatic plugs to turn off")
+
+            return jsonify(
+                {
+                    "success": True,
+                    "message": f"Detection test completed: {sound_file}",
+                }
+            )
+        except Exception as e:  # pylint: disable=broad-except
+            logger.exception("Error testing detection: %s", str(e))
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/models/available", methods=["GET"])

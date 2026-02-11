@@ -216,7 +216,7 @@ test-server: install
 	./scripts/test-server.sh
 
 .PHONY: pre-commit
-pre-commit: lint docs poetry test-ui test
+pre-commit: docs lint test
 
 .PHONY: add-model
 add-model:

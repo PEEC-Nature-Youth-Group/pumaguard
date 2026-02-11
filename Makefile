@@ -55,7 +55,10 @@ install-dev: .venv
 	uv sync --native-tls --extra dev --frozen
 
 .PHONY: test
-test: install-dev
+test: test-phython test-ui
+
+.PHONY: test-phython
+test-phython: install-dev
 	timeout 300 uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: lint-ui

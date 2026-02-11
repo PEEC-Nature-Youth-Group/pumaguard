@@ -152,8 +152,8 @@ check-functional:
 	fi
 	@echo "Success"
 
-.PHONY: functional-poetry
-functional-poetry: install
+.PHONY: functional-python
+functional-python: install
 	$(MAKE) EXE="uv run --native-tls pumaguard" run-functional
 	$(MAKE) check-functional
 

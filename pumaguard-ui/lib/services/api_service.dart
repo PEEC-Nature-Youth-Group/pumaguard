@@ -462,6 +462,25 @@ class ApiService {
     }
   }
 
+  /// Test detection - simulates a puma detection with sound and plug control
+  Future<bool> testDetection() async {
+    try {
+      final response = await http.post(
+        Uri.parse(getApiUrl('/api/settings/test-detection')),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to test detection');
+      }
+    } catch (e) {
+      throw Exception('Failed to test detection: $e');
+    }
+  }
+
   /// Get list of available models with cache status
   /// [modelType] can be 'classifier' (*.h5 files) or 'yolo' (*.pt files)
   Future<List<Map<String, dynamic>>> getAvailableModels({

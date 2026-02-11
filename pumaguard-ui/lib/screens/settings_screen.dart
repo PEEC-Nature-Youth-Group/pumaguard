@@ -21,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isTestingSound = false;
+  bool _isTestingDetection = false;
   String? _error;
 
   // Controllers for text fields
@@ -407,6 +408,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+
+  Future<void> _testDetection() async {
+    setState(() {
+      _isTestingDetection = true;
+      _error = null;
+    });
+
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.testDetection();
+
+      if (mounted) {
+        setState(() {
+          _isTestingDetection = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Detection test completed'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to test detection: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() {
+          _isTestingDetection = false;
+        });
       }
     }
   }
@@ -1181,6 +1219,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isTestingDetection ? null : _testDetection,
+                icon: _isTestingDetection
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.notifications_active),
+                label: const Text('Test Detection'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Simulates a puma detection: plays a random sound and controls automatic plugs',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
             ),
           ],
         ),

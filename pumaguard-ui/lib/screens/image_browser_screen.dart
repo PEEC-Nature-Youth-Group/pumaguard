@@ -30,6 +30,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   bool _selectAll = false;
   ImageGrouping _grouping = ImageGrouping.none;
   ImageSize _imageSize = ImageSize.large;
+  bool _showFolderPanel = true;
 
   @override
   void initState() {
@@ -646,10 +647,22 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
     final displayImages = _groupImages(_images);
+    final isNarrowScreen = MediaQuery.of(context).size.width < 800;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Image Browser'),
+        leading: isNarrowScreen && _selectedFolder != null
+            ? IconButton(
+                icon: const Icon(Icons.folder_outlined),
+                onPressed: () {
+                  setState(() {
+                    _showFolderPanel = true;
+                  });
+                },
+                tooltip: 'Show folders',
+              )
+            : null,
         actions: [
           if (_selectedImages.isNotEmpty)
             Padding(
@@ -698,361 +711,9 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                 ],
               ),
             )
-          : Row(
-              children: [
-                // Folder list sidebar
-                SizedBox(
-                  width: 300,
-                  child: Card(
-                    margin: const EdgeInsets.all(8),
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Watched Folders',
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        // Debug overlay shows selected folder
-                        if (_selectedFolder != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Debug: Selected base = $_selectedFolder',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey[600]),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        const Divider(),
-                        Expanded(
-                          child: _folders.isEmpty
-                              ? const Center(child: Text('No watched folders'))
-                              : ListView.builder(
-                                  itemCount: _folders.length,
-                                  itemBuilder: (context, index) {
-                                    final folder = _folders[index];
-                                    final isSelected =
-                                        _selectedFolder == folder['path'];
-                                    return ListTile(
-                                      selected: isSelected,
-                                      leading: const Icon(Icons.folder),
-                                      title: Text(
-                                        _formatFolderName(
-                                          folder['name'] as String,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        '${folder['image_count']} images',
-                                      ),
-                                      onTap: () => _loadFolderImages(
-                                        folder['path'] as String,
-                                      ),
-                                    );
-                                  },
-                                ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Image grid
-                Expanded(
-                  child: _selectedFolder == null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.photo_library_outlined,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'Select a folder to view images',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ],
-                          ),
-                        )
-                      : Column(
-                          children: [
-                            // Toolbar
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              child: Row(
-                                children: [
-                                  Checkbox(
-                                    value: _selectAll,
-                                    onChanged: (value) => _toggleSelectAll(),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _selectAll ? 'Deselect All' : 'Select All',
-                                  ),
-                                  const Spacer(),
-                                  const Text('Size:'),
-                                  const SizedBox(width: 8),
-                                  DropdownButton<ImageSize>(
-                                    value: _imageSize,
-                                    underline: Container(),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: ImageSize.small,
-                                        child: Text('Small'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: ImageSize.large,
-                                        child: Text('Large'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: ImageSize.full,
-                                        child: Text('Full'),
-                                      ),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          _imageSize = value;
-                                        });
-                                        _saveSizePreference(value);
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(width: 16),
-                                  const Text('Group by:'),
-                                  const SizedBox(width: 8),
-                                  DropdownButton<ImageGrouping>(
-                                    value: _grouping,
-                                    underline: Container(),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: ImageGrouping.none,
-                                        child: Text('None'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: ImageGrouping.day,
-                                        child: Text('Day'),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: ImageGrouping.week,
-                                        child: Text('Week'),
-                                      ),
-                                    ],
-                                    onChanged: (value) {
-                                      if (value != null) {
-                                        setState(() {
-                                          _grouping = value;
-                                        });
-                                        _saveGroupingPreference(value);
-                                      }
-                                    },
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Text('${_images.length} images'),
-                                ],
-                              ),
-                            ),
-                            // Image grid with grouping
-                            Expanded(
-                              child: _isLoading
-                                  ? const Center(
-                                      child: CircularProgressIndicator(),
-                                    )
-                                  : _images.isEmpty
-                                  ? const Center(
-                                      child: Text('No images in this folder'),
-                                    )
-                                  : CustomScrollView(
-                                      slivers: [
-                                        SliverPadding(
-                                          padding: const EdgeInsets.all(16),
-                                          sliver: _imageSize == ImageSize.small
-                                              ? SliverGrid(
-                                                  gridDelegate:
-                                                      const SliverGridDelegateWithMaxCrossAxisExtent(
-                                                        maxCrossAxisExtent: 250,
-                                                        childAspectRatio: 0.8,
-                                                        crossAxisSpacing: 16,
-                                                        mainAxisSpacing: 16,
-                                                      ),
-                                                  delegate: SliverChildBuilderDelegate(
-                                                    (context, index) {
-                                                      final item =
-                                                          displayImages[index];
-
-                                                      // Skip headers in grid view
-                                                      if (item['is_header'] ==
-                                                          true) {
-                                                        return const SizedBox.shrink();
-                                                      }
-
-                                                      return _buildImageItem(
-                                                        context,
-                                                        apiService,
-                                                        item,
-                                                      );
-                                                    },
-                                                    childCount:
-                                                        displayImages.length,
-                                                  ),
-                                                )
-                                              : SliverList(
-                                                  delegate: SliverChildBuilderDelegate(
-                                                    (context, index) {
-                                                      final item =
-                                                          displayImages[index];
-
-                                                      // Check if this is a header
-                                                      if (item['is_header'] ==
-                                                          true) {
-                                                        final groupImages =
-                                                            item['group_images']
-                                                                as List<
-                                                                  Map<
-                                                                    String,
-                                                                    dynamic
-                                                                  >
-                                                                >;
-                                                        final allSelected =
-                                                            _areAllImagesInGroupSelected(
-                                                              groupImages,
-                                                            );
-
-                                                        return Padding(
-                                                          padding:
-                                                              const EdgeInsets.only(
-                                                                top: 16,
-                                                                bottom: 8,
-                                                              ),
-                                                          child: Row(
-                                                            children: [
-                                                              Expanded(
-                                                                child: Text(
-                                                                  item['header_text']
-                                                                      as String,
-                                                                  style: Theme.of(context)
-                                                                      .textTheme
-                                                                      .titleMedium
-                                                                      ?.copyWith(
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          12,
-                                                                      vertical:
-                                                                          4,
-                                                                    ),
-                                                                decoration: BoxDecoration(
-                                                                  color: Theme.of(
-                                                                    context,
-                                                                  ).colorScheme.primaryContainer,
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        12,
-                                                                      ),
-                                                                ),
-                                                                child: Text(
-                                                                  '${item['image_count']} images',
-                                                                  style: Theme.of(context)
-                                                                      .textTheme
-                                                                      .bodySmall
-                                                                      ?.copyWith(
-                                                                        color: Theme.of(
-                                                                          context,
-                                                                        ).colorScheme.onPrimaryContainer,
-                                                                      ),
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                width: 8,
-                                                              ),
-                                                              OutlinedButton.icon(
-                                                                onPressed: () {
-                                                                  if (allSelected) {
-                                                                    _deselectAllInGroup(
-                                                                      groupImages,
-                                                                    );
-                                                                  } else {
-                                                                    _selectAllInGroup(
-                                                                      groupImages,
-                                                                    );
-                                                                  }
-                                                                },
-                                                                icon: Icon(
-                                                                  allSelected
-                                                                      ? Icons
-                                                                            .check_box
-                                                                      : Icons
-                                                                            .check_box_outline_blank,
-                                                                  size: 18,
-                                                                ),
-                                                                label: Text(
-                                                                  allSelected
-                                                                      ? 'Deselect All'
-                                                                      : 'Select All',
-                                                                ),
-                                                                style: OutlinedButton.styleFrom(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            12,
-                                                                        vertical:
-                                                                            8,
-                                                                      ),
-                                                                  visualDensity:
-                                                                      VisualDensity
-                                                                          .compact,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      }
-
-                                                      // Regular image item
-                                                      return Padding(
-                                                        padding:
-                                                            const EdgeInsets.only(
-                                                              bottom: 16,
-                                                            ),
-                                                        child: _buildImageItem(
-                                                          context,
-                                                          apiService,
-                                                          item,
-                                                        ),
-                                                      );
-                                                    },
-                                                    childCount:
-                                                        displayImages.length,
-                                                  ),
-                                                ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
-            ),
+          : isNarrowScreen
+          ? _buildNarrowLayout(context, apiService, displayImages)
+          : _buildWideLayout(context, apiService, displayImages),
       floatingActionButton: _isDownloading
           ? const FloatingActionButton(
               onPressed: null,
@@ -1060,6 +721,705 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
             )
           : null,
     );
+  }
+
+  Widget _buildWideLayout(
+    BuildContext context,
+    ApiService apiService,
+    List<Map<String, dynamic>> displayImages,
+  ) {
+    return Row(
+      children: [
+        // Folder list sidebar
+        SizedBox(
+          width: 300,
+          child: Card(
+            margin: const EdgeInsets.all(8),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Watched Folders',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                // Debug overlay shows selected folder
+                if (_selectedFolder != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Debug: Selected base = $_selectedFolder',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                const Divider(),
+                Expanded(
+                  child: _folders.isEmpty
+                      ? const Center(child: Text('No watched folders'))
+                      : ListView.builder(
+                          itemCount: _folders.length,
+                          itemBuilder: (context, index) {
+                            final folder = _folders[index];
+                            final isSelected =
+                                _selectedFolder == folder['path'];
+                            return ListTile(
+                              selected: isSelected,
+                              leading: const Icon(Icons.folder),
+                              title: Text(
+                                _formatFolderName(folder['name'] as String),
+                              ),
+                              subtitle: Text('${folder['image_count']} images'),
+                              onTap: () =>
+                                  _loadFolderImages(folder['path'] as String),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Image grid
+        Expanded(
+          child: _selectedFolder == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.photo_library_outlined,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Select a folder to view images',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
+                  children: [
+                    // Toolbar
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _selectAll,
+                            onChanged: (value) => _toggleSelectAll(),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(_selectAll ? 'Deselect All' : 'Select All'),
+                          const Spacer(),
+                          const Text('Size:'),
+                          const SizedBox(width: 8),
+                          DropdownButton<ImageSize>(
+                            value: _imageSize,
+                            underline: Container(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: ImageSize.small,
+                                child: Text('Small'),
+                              ),
+                              DropdownMenuItem(
+                                value: ImageSize.large,
+                                child: Text('Large'),
+                              ),
+                              DropdownMenuItem(
+                                value: ImageSize.full,
+                                child: Text('Full'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _imageSize = value;
+                                });
+                                _saveSizePreference(value);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 16),
+                          const Text('Group by:'),
+                          const SizedBox(width: 8),
+                          DropdownButton<ImageGrouping>(
+                            value: _grouping,
+                            underline: Container(),
+                            items: const [
+                              DropdownMenuItem(
+                                value: ImageGrouping.none,
+                                child: Text('None'),
+                              ),
+                              DropdownMenuItem(
+                                value: ImageGrouping.day,
+                                child: Text('Day'),
+                              ),
+                              DropdownMenuItem(
+                                value: ImageGrouping.week,
+                                child: Text('Week'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _grouping = value;
+                                });
+                                _saveGroupingPreference(value);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 16),
+                          Text('${_images.length} images'),
+                        ],
+                      ),
+                    ),
+                    // Image grid with grouping
+                    Expanded(
+                      child: _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _images.isEmpty
+                          ? const Center(
+                              child: Text('No images in this folder'),
+                            )
+                          : CustomScrollView(
+                              slivers: [
+                                SliverPadding(
+                                  padding: const EdgeInsets.all(16),
+                                  sliver: _imageSize == ImageSize.small
+                                      ? SliverGrid(
+                                          gridDelegate:
+                                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                                                maxCrossAxisExtent: 250,
+                                                childAspectRatio: 0.8,
+                                                crossAxisSpacing: 16,
+                                                mainAxisSpacing: 16,
+                                              ),
+                                          delegate: SliverChildBuilderDelegate((
+                                            context,
+                                            index,
+                                          ) {
+                                            final item = displayImages[index];
+
+                                            // Skip headers in grid view
+                                            if (item['is_header'] == true) {
+                                              return const SizedBox.shrink();
+                                            }
+
+                                            return _buildImageItem(
+                                              context,
+                                              apiService,
+                                              item,
+                                            );
+                                          }, childCount: displayImages.length),
+                                        )
+                                      : SliverList(
+                                          delegate: SliverChildBuilderDelegate((
+                                            context,
+                                            index,
+                                          ) {
+                                            final item = displayImages[index];
+
+                                            // Check if this is a header
+                                            if (item['is_header'] == true) {
+                                              final groupImages =
+                                                  item['group_images']
+                                                      as List<
+                                                        Map<String, dynamic>
+                                                      >;
+                                              final allSelected =
+                                                  _areAllImagesInGroupSelected(
+                                                    groupImages,
+                                                  );
+
+                                              return Padding(
+                                                padding: const EdgeInsets.only(
+                                                  top: 16,
+                                                  bottom: 8,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Expanded(
+                                                      child: Text(
+                                                        item['header_text']
+                                                            as String,
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 12,
+                                                            vertical: 4,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primaryContainer,
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        '${item['image_count']} images',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              color: Theme.of(context)
+                                                                  .colorScheme
+                                                                  .onPrimaryContainer,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    OutlinedButton.icon(
+                                                      onPressed: () {
+                                                        if (allSelected) {
+                                                          _deselectAllInGroup(
+                                                            groupImages,
+                                                          );
+                                                        } else {
+                                                          _selectAllInGroup(
+                                                            groupImages,
+                                                          );
+                                                        }
+                                                      },
+                                                      icon: Icon(
+                                                        allSelected
+                                                            ? Icons.check_box
+                                                            : Icons
+                                                                  .check_box_outline_blank,
+                                                        size: 18,
+                                                      ),
+                                                      label: Text(
+                                                        allSelected
+                                                            ? 'Deselect All'
+                                                            : 'Select All',
+                                                      ),
+                                                      style: OutlinedButton.styleFrom(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 8,
+                                                            ),
+                                                        visualDensity:
+                                                            VisualDensity
+                                                                .compact,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }
+
+                                            // Regular image item
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
+                                              child: _buildImageItem(
+                                                context,
+                                                apiService,
+                                                item,
+                                              ),
+                                            );
+                                          }, childCount: displayImages.length),
+                                        ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNarrowLayout(
+    BuildContext context,
+    ApiService apiService,
+    List<Map<String, dynamic>> displayImages,
+  ) {
+    return Stack(
+      children: [
+        // Image grid (full screen on narrow displays)
+        _buildImageGridContent(context, apiService, displayImages),
+        // Folder panel overlay (modal panel that slides in from left)
+        if (_showFolderPanel)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _showFolderPanel = false;
+                });
+              },
+              child: Container(color: Colors.black54),
+            ),
+          ),
+        if (_showFolderPanel)
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Material(
+              elevation: 16,
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.85,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Watched Folders',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                  ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              setState(() {
+                                _showFolderPanel = false;
+                              });
+                            },
+                            tooltip: 'Close',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: _folders.isEmpty
+                          ? const Center(child: Text('No watched folders'))
+                          : ListView.builder(
+                              itemCount: _folders.length,
+                              itemBuilder: (context, index) {
+                                final folder = _folders[index];
+                                final isSelected =
+                                    _selectedFolder == folder['path'];
+                                return ListTile(
+                                  selected: isSelected,
+                                  leading: const Icon(Icons.folder),
+                                  title: Text(
+                                    _formatFolderName(folder['name'] as String),
+                                  ),
+                                  subtitle: Text(
+                                    '${folder['image_count']} images',
+                                  ),
+                                  onTap: () {
+                                    _loadFolderImages(folder['path'] as String);
+                                    setState(() {
+                                      _showFolderPanel = false;
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildImageGridContent(
+    BuildContext context,
+    ApiService apiService,
+    List<Map<String, dynamic>> displayImages,
+  ) {
+    return _selectedFolder == null
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.photo_library_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Select a folder to view images',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+          )
+        : Column(
+            children: [
+              // Toolbar
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _selectAll,
+                      onChanged: (value) => _toggleSelectAll(),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(_selectAll ? 'Deselect All' : 'Select All'),
+                    const Spacer(),
+                    const Text('Size:'),
+                    const SizedBox(width: 8),
+                    DropdownButton<ImageSize>(
+                      value: _imageSize,
+                      underline: Container(),
+                      items: const [
+                        DropdownMenuItem(
+                          value: ImageSize.small,
+                          child: Text('Small'),
+                        ),
+                        DropdownMenuItem(
+                          value: ImageSize.large,
+                          child: Text('Large'),
+                        ),
+                        DropdownMenuItem(
+                          value: ImageSize.full,
+                          child: Text('Full'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _imageSize = value;
+                          });
+                          _saveSizePreference(value);
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('Group by:'),
+                    const SizedBox(width: 8),
+                    DropdownButton<ImageGrouping>(
+                      value: _grouping,
+                      underline: Container(),
+                      items: const [
+                        DropdownMenuItem(
+                          value: ImageGrouping.none,
+                          child: Text('None'),
+                        ),
+                        DropdownMenuItem(
+                          value: ImageGrouping.day,
+                          child: Text('Day'),
+                        ),
+                        DropdownMenuItem(
+                          value: ImageGrouping.week,
+                          child: Text('Week'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _grouping = value;
+                          });
+                          _saveGroupingPreference(value);
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    Text('${_images.length} images'),
+                  ],
+                ),
+              ),
+              // Image grid with grouping
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _images.isEmpty
+                    ? const Center(child: Text('No images in this folder'))
+                    : CustomScrollView(
+                        slivers: [
+                          SliverPadding(
+                            padding: const EdgeInsets.all(16),
+                            sliver: _imageSize == ImageSize.small
+                                ? SliverGrid(
+                                    gridDelegate:
+                                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: 250,
+                                          childAspectRatio: 0.8,
+                                          crossAxisSpacing: 16,
+                                          mainAxisSpacing: 16,
+                                        ),
+                                    delegate: SliverChildBuilderDelegate((
+                                      context,
+                                      index,
+                                    ) {
+                                      final item = displayImages[index];
+
+                                      // Skip headers in grid view
+                                      if (item['is_header'] == true) {
+                                        return const SizedBox.shrink();
+                                      }
+
+                                      return _buildImageItem(
+                                        context,
+                                        apiService,
+                                        item,
+                                      );
+                                    }, childCount: displayImages.length),
+                                  )
+                                : SliverList(
+                                    delegate: SliverChildBuilderDelegate((
+                                      context,
+                                      index,
+                                    ) {
+                                      final item = displayImages[index];
+
+                                      // Check if this is a header
+                                      if (item['is_header'] == true) {
+                                        final groupImages =
+                                            item['group_images']
+                                                as List<Map<String, dynamic>>;
+                                        final allSelected =
+                                            _areAllImagesInGroupSelected(
+                                              groupImages,
+                                            );
+
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 16,
+                                            bottom: 8,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  item['header_text'] as String,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 4,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .primaryContainer,
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                child: Text(
+                                                  '${item['image_count']} images',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onPrimaryContainer,
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              OutlinedButton.icon(
+                                                onPressed: () {
+                                                  if (allSelected) {
+                                                    _deselectAllInGroup(
+                                                      groupImages,
+                                                    );
+                                                  } else {
+                                                    _selectAllInGroup(
+                                                      groupImages,
+                                                    );
+                                                  }
+                                                },
+                                                icon: Icon(
+                                                  allSelected
+                                                      ? Icons.check_box
+                                                      : Icons
+                                                            .check_box_outline_blank,
+                                                  size: 18,
+                                                ),
+                                                label: Text(
+                                                  allSelected
+                                                      ? 'Deselect All'
+                                                      : 'Select All',
+                                                ),
+                                                style: OutlinedButton.styleFrom(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 8,
+                                                      ),
+                                                  visualDensity:
+                                                      VisualDensity.compact,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+
+                                      // Regular image item
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 16,
+                                        ),
+                                        child: _buildImageItem(
+                                          context,
+                                          apiService,
+                                          item,
+                                        ),
+                                      );
+                                    }, childCount: displayImages.length),
+                                  ),
+                          ),
+                        ],
+                      ),
+              ),
+            ],
+          );
   }
 }
 

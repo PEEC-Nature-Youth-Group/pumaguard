@@ -298,7 +298,13 @@ def classify_image_two_stage(
         )
         arr = np.expand_dims(arr, 0)
         arr = keras.applications.efficientnet_v2.preprocess_input(arr)
+        start_time = datetime.datetime.now()
         p = float(classifier.predict(arr, verbose=0).ravel()[0])
+        end_time = datetime.datetime.now()
+        logger.debug(
+            "Classification took %.6f seconds",
+            get_duration(start_time, end_time),
+        )
         return p
 
     logger.debug("classifying image %s using two-stage approach", image_path)
@@ -325,6 +331,7 @@ def classify_image_two_stage(
     all_rows = []
     image_summary = []
 
+    start_time = datetime.datetime.now()
     image_file = Path(image_path)
     try:
         PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -335,7 +342,14 @@ def classify_image_two_stage(
     except FileNotFoundError:
         logger.error("Could not find file %s", image_file)
         raise
+    end_time = datetime.datetime.now()
+    logger.debug(
+        "Loading of image %s took %.6f seconds",
+        image_path,
+        get_duration(start_time, end_time),
+    )
 
+    start_time = datetime.datetime.now()
     res = detector.predict(
         image,
         imgsz=640,
@@ -343,6 +357,10 @@ def classify_image_two_stage(
         iou=iou_thresh,
         max_det=presets.yolo_max_dets,
         verbose=False,
+    )
+    end_time = datetime.datetime.now()
+    logger.debug(
+        "YOLO step took %.6f seconds", get_duration(start_time, end_time)
     )
     boxes = (
         res[0].boxes.xyxy.cpu().numpy()

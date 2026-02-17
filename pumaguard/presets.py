@@ -118,7 +118,7 @@ class Settings:
     def __init__(self):
         self.settings_file = get_default_settings_file()
         self.yolo_min_size = 0.02
-        self.yolo_conf_thresh = 0.25
+        self.yolo_conf_thresh = 0.15
         self.yolo_max_dets = 2
         self.yolo_model_filename = "yolov8s_101425.pt"
         self.classifier_model_filename = "colorbw_111325.h5"
@@ -214,21 +214,21 @@ class Settings:
             if "python/tuple" in error_msg:
                 raise PresetError(
                     f"{error_msg}\n\n"
-                    "Your settings file contains Python-specific tuple "
-                    "formatting that is no longer supported.\n"
-                    f"Please update {filename} to use YAML list syntax.\n"
-                    "For example, change:\n"
-                    "  image-dimensions: !!python/tuple [512, 512]\n"
-                    "to:\n"
-                    "  image-dimensions:\n"
-                    "    - 512\n"
-                    "    - 512\n"
-                    "Or delete the file to use defaults."
+                    + "Your settings file contains Python-specific tuple "
+                    + "formatting that is no longer supported.\n"
+                    + f"Please update {filename} to use YAML list syntax.\n"
+                    + "For example, change:\n"
+                    + "  image-dimensions: !!python/tuple [512, 512]\n"
+                    + "to:\n"
+                    + "  image-dimensions:\n"
+                    + "    - 512\n"
+                    + "    - 512\n"
+                    + "Or delete the file to use defaults."
                 ) from e
             raise PresetError(error_msg) from e
 
         self.yolo_min_size = settings.get("YOLO-min-size", 0.02)
-        self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.25)
+        self.yolo_conf_thresh = settings.get("YOLO-conf-thresh", 0.15)
         self.yolo_max_dets = settings.get("YOLO-max-dets", 12)
         self.yolo_model_filename = settings.get(
             "YOLO-model-filename", "yolov8s_101425.pt"
@@ -314,7 +314,7 @@ class Settings:
         self.batch_size = settings.get("batch-size", 1)
         self.color_mode = settings.get("color-mode", "rgb")
         self.file_stabilization_extra_wait = settings.get(
-            "file-stabilization-extra-wait", 0
+            "file-stabilization-extra-wait", 1
         )
         self.play_sound = settings.get("play-sound", True)
         self.volume = settings.get("volume", 80)

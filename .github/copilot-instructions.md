@@ -22,7 +22,7 @@ The core classification uses a two-stage approach (see `pumaguard/utils.py::clas
 yolo_model_filename = "yolov8s_101425.pt"
 classifier_model_filename = "colorbw_111325.h5"
 yolo_min_size = 0.02  # Minimum object size as fraction of image
-yolo_conf_thresh = 0.25  # Confidence threshold
+yolo_conf_thresh = 0.15  # Confidence threshold
 ```
 
 ### Model Distribution System

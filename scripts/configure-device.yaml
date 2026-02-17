@@ -401,6 +401,12 @@
         name: lm-sensors.timer
         state: started
 
+    - name: Set ALSA mixer volume to 100%
+      ansible.builtin.command: amixer set PCM 100%
+      register: alsa_volume
+      changed_when: "'100%' not in alsa_volume.stdout"
+      failed_when: false
+
     - name: Allow ansible user to run rsync without password
       ansible.builtin.copy:
         dest: /etc/sudoers.d/ansible-rsync

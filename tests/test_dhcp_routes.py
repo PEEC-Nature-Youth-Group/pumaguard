@@ -331,6 +331,46 @@ def test_add_camera_default_status(test_app):
     assert data["camera"]["status"] == "connected"  # Default status
 
 
+def test_remove_camera(test_app):
+    """Test removing a specific camera by MAC address."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a camera first
+    webui.cameras["aa:bb:cc:dd:ee:ff"] = {
+        "hostname": "test-camera",
+        "ip_address": "192.168.52.100",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+
+    response = client.delete("/api/dhcp/cameras/aa:bb:cc:dd:ee:ff")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert "test-camera" in data["message"]
+    assert "camera" in data
+    assert data["camera"]["hostname"] == "test-camera"
+
+    # Verify camera was removed
+    assert "aa:bb:cc:dd:ee:ff" not in webui.cameras
+
+
+def test_remove_camera_not_found(test_app):
+    """Test removing a camera that doesn't exist."""
+    app, _ = test_app
+    client = app.test_client()
+
+    response = client.delete("/api/dhcp/cameras/aa:bb:cc:dd:ee:99")
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Camera not found"
+
+
 def test_clear_cameras(test_app):
     """Test clearing all camera records."""
     app, webui = test_app
@@ -627,6 +667,47 @@ def test_get_plug_not_found(test_app):
     client = app.test_client()
 
     response = client.get("/api/dhcp/plugs/11:22:33:44:55:99")
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert "error" in data
+    assert data["error"] == "Plug not found"
+
+
+def test_remove_plug(test_app):
+    """Test removing a specific plug by MAC address."""
+    app, webui = test_app
+    client = app.test_client()
+
+    # Add a plug first
+    webui.plugs["11:22:33:44:55:66"] = {
+        "hostname": "test-plug",
+        "ip_address": "192.168.52.200",
+        "mac_address": "11:22:33:44:55:66",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "off",
+    }
+
+    response = client.delete("/api/dhcp/plugs/11:22:33:44:55:66")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert "test-plug" in data["message"]
+    assert "plug" in data
+    assert data["plug"]["hostname"] == "test-plug"
+
+    # Verify plug was removed
+    assert "11:22:33:44:55:66" not in webui.plugs
+
+
+def test_remove_plug_not_found(test_app):
+    """Test removing a plug that doesn't exist."""
+    app, _ = test_app
+    client = app.test_client()
+
+    response = client.delete("/api/dhcp/plugs/11:22:33:44:55:99")
 
     assert response.status_code == 404
     data = json.loads(response.data)

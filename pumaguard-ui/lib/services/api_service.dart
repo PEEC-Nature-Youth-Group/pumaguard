@@ -607,6 +607,33 @@ class ApiService {
     }
   }
 
+  /// Delete a camera by MAC address
+  Future<void> deleteCamera(String macAddress) async {
+    try {
+      final url = getApiUrl('/api/dhcp/cameras/$macAddress');
+      debugPrint('[ApiService.deleteCamera] Requesting URL: $url');
+
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.deleteCamera] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.deleteCamera] Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.deleteCamera] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to delete camera');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.deleteCamera] Exception: $e');
+      throw Exception('Failed to delete camera: $e');
+    }
+  }
+
   /// Get list of known plugs
   Future<List<Plug>> getPlugs() async {
     try {
@@ -639,6 +666,33 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService.getPlugs] Exception: $e');
       throw Exception('Failed to get plugs: $e');
+    }
+  }
+
+  /// Delete a plug by MAC address
+  Future<void> deletePlug(String macAddress) async {
+    try {
+      final url = getApiUrl('/api/dhcp/plugs/$macAddress');
+      debugPrint('[ApiService.deletePlug] Requesting URL: $url');
+
+      final response = await http.delete(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.deletePlug] Response status: ${response.statusCode}',
+      );
+      debugPrint('[ApiService.deletePlug] Response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        debugPrint('[ApiService.deletePlug] Error response: $error');
+        throw Exception(error['error'] ?? 'Failed to delete plug');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.deletePlug] Exception: $e');
+      throw Exception('Failed to delete plug: $e');
     }
   }
 

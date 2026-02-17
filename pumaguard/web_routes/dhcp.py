@@ -390,6 +390,77 @@ def register_dhcp_routes(
             404,
         )
 
+    @app.route("/api/dhcp/cameras/<mac_address>", methods=["DELETE"])
+    def remove_camera(mac_address: str):
+        """
+        Remove a specific camera by MAC address.
+
+        Args:
+            mac_address: MAC address of the camera to remove
+        """
+        # Normalize MAC address format (lowercase, colons)
+        mac_address = mac_address.lower()
+
+        if mac_address not in webui.cameras:
+            return (
+                jsonify(
+                    {
+                        "error": "Camera not found",
+                        "mac_address": mac_address,
+                    }
+                ),
+                404,
+            )
+
+        # Get camera info before removing
+        camera_info = dict(webui.cameras[mac_address])
+
+        # Remove camera from memory
+        del webui.cameras[mac_address]
+        # Avoid logging full MAC address; log only a redacted suffix
+        redacted_mac = (
+            f"***{mac_address[-5:]}" if len(mac_address) > 5 else "***"
+        )
+        logger.info(
+            "Removed camera '%s' (%s)",
+            camera_info["hostname"],
+            redacted_mac,
+        )
+
+        # Update settings
+        camera_list = []
+        for _, cam_info in webui.cameras.items():
+            camera_list.append(
+                {
+                    "hostname": cam_info["hostname"],
+                    "ip_address": cam_info["ip_address"],
+                    "mac_address": cam_info["mac_address"],
+                    "last_seen": cam_info["last_seen"],
+                    "status": cam_info["status"],
+                }
+            )
+        webui.presets.cameras = camera_list
+
+        try:
+            webui.presets.save()
+            logger.info("Camera list updated in settings")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Failed to save camera list to settings: %s", str(e))
+
+        # Notify SSE clients
+        notify_camera_change("camera_removed", camera_info)
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"Camera '{camera_info['hostname']}' removed",
+                    "camera": camera_info,
+                }
+            ),
+            200,
+        )
+
     @app.route("/api/dhcp/cameras", methods=["POST"])
     def add_camera():
         """
@@ -603,6 +674,71 @@ def register_dhcp_routes(
             return jsonify({"error": "Plug not found"}), 404
 
         return jsonify({"plug": plug}), 200
+
+    @app.route("/api/dhcp/plugs/<mac_address>", methods=["DELETE"])
+    def remove_plug(mac_address: str):
+        """
+        Remove a specific plug by MAC address.
+
+        Args:
+            mac_address: MAC address of the plug to remove
+        """
+        if mac_address not in webui.plugs:
+            return (
+                jsonify(
+                    {
+                        "error": "Plug not found",
+                        "mac_address": mac_address,
+                    }
+                ),
+                404,
+            )
+
+        # Get plug info before removing
+        plug_info = dict(webui.plugs[mac_address])
+
+        # Remove plug from memory
+        del webui.plugs[mac_address]
+        logger.info(
+            "Removed plug '%s' (%s)",
+            plug_info["hostname"],
+            mac_address,
+        )
+
+        # Update settings
+        plug_list = []
+        for _, p_info in webui.plugs.items():
+            plug_list.append(
+                {
+                    "hostname": p_info["hostname"],
+                    "ip_address": p_info["ip_address"],
+                    "mac_address": p_info["mac_address"],
+                    "last_seen": p_info["last_seen"],
+                    "status": p_info["status"],
+                    "mode": p_info.get("mode", "off"),
+                }
+            )
+        webui.presets.plugs = plug_list
+
+        try:
+            webui.presets.save()
+            logger.info("Plug list updated in settings")
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error("Failed to save plug list to settings: %s", str(e))
+
+        # Notify SSE clients
+        notify_camera_change("plug_removed", plug_info)
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": f"Plug '{plug_info['hostname']}' removed",
+                    "plug": plug_info,
+                }
+            ),
+            200,
+        )
 
     @app.route("/api/dhcp/plugs", methods=["POST"])
     def add_plug():

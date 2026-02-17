@@ -8,7 +8,7 @@
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
     wheelhouse_local_base: "{{ playbook_dir }}/.wheelhouse"
-    pumaguard_watch_dir: "/home/pumaguard/watch-folder"
+    pumaguard_watch_dir: "/home/pumaguard/watch_folder"
     pumaguard_user: "{{ ansible_user }}"
     pumaguard_group: "{{ ansible_group }}"
     # PumaGuard installation method:

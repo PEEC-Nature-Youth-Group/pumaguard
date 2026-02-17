@@ -1,8 +1,14 @@
 # Interface to use for access point
 interface=wlan0
 
+# Control interface for hostapd_cli
+ctrl_interface=/var/run/hostapd
+
 # nl80211 driver for modern wireless cards
 driver=nl80211
+
+# Country code (regulatory domain)
+country_code=US
 
 # Network name (SSID)
 ssid={{ hostapd_ssid }}

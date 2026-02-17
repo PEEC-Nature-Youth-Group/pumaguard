@@ -549,6 +549,16 @@
       # Combined with port 80->5000 redirect, this triggers captive portal detection
       # on phones/devices while preserving internet access through the wired interface.
 
+    - name: Ensure hostapd control interface directory exists
+      ansible.builtin.file:
+        path: /var/run/hostapd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - networking
+
     - name: Configure hostapd for wlan0 access point
       ansible.builtin.template:
         lstrip_blocks: true

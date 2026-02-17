@@ -174,10 +174,10 @@ jobs:
           channel: stable
       - run: flutter doctor
       - run: |
-            ls -lh pumaguard-ui
-            ls -lh pumaguard-ui/test
-            ls -lh pumaguard-ui/test/models
-            cat pumaguard-ui/test/models/status_test.dart
+          ls -lh pumaguard-ui
+          ls -lh pumaguard-ui/test
+          ls -lh pumaguard-ui/test/models
+          cat pumaguard-ui/test/models/status_test.dart
       - name: Lint UI
         run: make lint-ui
 
@@ -375,6 +375,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: make functional-python
+      - name: Upload functional test output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: functional-test-output-python
+          path: functional-test.output
 
   functional-snap:
     runs-on: ${{ matrix.os }}

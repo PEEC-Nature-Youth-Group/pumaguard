@@ -506,16 +506,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            ..._plugs.asMap().entries.map((entry) {
-              final plug = entry.value;
-              final isLast = entry.key == _plugs.length - 1;
-              return Column(
-                children: [
-                  _buildPlugListItem(plug),
-                  if (!isLast) const Divider(),
-                ],
-              );
-            }),
+            ..._plugs.map((plug) => _buildPlugListItem(plug)),
           ],
         ),
       ),
@@ -532,168 +523,260 @@ class _DevicesScreenState extends State<DevicesScreen> {
     final hasShelly = shellyPlug != null;
 
     Color modeColor;
-    IconData modeIcon;
 
     switch (plug.mode) {
       case 'on':
         modeColor = Colors.green;
-        modeIcon = Icons.power_settings_new;
         break;
       case 'off':
         modeColor = Colors.grey;
-        modeIcon = Icons.power_off;
         break;
       case 'automatic':
         modeColor = Colors.orange;
-        modeIcon = Icons.auto_mode;
         break;
       default:
         modeColor = Colors.grey;
-        modeIcon = Icons.power_off;
     }
 
     // Determine actual output state from Shelly
     final isOutputOn = hasShelly ? (shellyPlug.output ?? false) : false;
     final outputColor = isOutputOn ? Colors.green : Colors.grey;
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      leading: CircleAvatar(
-        backgroundColor: modeColor.withValues(alpha: 0.2),
-        child: Icon(Icons.power, color: modeColor),
-      ),
-      title: Text(
-        plug.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w500),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 4),
-          Text('IP: ${plug.ipAddress}'),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row with icon, name, and status
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: modeColor.withValues(alpha: 0.2),
+                  child: Icon(Icons.power, color: modeColor),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        plug.displayName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'IP: ${plug.ipAddress}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Mode selection buttons
+            Row(
+              children: [
+                Expanded(
+                  child: _buildModeButton(
+                    plug: plug,
+                    mode: 'on',
+                    label: 'On',
+                    icon: Icons.power_settings_new,
+                    color: Colors.green,
+                    isSelected: plug.mode == 'on',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildModeButton(
+                    plug: plug,
+                    mode: 'off',
+                    label: 'Off',
+                    icon: Icons.power_off,
+                    color: Colors.grey,
+                    isSelected: plug.mode == 'off',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildModeButton(
+                    plug: plug,
+                    mode: 'automatic',
+                    label: 'Auto',
+                    icon: Icons.auto_mode,
+                    color: Colors.orange,
+                    isSelected: plug.mode == 'automatic',
+                  ),
+                ),
+              ],
+            ),
+            // Shelly status information
+            if (hasShelly) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isOutputOn ? Icons.lightbulb : Icons.lightbulb_outline,
+                        size: 16,
+                        color: outputColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        isOutputOn ? 'ON' : 'OFF',
+                        style: TextStyle(
+                          color: outputColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.flash_on,
+                        size: 16,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${shellyPlug.apower?.toStringAsFixed(1) ?? '0.0'}W',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.electric_bolt,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${shellyPlug.voltage?.toStringAsFixed(1) ?? '0.0'}V',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.show_chart,
+                        size: 16,
+                        color: Colors.purple,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${shellyPlug.current?.toStringAsFixed(2) ?? '0.00'}A',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  if (shellyPlug.temperature != null &&
+                      shellyPlug.temperature!['tC'] != null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.thermostat,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${shellyPlug.temperature!['tC'].toStringAsFixed(1)}°C',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                ],
               ),
-              const SizedBox(width: 6),
-              Text(
-                statusText,
-                style: TextStyle(color: statusColor, fontSize: 12),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeButton({
+    required Plug plug,
+    required String mode,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required bool isSelected,
+  }) {
+    return Material(
+      color: isSelected
+          ? color.withValues(alpha: 0.2)
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: isSelected ? null : () => _setPlugMode(plug, mode),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 24,
+                color: isSelected
+                    ? color
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(width: 12),
-              Icon(modeIcon, size: 14, color: modeColor),
-              const SizedBox(width: 4),
+              const SizedBox(height: 4),
               Text(
-                plug.mode.toUpperCase(),
+                label,
                 style: TextStyle(
-                  color: modeColor,
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? color
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-          if (hasShelly) ...[
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  isOutputOn ? Icons.lightbulb : Icons.lightbulb_outline,
-                  size: 14,
-                  color: outputColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isOutputOn ? 'ON' : 'OFF',
-                  style: TextStyle(
-                    color: outputColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.flash_on, size: 14, color: Colors.orange),
-                const SizedBox(width: 4),
-                Text(
-                  '${shellyPlug.apower?.toStringAsFixed(1) ?? '0.0'}W',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.electric_bolt, size: 14, color: Colors.blue),
-                const SizedBox(width: 4),
-                Text(
-                  '${shellyPlug.voltage?.toStringAsFixed(1) ?? '0.0'}V',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 2),
-            Row(
-              children: [
-                Icon(Icons.show_chart, size: 14, color: Colors.purple),
-                const SizedBox(width: 4),
-                Text(
-                  '${shellyPlug.current?.toStringAsFixed(2) ?? '0.00'}A',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                if (shellyPlug.temperature != null &&
-                    shellyPlug.temperature!['tC'] != null) ...[
-                  const SizedBox(width: 12),
-                  Icon(Icons.thermostat, size: 14, color: Colors.red),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${shellyPlug.temperature!['tC'].toStringAsFixed(1)}°C',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert),
-        tooltip: 'Plug Mode',
-        onSelected: (String mode) => _setPlugMode(plug, mode),
-        itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-          PopupMenuItem<String>(
-            value: 'on',
-            child: Row(
-              children: [
-                Icon(Icons.power_settings_new, color: Colors.green, size: 20),
-                const SizedBox(width: 12),
-                const Text('Always On'),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'off',
-            child: Row(
-              children: [
-                Icon(Icons.power_off, color: Colors.grey, size: 20),
-                const SizedBox(width: 12),
-                const Text('Always Off'),
-              ],
-            ),
-          ),
-          PopupMenuItem<String>(
-            value: 'automatic',
-            child: Row(
-              children: [
-                Icon(Icons.auto_mode, color: Colors.orange, size: 20),
-                const SizedBox(width: 12),
-                const Text('Automatic'),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

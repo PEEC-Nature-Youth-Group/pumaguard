@@ -104,6 +104,14 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "play-sound",
                 "volume",
                 "camera-url",
+                "camera-heartbeat-enabled",
+                "camera-heartbeat-interval",
+                "camera-heartbeat-method",
+                "camera-heartbeat-tcp-port",
+                "camera-heartbeat-tcp-timeout",
+                "camera-heartbeat-icmp-timeout",
+                "camera-auto-remove-enabled",
+                "camera-auto-remove-hours",
             ]
 
             if len(data) == 0:

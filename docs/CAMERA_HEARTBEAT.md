@@ -38,6 +38,8 @@ All heartbeat settings are stored in `~/.config/pumaguard/pumaguard-settings.yam
 | `camera_heartbeat_tcp_port` | `80` | TCP port to check (HTTP by default) |
 | `camera_heartbeat_tcp_timeout` | `3` | TCP connection timeout in seconds |
 | `camera_heartbeat_icmp_timeout` | `2` | ICMP ping timeout in seconds |
+| `camera_auto_remove_enabled` | `false` | Enable automatic removal of inactive cameras |
+| `camera_auto_remove_hours` | `24` | Hours of inactivity before auto-removal |
 
 ### Check Methods
 
@@ -171,6 +173,26 @@ Heartbeat monitoring works alongside DHCP event tracking:
 - **DHCP events** (from dnsmasq) update status when leases are created, renewed, or expire
 - **Heartbeat checks** provide ongoing status verification between DHCP events
 - Both mechanisms update the same camera records, providing comprehensive tracking
+
+### Automatic Camera Removal
+
+The heartbeat monitor includes optional automatic removal of inactive cameras. When enabled, cameras that have not been seen for a configurable number of hours are automatically removed from the device list.
+
+**Configuration**:
+
+```yaml
+camera_auto_remove_enabled: true   # Enable auto-removal
+camera_auto_remove_hours: 24       # Remove after 24 hours of inactivity
+```
+
+**Behavior**:
+
+- Disabled by default to prevent accidental data loss
+- Cameras are removed if `last_seen` timestamp exceeds configured hours
+- Removal events are logged and broadcast via SSE to connected UI clients
+- Removed cameras can reconnect and be re-detected via DHCP
+
+See [Camera Auto-Removal](CAMERA_AUTO_REMOVAL.md) for complete documentation.
 
 ### Threading Model
 
@@ -357,9 +379,11 @@ Potential improvements for future versions:
 
 - [ ] Per-camera check intervals
 - [ ] Per-camera check methods
+- [ ] Per-camera auto-removal timeout
 - [ ] Webhooks for status change notifications
 - [ ] Historical uptime tracking
 - [ ] Dashboard with availability graphs
 - [ ] Email/SMS alerts on camera offline
 - [ ] HTTP/HTTPS health check endpoints
 - [ ] ONVIF device discovery integration
+- [ ] Grace period after first camera detection

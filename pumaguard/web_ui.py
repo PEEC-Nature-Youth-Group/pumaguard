@@ -188,6 +188,13 @@ class WebUI:
         # Format: {mac_address: PlugInfo}
         self.plugs: dict[str, PlugInfo] = {}
 
+        # Device history - tracks all devices we've ever seen
+        # This allows re-recognition of devices after manual removal,
+        # even when hostname is not provided during DHCP renewal
+        # Format: {mac_address: {"type": "camera"|"plug", "hostname": str}}
+        # Load from persisted settings
+        self.device_history: dict[str, dict[str, str]] = presets.device_history
+
         # Camera heartbeat monitoring (callback set after routes registered)
         self.heartbeat: CameraHeartbeat = CameraHeartbeat(
             webui=self,
@@ -197,6 +204,8 @@ class WebUI:
             tcp_port=presets.camera_heartbeat_tcp_port,
             tcp_timeout=presets.camera_heartbeat_tcp_timeout,
             icmp_timeout=presets.camera_heartbeat_icmp_timeout,
+            auto_remove_enabled=presets.camera_auto_remove_enabled,
+            auto_remove_hours=presets.camera_auto_remove_hours,
             # Will be set after routes are registered
             status_change_callback=None,
         )
@@ -222,6 +231,14 @@ class WebUI:
                     last_seen=camera.get("last_seen", ""),
                     status=camera.get("status", "disconnected"),
                 )
+                # Ensure device is in history (if not already from persisted)
+                if mac not in self.device_history:
+                    hostname = camera.get("hostname", "")
+                    if hostname:
+                        self.device_history[mac] = {
+                            "type": "camera",
+                            "hostname": hostname,
+                        }
 
         # Load plugs from persisted settings
         for plug in presets.plugs:
@@ -235,6 +252,14 @@ class WebUI:
                     status=plug.get("status", "disconnected"),
                     mode=plug.get("mode", "off"),
                 )
+                # Ensure device is in history (if not already from persisted)
+                if mac not in self.device_history:
+                    hostname = plug.get("hostname", "")
+                    if hostname:
+                        self.device_history[mac] = {
+                            "type": "plug",
+                            "hostname": hostname,
+                        }
 
         # mDNS/Zeroconf support
         self.zeroconf: Zeroconf | None = None

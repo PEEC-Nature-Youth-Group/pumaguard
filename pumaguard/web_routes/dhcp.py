@@ -132,25 +132,66 @@ def register_dhcp_routes(
                 timestamp,
             )
 
-            # Determine device type based on hostname pattern
-            is_camera = hostname and hostname.startswith("Microseven")
-            is_plug = hostname and hostname.lower().startswith("shellyplug")
+            # Determine device type based on:
+            # 1. Hostname pattern (for new devices)
+            # 2. Currently tracked devices (for renewals)
+            # 3. Device history (for re-detection after manual removal)
+            is_known_camera = mac_address in webui.cameras
+            is_known_plug = mac_address in webui.plugs
+            device_history = webui.device_history.get(mac_address, {})
+            is_historical_camera = device_history.get("type") == "camera"
+            is_historical_plug = device_history.get("type") == "plug"
+
+            is_camera = (
+                (hostname and hostname.startswith("Microseven"))
+                or is_known_camera
+                or is_historical_camera
+            )
+            is_plug = (
+                (hostname and hostname.lower().startswith("shellyplug"))
+                or is_known_plug
+                or is_historical_plug
+            )
 
             if is_camera:
                 # Handle camera events
                 if action in ["add", "old"]:
                     # Camera connected or renewed lease
+                    # Preserve existing hostname if current is unknown
+                    # Priority: current > history > provided
+                    effective_hostname = hostname
+                    if not hostname or hostname == "unknown":
+                        if is_known_camera:
+                            effective_hostname = webui.cameras[
+                                mac_address
+                            ].get("hostname", hostname)
+                        elif is_historical_camera:
+                            effective_hostname = device_history.get(
+                                "hostname", hostname
+                            )
+
                     logger.info(
-                        "Camera '%s' connected at IP %s", hostname, ip_address
+                        "Camera '%s' connected at IP %s",
+                        effective_hostname,
+                        ip_address,
                     )
                     # Store camera info indexed by MAC address
                     webui.cameras[mac_address] = {
-                        "hostname": hostname,
+                        "hostname": effective_hostname,
                         "ip_address": ip_address,
                         "mac_address": mac_address,
                         "last_seen": timestamp,
                         "status": "connected",
                     }
+
+                    # Update device history
+                    if effective_hostname and effective_hostname != "unknown":
+                        webui.device_history[mac_address] = {
+                            "type": "camera",
+                            "hostname": effective_hostname,
+                        }
+                        # Persist device history to settings
+                        webui.presets.device_history = webui.device_history
 
                     # Notify SSE clients
                     notify_camera_change(
@@ -225,8 +266,23 @@ def register_dhcp_routes(
                 # Handle plug events
                 if action in ["add", "old"]:
                     # Plug connected or renewed lease
+                    # Preserve existing hostname if current is unknown
+                    # Priority: current > history > provided
+                    effective_hostname = hostname
+                    if not hostname or hostname == "unknown":
+                        if is_known_plug:
+                            effective_hostname = webui.plugs[mac_address].get(
+                                "hostname", hostname
+                            )
+                        elif is_historical_plug:
+                            effective_hostname = device_history.get(
+                                "hostname", hostname
+                            )
+
                     logger.info(
-                        "Plug '%s' connected at IP %s", hostname, ip_address
+                        "Plug '%s' connected at IP %s",
+                        effective_hostname,
+                        ip_address,
                     )
                     # Preserve existing mode if plug already exists
                     existing_mode = (
@@ -236,13 +292,22 @@ def register_dhcp_routes(
                     )
                     # Add to webui.plugs (or update)
                     webui.plugs[mac_address] = {
-                        "hostname": hostname,
+                        "hostname": effective_hostname,
                         "ip_address": ip_address,
                         "mac_address": mac_address,
                         "last_seen": timestamp,
                         "status": "connected",
                         "mode": existing_mode,
                     }
+
+                    # Update device history
+                    if effective_hostname and effective_hostname != "unknown":
+                        webui.device_history[mac_address] = {
+                            "type": "plug",
+                            "hostname": effective_hostname,
+                        }
+                        # Persist device history to settings
+                        webui.presets.device_history = webui.device_history
 
                     # Notify SSE clients
                     notify_camera_change(

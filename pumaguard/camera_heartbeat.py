@@ -17,6 +17,7 @@ from collections.abc import (
 )
 from datetime import (
     datetime,
+    timedelta,
     timezone,
 )
 from typing import (
@@ -52,6 +53,8 @@ class CameraHeartbeat:
         tcp_timeout: int = 3,
         icmp_timeout: int = 2,
         status_change_callback: Callable[[str, dict], None] | None = None,
+        auto_remove_enabled: bool = False,
+        auto_remove_hours: int = 24,
     ):
         """
         Initialize the camera heartbeat monitor.
@@ -68,6 +71,10 @@ class CameraHeartbeat:
             status_change_callback: Optional callback function to be called
                 when camera status changes. Signature:
                 callback(event_type: str, camera_data: dict)
+            auto_remove_enabled: Enable automatic removal of stale cameras
+                (default: False)
+            auto_remove_hours: Hours of inactivity before auto-removal
+                (default: 24)
         """
         self.webui = webui
         self.interval = interval
@@ -77,6 +84,8 @@ class CameraHeartbeat:
         self.tcp_timeout = tcp_timeout
         self.icmp_timeout = icmp_timeout
         self.status_change_callback = status_change_callback
+        self.auto_remove_enabled = auto_remove_enabled
+        self.auto_remove_hours = auto_remove_hours
 
         self._running = False
         self._thread: threading.Thread | None = None
@@ -240,14 +249,101 @@ class CameraHeartbeat:
         except Exception as e:  # pylint: disable=broad-except
             logger.error("Failed to save camera list: %s", str(e))
 
+    def _check_and_remove_stale_cameras(self) -> None:
+        """
+        Check for cameras not seen within configured timeout.
+
+        Remove cameras whose last_seen timestamp exceeds the
+        configured hours threshold. Called during heartbeat
+        monitoring loop if auto-removal is enabled.
+        """
+        if not self.auto_remove_enabled:
+            return
+
+        now = datetime.now(timezone.utc)
+        removal_threshold = timedelta(hours=self.auto_remove_hours)
+
+        cameras_to_remove = []
+
+        for mac_address, camera in list(self.webui.cameras.items()):
+            last_seen_str = camera.get("last_seen")
+            if not last_seen_str:
+                continue
+
+            try:
+                # Parse ISO8601 timestamp
+                last_seen = datetime.fromisoformat(
+                    last_seen_str.replace("Z", "+00:00")
+                )
+
+                # Calculate time since last seen
+                time_since_seen = now - last_seen
+
+                # Check if camera exceeds removal threshold
+                if time_since_seen > removal_threshold:
+                    cameras_to_remove.append((mac_address, camera))
+                    logger.info(
+                        "Camera '%s' (%s) not seen for %.1f hours, "
+                        "scheduling for auto-removal",
+                        camera["hostname"],
+                        mac_address,
+                        time_since_seen.total_seconds() / 3600,
+                    )
+
+            except (ValueError, AttributeError) as e:
+                logger.warning(
+                    "Could not parse last_seen timestamp for camera %s: %s",
+                    mac_address,
+                    str(e),
+                )
+
+        # Remove cameras outside the iteration loop
+        for mac_address, camera in cameras_to_remove:
+            try:
+                # Remove from in-memory dictionary
+                del self.webui.cameras[mac_address]
+
+                # Persist changes
+                self._save_camera_list()
+
+                logger.info(
+                    "Auto-removed camera '%s' (%s) at %s",
+                    camera["hostname"],
+                    mac_address,
+                    camera["ip_address"],
+                )
+
+                # Notify via SSE if callback is available
+                if self.status_change_callback:
+                    try:
+                        self.status_change_callback(
+                            "camera_removed", dict(camera)
+                        )
+                    except Exception as e:  # pylint: disable=broad-except
+                        logger.error(
+                            "Error calling status change callback "
+                            "for removal: %s",
+                            str(e),
+                        )
+
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error(
+                    "Failed to auto-remove camera %s: %s", mac_address, str(e)
+                )
+
     def _monitor_loop(self) -> None:
         """Main monitoring loop that runs in a background thread."""
+        auto_remove_msg = ""
+        if self.auto_remove_enabled:
+            auto_remove_msg = f", auto-remove after {self.auto_remove_hours}h"
+
         logger.info(
             "Camera heartbeat monitor started "
-            "(method=%s, interval=%ds, port=%d)",
+            "(method=%s, interval=%ds, port=%d%s)",
             self.check_method,
             self.interval,
             self.tcp_port,
+            auto_remove_msg,
         )
 
         while not self._stop_event.is_set():
@@ -269,6 +365,9 @@ class CameraHeartbeat:
 
                     is_reachable = self.check_camera(ip_address)
                     self._update_camera_status(mac_address, is_reachable)
+
+                # Check for stale cameras after status checks
+                self._check_and_remove_stale_cameras()
 
             except Exception as e:  # pylint: disable=broad-except
                 logger.error("Error in heartbeat monitor loop: %s", str(e))

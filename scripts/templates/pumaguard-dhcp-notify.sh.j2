@@ -60,29 +60,19 @@ case "$ACTION" in
         # Device connected or renewed lease
         log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
 
-        # Check if this is a camera we're tracking
-        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME_PREFIX"* ]]; then
-            log_message "Camera detected: $HOSTNAME at $IP"
-            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
-        # Check if this is a plug we're tracking
-        elif [[ "${HOSTNAME,,}" == "$PLUG_HOSTNAME_PREFIX"* ]]; then
-            log_message "Plug detected: $HOSTNAME at $IP"
-            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
-        fi
+        # Send all DHCP events to PumaGuard API
+        # Let the backend decide if this is a device to track based on:
+        # - Hostname pattern matching (for new devices)
+        # - MAC address history (for returning devices that may not send hostname on renewal)
+        notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
         ;;
     del)
         # Device disconnected
         log_message "DHCP $ACTION: hostname=$HOSTNAME, mac=$MAC, ip=$IP"
 
-        # Check if this is a camera
-        if [[ "$HOSTNAME" == "$CAMERA_HOSTNAME_PREFIX"* ]]; then
-            log_message "Camera disconnected: $HOSTNAME"
-            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
-        # Check if this is a plug
-        elif [[ "${HOSTNAME,,}" == "$PLUG_HOSTNAME_PREFIX"* ]]; then
-            log_message "Plug disconnected: $HOSTNAME"
-            notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
-        fi
+        # Send all disconnect events to PumaGuard API
+        # Backend will determine if this was a tracked device
+        notify_pumaguard "$ACTION" "$MAC" "$IP" "$HOSTNAME"
         ;;
     *)
         log_message "Unknown action: $ACTION"

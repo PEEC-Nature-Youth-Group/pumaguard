@@ -452,11 +452,11 @@ def classify_image_two_stage(
             idx += 1
 
     # Determine output paths
-    out_png = f"{image_file.stem}_viz.png"
+    out_jpg = f"{image_file.stem}_viz.jpg"
     if intermediate_dir:
-        out_png = str(Path(intermediate_dir) / out_png)
+        out_jpg = str(Path(intermediate_dir) / out_jpg)
     plt.tight_layout()
-    plt.savefig(out_png, dpi=160)
+    plt.savefig(out_jpg, dpi=160, format="jpeg")
     plt.close(fig)
 
     logger.debug("Freeing memory")
@@ -476,7 +476,7 @@ def classify_image_two_stage(
                 "agg_label_max": (
                     "Puma" if np.max(det_probs) >= best_t else "Not-puma"
                 ),
-                "viz_path": str(out_png),
+                "viz_path": str(out_jpg),
             }
         )
     else:
@@ -488,7 +488,7 @@ def classify_image_two_stage(
                 "max_prob": 0.0,
                 "agg_label_mean": "Not-puma",
                 "agg_label_max": "Not-puma",
-                "viz_path": str(out_png),
+                "viz_path": str(out_jpg),
             }
         )
 

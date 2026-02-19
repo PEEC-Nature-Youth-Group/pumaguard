@@ -47,6 +47,7 @@ def test_app(mock_preset):
     webui = MagicMock(spec=WebUI)
     webui.cameras = {}
     webui.plugs = {}
+    webui.device_history = {}
     webui.presets = mock_preset
     webui.presets.plugs = []
     webui.heartbeat = MagicMock()
@@ -369,6 +370,272 @@ def test_remove_camera_not_found(test_app):
     data = json.loads(response.data)
     assert "error" in data
     assert data["error"] == "Camera not found"
+
+
+def test_removed_camera_readded_on_lease_renewal_with_unknown_hostname(
+    test_app,
+):
+    """
+    Test that a removed camera is re-added when it renews lease with
+    unknown hostname.
+
+    This test verifies the fix for the issue where:
+    1. A camera is added via DHCP with hostname "Microseven"
+    2. User removes the camera via the UI
+    3. Camera renews its DHCP lease but doesn't send hostname (appears as
+       "unknown")
+    4. The camera should be re-added because the MAC address is recognized
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    # Step 1: Camera initially connects with proper hostname
+    payload_add = {
+        "action": "add",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "ip_address": "192.168.52.100",
+        "hostname": "Microseven",
+        "timestamp": "2024-01-15T10:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_add),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert "aa:bb:cc:dd:ee:ff" in webui.cameras
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["hostname"] == "Microseven"
+
+    # Step 2: User removes the camera via UI
+    response = client.delete("/api/dhcp/cameras/aa:bb:cc:dd:ee:ff")
+    assert response.status_code == 200
+    assert "aa:bb:cc:dd:ee:ff" not in webui.cameras
+
+    # Step 3: Camera renews lease but hostname is "unknown" (common for
+    # DHCP RENEW)
+    payload_renew = {
+        "action": "old",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "ip_address": "192.168.52.100",
+        "hostname": "unknown",
+        "timestamp": "2024-01-15T11:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_renew),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+
+    # Step 4: Verify camera WAS re-added using device history
+    # Even though hostname is "unknown", the MAC address is recognized from
+    # history
+    assert "aa:bb:cc:dd:ee:ff" in webui.cameras
+    # Hostname should be preserved from device history
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["hostname"] == "Microseven"
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["ip_address"] == "192.168.52.100"
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["status"] == "connected"
+    assert (
+        webui.cameras["aa:bb:cc:dd:ee:ff"]["last_seen"]
+        == "2024-01-15T11:00:00Z"
+    )
+
+    # Verify device is in history
+    assert "aa:bb:cc:dd:ee:ff" in webui.device_history
+    assert webui.device_history["aa:bb:cc:dd:ee:ff"]["type"] == "camera"
+    assert (
+        webui.device_history["aa:bb:cc:dd:ee:ff"]["hostname"] == "Microseven"
+    )
+
+
+def test_known_camera_lease_renewal_preserves_hostname(test_app):
+    """
+    Test that lease renewal with unknown hostname preserves original 
+    hostname.
+
+    This test verifies that when a known camera renews its lease but doesn't
+    send hostname (appears as "unknown"), the system:
+    1. Recognizes the device by MAC address
+    2. Preserves the original hostname from previous connection
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    # Step 1: Camera initially connects with proper hostname
+    webui.cameras["aa:bb:cc:dd:ee:ff"] = {
+        "hostname": "Microseven-Cam1",
+        "ip_address": "192.168.52.100",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+    }
+
+    # Step 2: Camera renews lease but hostname is "unknown"
+    payload_renew = {
+        "action": "old",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "ip_address": "192.168.52.101",  # IP might change
+        "hostname": "unknown",
+        "timestamp": "2024-01-15T11:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_renew),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["data"]["device_type"] == "camera"
+
+    # Verify camera was recognized and hostname preserved
+    assert "aa:bb:cc:dd:ee:ff" in webui.cameras
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["hostname"] == "Microseven-Cam1"
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["ip_address"] == "192.168.52.101"
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["status"] == "connected"
+    assert (
+        webui.cameras["aa:bb:cc:dd:ee:ff"]["last_seen"]
+        == "2024-01-15T11:00:00Z"
+    )
+
+
+def test_known_plug_lease_renewal_preserves_hostname_and_mode(test_app):
+    """Test that plug lease renewal with unknown hostname preserves settings.
+
+    This test verifies that when a known plug renews its lease but doesn't
+    send hostname, the system preserves both hostname and mode.
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    # Step 1: Plug exists with configured mode
+    webui.plugs["bb:cc:dd:ee:ff:00"] = {
+        "hostname": "shellyplug-office",
+        "ip_address": "192.168.52.150",
+        "mac_address": "bb:cc:dd:ee:ff:00",
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": "sunset",
+    }
+
+    # Step 2: Plug renews lease with unknown hostname
+    payload_renew = {
+        "action": "old",
+        "mac_address": "bb:cc:dd:ee:ff:00",
+        "ip_address": "192.168.52.151",
+        "hostname": "unknown",
+        "timestamp": "2024-01-15T11:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_renew),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["data"]["device_type"] == "plug"
+
+    # Verify plug was recognized and settings preserved
+    assert "bb:cc:dd:ee:ff:00" in webui.plugs
+    assert webui.plugs["bb:cc:dd:ee:ff:00"]["hostname"] == "shellyplug-office"
+    assert webui.plugs["bb:cc:dd:ee:ff:00"]["ip_address"] == "192.168.52.151"
+    assert webui.plugs["bb:cc:dd:ee:ff:00"]["mode"] == "sunset"
+    assert webui.plugs["bb:cc:dd:ee:ff:00"]["status"] == "connected"
+
+
+def test_device_history_persists_across_settings_save_load(test_app):
+    """Test that device history is persisted to and loaded from settings.
+
+    This test verifies that:
+    1. Device history is saved to settings file
+    2. Device history survives settings save/load cycle
+    3. Removed devices can be re-detected after server restart
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    # Step 1: Add a camera via DHCP
+    payload_add = {
+        "action": "add",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "ip_address": "192.168.52.100",
+        "hostname": "Microseven-Cam1",
+        "timestamp": "2024-01-15T10:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_add),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert "aa:bb:cc:dd:ee:ff" in webui.cameras
+    assert "aa:bb:cc:dd:ee:ff" in webui.device_history
+    assert webui.device_history["aa:bb:cc:dd:ee:ff"]["type"] == "camera"
+    assert (
+        webui.device_history["aa:bb:cc:dd:ee:ff"]["hostname"]
+        == "Microseven-Cam1"
+    )
+
+    # Step 2: Verify device history was saved to settings
+    assert "aa:bb:cc:dd:ee:ff" in webui.presets.device_history
+    assert (
+        webui.presets.device_history["aa:bb:cc:dd:ee:ff"]["type"] == "camera"
+    )
+
+    # Step 3: Remove the camera
+    response = client.delete("/api/dhcp/cameras/aa:bb:cc:dd:ee:ff")
+    assert response.status_code == 200
+    assert "aa:bb:cc:dd:ee:ff" not in webui.cameras
+
+    # Step 4: Device history should still exist (not removed with camera)
+    assert "aa:bb:cc:dd:ee:ff" in webui.device_history
+    assert "aa:bb:cc:dd:ee:ff" in webui.presets.device_history
+
+    # Step 5: Simulate server restart by creating new webui with same settings
+    # In real scenario, settings would be saved/loaded from file
+    # Here we verify the in-memory settings contain device history
+    saved_device_history = dict(webui.presets.device_history)
+    assert "aa:bb:cc:dd:ee:ff" in saved_device_history
+    assert saved_device_history["aa:bb:cc:dd:ee:ff"]["type"] == "camera"
+    assert (
+        saved_device_history["aa:bb:cc:dd:ee:ff"]["hostname"]
+        == "Microseven-Cam1"
+    )
+
+    # Step 6: Camera renews lease with unknown hostname (simulating
+    # post-restart)
+    payload_renew = {
+        "action": "old",
+        "mac_address": "aa:bb:cc:dd:ee:ff",
+        "ip_address": "192.168.52.100",
+        "hostname": "unknown",
+        "timestamp": "2024-01-15T11:00:00Z",
+    }
+
+    response = client.post(
+        "/api/dhcp/event",
+        data=json.dumps(payload_renew),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+
+    # Step 7: Camera should be re-added using persisted device history
+    assert "aa:bb:cc:dd:ee:ff" in webui.cameras
+    assert webui.cameras["aa:bb:cc:dd:ee:ff"]["hostname"] == "Microseven-Cam1"
 
 
 def test_clear_cameras(test_app):

@@ -6,6 +6,11 @@
 # Tests need to access protected members for verification
 
 import time
+from datetime import (
+    datetime,
+    timedelta,
+    timezone,
+)
 from subprocess import (
     TimeoutExpired,
 )
@@ -47,7 +52,7 @@ def mock_webui():
             "hostname": "TestCamera2",
             "ip_address": "192.168.52.102",
             "mac_address": "aa:bb:cc:dd:ee:02",
-            "last_seen": "2024-01-15T10:00:00Z",
+            "last_seen": "2024-01-16T11:00:00Z",  # Recent timestamp
             "status": "disconnected",
         },
     }
@@ -480,3 +485,240 @@ def test_monitor_loop_skips_empty_ip(mock_webui):
     # Should not check the camera with empty IP
     for call in mock_check.call_args_list:
         assert call[0][0] != ""
+
+
+def test_auto_removal_initialization(mock_webui):
+    """Test CameraHeartbeat initialization with auto-removal settings."""
+    heartbeat = CameraHeartbeat(
+        mock_webui,
+        auto_remove_enabled=True,
+        auto_remove_hours=48,
+    )
+
+    assert heartbeat.auto_remove_enabled is True
+    assert heartbeat.auto_remove_hours == 48
+
+
+def test_auto_removal_disabled_by_default(mock_webui):
+    """Test that auto-removal is disabled by default."""
+    heartbeat = CameraHeartbeat(mock_webui)
+
+    assert heartbeat.auto_remove_enabled is False
+    assert heartbeat.auto_remove_hours == 24
+
+
+def test_check_and_remove_stale_cameras_removes_old_camera(mock_webui):
+    """Test that stale cameras are removed after configured hours."""
+    # Set current time
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Camera last seen 25 hours ago (threshold is 24 hours)
+    mock_webui.cameras["aa:bb:cc:dd:ee:01"]["last_seen"] = (
+        now - timedelta(hours=25)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    # Camera 2 last seen recently (1 hour ago)
+    mock_webui.cameras["aa:bb:cc:dd:ee:02"]["last_seen"] = (
+        now - timedelta(hours=1)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    # Mock the callback
+    callback = MagicMock()
+    heartbeat.status_change_callback = callback
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Camera should be removed
+    assert "aa:bb:cc:dd:ee:01" not in mock_webui.cameras
+    # Other camera should remain
+    assert "aa:bb:cc:dd:ee:02" in mock_webui.cameras
+    # Callback should be called
+    callback.assert_called_once()
+    assert callback.call_args[0][0] == "camera_removed"
+
+
+def test_check_and_remove_stale_cameras_keeps_recent_camera(mock_webui):
+    """Test that recently seen cameras are not removed."""
+    # Set current time
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Both cameras last seen within 24 hours
+    mock_webui.cameras["aa:bb:cc:dd:ee:01"]["last_seen"] = (
+        now - timedelta(hours=23)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    mock_webui.cameras["aa:bb:cc:dd:ee:02"]["last_seen"] = (
+        now - timedelta(hours=1)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Both cameras should still be present
+    assert "aa:bb:cc:dd:ee:01" in mock_webui.cameras
+    assert "aa:bb:cc:dd:ee:02" in mock_webui.cameras
+
+
+def test_check_and_remove_stale_cameras_disabled(mock_webui):
+    """Test that auto-removal does nothing when disabled."""
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=False, auto_remove_hours=1
+    )
+
+    initial_camera_count = len(mock_webui.cameras)
+
+    heartbeat._check_and_remove_stale_cameras()
+
+    # No cameras should be removed
+    assert len(mock_webui.cameras) == initial_camera_count
+
+
+def test_check_and_remove_stale_cameras_handles_missing_last_seen(mock_webui):
+    """Test that cameras without last_seen are not removed."""
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Add camera without last_seen
+    mock_webui.cameras["aa:bb:cc:dd:ee:03"] = {
+        "hostname": "NoLastSeen",
+        "ip_address": "192.168.52.103",
+        "mac_address": "aa:bb:cc:dd:ee:03",
+        "status": "connected",
+    }
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Camera without last_seen should not be removed
+    assert "aa:bb:cc:dd:ee:03" in mock_webui.cameras
+
+
+def test_check_and_remove_stale_cameras_handles_invalid_timestamp(mock_webui):
+    """Test that cameras with invalid timestamps are not removed."""
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Add camera with invalid timestamp
+    mock_webui.cameras["aa:bb:cc:dd:ee:01"]["last_seen"] = "invalid-timestamp"
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Camera should not be removed due to parsing error
+    assert "aa:bb:cc:dd:ee:01" in mock_webui.cameras
+
+
+def test_check_and_remove_stale_cameras_removes_multiple(mock_webui):
+    """Test that multiple stale cameras are removed."""
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Both cameras last seen over 24 hours ago
+    mock_webui.cameras["aa:bb:cc:dd:ee:01"]["last_seen"] = (
+        now - timedelta(hours=25)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+    mock_webui.cameras["aa:bb:cc:dd:ee:02"]["last_seen"] = (
+        now - timedelta(hours=30)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    callback = MagicMock()
+    heartbeat.status_change_callback = callback
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Both cameras should be removed
+    assert len(mock_webui.cameras) == 0
+    # Callback should be called twice
+    assert callback.call_count == 2
+
+
+def test_check_and_remove_stale_cameras_handles_callback_exception(
+    mock_webui,
+):
+    """Test that callback exceptions don't prevent removal."""
+    now = datetime(2024, 1, 16, 12, 0, 0, tzinfo=timezone.utc)
+
+    # Camera last seen over 24 hours ago
+    mock_webui.cameras["aa:bb:cc:dd:ee:01"]["last_seen"] = (
+        now - timedelta(hours=25)
+    ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    heartbeat = CameraHeartbeat(
+        mock_webui, auto_remove_enabled=True, auto_remove_hours=24
+    )
+
+    # Mock callback that raises exception
+    callback = MagicMock(side_effect=Exception("Callback error"))
+    heartbeat.status_change_callback = callback
+
+    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+        mock_datetime.now.return_value = now
+        mock_datetime.fromisoformat = datetime.fromisoformat
+
+        with patch.object(heartbeat, "_save_camera_list"):
+            # Should not raise exception
+            heartbeat._check_and_remove_stale_cameras()
+
+    # Camera should still be removed despite callback error
+    assert "aa:bb:cc:dd:ee:01" not in mock_webui.cameras
+
+
+def test_monitor_loop_calls_auto_removal(mock_webui):
+    """Test that monitor loop calls auto-removal check."""
+    heartbeat = CameraHeartbeat(
+        mock_webui,
+        interval=0.1,
+        auto_remove_enabled=True,
+        auto_remove_hours=24,
+    )
+
+    with patch.object(heartbeat, "check_camera", return_value=True):
+        with patch.object(heartbeat, "_save_camera_list"):
+            with patch.object(
+                heartbeat, "_check_and_remove_stale_cameras"
+            ) as mock_remove:
+                heartbeat.start()
+                time.sleep(0.3)
+                heartbeat.stop()
+
+    # Should have called auto-removal check at least once
+    assert mock_remove.call_count >= 1

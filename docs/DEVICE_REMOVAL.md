@@ -10,6 +10,7 @@ This document describes the manual device removal functionality for cameras and 
 - **Confirmation Dialog**: Prevents accidental deletion with a confirmation prompt
 - **Automatic Cleanup**: Removes device from memory and persists changes to settings
 - **Real-time Updates**: UI automatically refreshes after device removal
+- **Automatic Re-detection**: Removed devices can be automatically re-added when they reconnect to the network
 
 ## User Interface
 
@@ -31,13 +32,69 @@ This document describes the manual device removal functionality for cameras and 
 5. Confirm the removal in the dialog that appears
 6. The plug will be removed and a success message will appear
 
+## Device Re-detection After Removal
+
+### How It Works
+
+When a device is removed via the UI, PumaGuard:
+
+1. **Removes the device from the active list** - The device is deleted from memory and settings
+2. **Maintains device history** - The MAC address and original hostname are preserved in an internal history
+3. **Monitors DHCP events** - The system continues to receive DHCP lease notifications from dnsmasq
+4. **Recognizes returning devices** - When a removed device renews its DHCP lease, it's automatically re-added
+
+### Why This Happens
+
+DHCP lease renewals don't always include the device hostname (especially during RENEW requests). Without device history, PumaGuard wouldn't be able to recognize a device by its MAC address alone when the hostname is "unknown".
+
+The device history mechanism solves this by:
+- Tracking all devices ever seen by MAC address
+- Preserving the original hostname from when the device first connected
+- Using this information to identify devices even when hostname is missing
+
+### Example Scenario
+
+1. Camera "Microseven-Cam1" connects → detected and added to list
+2. User removes camera via UI → camera disappears from list
+3. Camera remains connected and renews DHCP lease
+4. DHCP server sends renewal notification with MAC but no hostname ("unknown")
+5. PumaGuard recognizes MAC from device history → camera re-appears with original name
+
+### Preventing Re-detection
+
+If you want to permanently remove a device and prevent automatic re-detection:
+
+1. **Disconnect the device from the network** - Power it off or disconnect from WiFi
+2. **Remove it via the UI** - This clears it from the active list
+3. **Optional**: Configure hostname filtering in the DHCP script to ignore specific device types
+
+### Device History Persistence
+
+Device history is:
+- **Persisted to settings file** (`~/.config/pumaguard/pumaguard-settings.yaml`)
+- **Loaded automatically** on server startup
+- **Updated automatically** when devices connect with valid hostnames
+- **Survives server restarts** (persists across removals and restarts)
+- **Never explicitly cleared** (accumulates all devices ever seen)
+
+The settings file includes a `device-history` section:
+```yaml
+device-history:
+  "aa:bb:cc:dd:ee:ff":
+    type: "camera"
+    hostname: "Microseven-Cam1"
+  "bb:cc:dd:ee:ff:00":
+    type: "plug"
+    hostname: "shellyplug-office"
+```
+
 ## API Endpoints
 
 ### Remove Camera
 
 **Endpoint:** `DELETE /api/dhcp/cameras/<mac_address>`
 
-Removes a specific camera by MAC address.
+Removes a specific camera by MAC address. The device can be automatically re-detected if it reconnects.
 
 **Parameters:**
 

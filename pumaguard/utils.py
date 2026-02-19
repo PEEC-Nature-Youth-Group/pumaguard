@@ -4,7 +4,6 @@ Some utility functions.
 
 # pylint: disable=wrong-import-position
 
-import csv
 import datetime
 import gc
 import hashlib
@@ -328,9 +327,6 @@ def classify_image_two_stage(
     classifier = get_cached_model("classifier", classifier_model_path)
     best_t = 0.5
 
-    all_rows = []
-    image_summary = []
-
     start_time = datetime.datetime.now()
     image_file = Path(image_path)
     try:
@@ -377,7 +373,7 @@ def classify_image_two_stage(
     )
 
     det_probs, crops_xyxy, crops_imgs = [], [], []
-    for j, (x1, y1, x2, y2) in enumerate(boxes):
+    for _, (x1, y1, x2, y2) in enumerate(boxes):
         # Filter crops smaller than min_size fraction
         if (x2 - x1) * (
             y2 - y1
@@ -395,18 +391,6 @@ def classify_image_two_stage(
         det_probs.append(p)
         crops_xyxy.append((x1e, y1e, x2e, y2e))
         crops_imgs.append(crop)
-        all_rows.append(
-            {
-                "file": image_path,
-                "det_id": j,
-                "x1": x1e,
-                "y1": y1e,
-                "x2": x2e,
-                "y2": y2e,
-                "prob_puma": p,
-                "pred_label": "Puma" if p >= best_t else "Not-puma",
-            }
-        )
     rows = 1 + ((len(crops_imgs) + 3) // 4)
 
     fig = plt.figure(figsize=(max(8, min(16, 4 * 4)), max(5, 3 * rows)))
@@ -461,63 +445,6 @@ def classify_image_two_stage(
 
     logger.debug("Freeing memory")
     gc.collect()
-
-    # Image-level summary
-    if det_probs:
-        image_summary.append(
-            {
-                "file": image_path,
-                "num_dets": len(det_probs),
-                "mean_prob": float(np.mean(det_probs)),
-                "max_prob": float(np.max(det_probs)),
-                "agg_label_mean": (
-                    "Puma" if np.mean(det_probs) >= best_t else "Not-puma"
-                ),
-                "agg_label_max": (
-                    "Puma" if np.max(det_probs) >= best_t else "Not-puma"
-                ),
-                "viz_path": str(out_jpg),
-            }
-        )
-    else:
-        image_summary.append(
-            {
-                "file": image_path,
-                "num_dets": 0,
-                "mean_prob": 0.0,
-                "max_prob": 0.0,
-                "agg_label_mean": "Not-puma",
-                "agg_label_max": "Not-puma",
-                "viz_path": str(out_jpg),
-            }
-        )
-
-    # Write CSV outputs
-    # Per-image CSV names (avoid overwriting)
-    det_csv = "test_detections_predictions.csv"
-    img_csv = "test_image_summary.csv"
-    if intermediate_dir:
-        det_csv = str(
-            Path(intermediate_dir)
-            / f"{image_file.stem}_detections_predictions.csv"
-        )
-        img_csv = str(
-            Path(intermediate_dir) / f"{image_file.stem}_image_summary.csv"
-        )
-
-    # Write detection predictions CSV
-    if all_rows:
-        with open(det_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=all_rows[0].keys())
-            writer.writeheader()
-            writer.writerows(all_rows)
-
-    # Write image summary CSV
-    if image_summary:
-        with open(img_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=image_summary[0].keys())
-            writer.writeheader()
-            writer.writerows(image_summary)
 
     logger.debug("probabilities: %s", det_probs)
     if len(det_probs) == 0:

@@ -1,17 +1,18 @@
-# Camera Auto-Removal Feature
+# Device Auto-Removal Feature
 
 ## Overview
 
-PumaGuard includes an automatic camera removal feature that removes cameras from the device list after a configurable period of inactivity. This helps keep the camera list clean and relevant by automatically removing cameras that are no longer in use or have been offline for an extended period.
+PumaGuard includes an automatic device removal feature that removes cameras and plugs from the device list after a configurable period of inactivity. This helps keep the device lists clean and relevant by automatically removing devices that are no longer in use or have been offline for an extended period.
 
 ## Features
 
-- **Configurable timeout**: Set the number of hours a camera must be inactive before removal
+- **Configurable timeout**: Set the number of hours a device (camera or plug) must be inactive before removal
 - **Enable/disable control**: Turn auto-removal on or off as needed
-- **Integration with heartbeat monitoring**: Works seamlessly with the existing camera heartbeat system
+- **Integration with heartbeat monitoring**: Works seamlessly with both camera and plug heartbeat systems
 - **SSE notifications**: Broadcasts removal events to all connected web UI clients
 - **Persistent settings**: Configuration is saved and survives server restarts
 - **Safe by default**: Auto-removal is **disabled by default** to prevent accidental data loss
+- **Unified configuration**: One setting applies to both cameras and plugs
 
 ## Configuration
 
@@ -19,31 +20,35 @@ All auto-removal settings are stored in `~/.config/pumaguard/pumaguard-settings.
 
 ### Settings
 
-| Setting                      | Default | Description                             |
-| ---------------------------- | ------- | --------------------------------------- |
-| `camera-auto-remove-enabled` | `false` | Enable/disable automatic camera removal |
-| `camera-auto-remove-hours`   | `24`    | Hours of inactivity before auto-removal |
+| Setting                      | Default | Description                                       |
+| ---------------------------- | ------- | ------------------------------------------------- |
+| `device-auto-remove-enabled` | `false` | Enable/disable automatic device removal           |
+| `device-auto-remove-hours`   | `24`    | Hours of inactivity before auto-removal           |
+
+**Note**: For backward compatibility, the old `camera-auto-remove-enabled` and `camera-auto-remove-hours` settings are still supported but will be deprecated. The new `device-auto-remove-*` settings apply to both cameras and plugs.
 
 ### Example Configuration
 
 ```yaml
-# Enable auto-removal after 48 hours of inactivity
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 48
+# Enable auto-removal after 48 hours of inactivity (applies to both cameras and plugs)
+device-auto-remove-enabled: true
+device-auto-remove-hours: 48
 
-# Camera heartbeat settings (must be enabled for auto-removal to work)
+# Heartbeat settings (must be enabled for auto-removal to work)
 camera-heartbeat-enabled: true
 camera-heartbeat-interval: 60
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 60
 ```
 
 ## How It Works
 
 ### Detection Logic
 
-1. **Heartbeat monitoring** runs in the background and tracks camera status
-2. Each heartbeat cycle updates the `last_seen` timestamp for reachable cameras
+1. **Heartbeat monitoring** runs in the background and tracks camera and plug status
+2. Each heartbeat cycle updates the `last_seen` timestamp for reachable devices
 3. **Auto-removal check** runs during each heartbeat cycle (if enabled)
-4. Cameras with `last_seen` timestamp older than configured hours are removed
+4. Devices (cameras or plugs) with `last_seen` timestamp older than configured hours are removed
 5. **Removal notification** is sent via Server-Sent Events (SSE) to all UI clients
 
 ### Workflow
@@ -71,29 +76,29 @@ Auto-removal Check → Calculate: now - last_seen
 
 ### Enable Auto-Removal via Web UI
 
-The easiest way to configure camera auto-removal is through the web interface:
+The easiest way to configure device auto-removal is through the web interface:
 
 1. Navigate to **Settings** page in the PumaGuard web UI
 2. Scroll to the **System Settings** section
-3. Find the **Camera Auto-Removal** subsection
+3. Find the **Device Auto-Removal** subsection
 4. Toggle **Enable Auto-Removal** switch to turn the feature on/off
 5. When enabled, adjust the **Inactivity Threshold (hours)** field to set the timeout
 6. Settings are automatically saved when changed
 
 The UI will show:
-- A toggle switch to enable/disable the feature
+- A toggle switch to enable/disable the feature (applies to both cameras and plugs)
 - An input field for the inactivity threshold (only visible when enabled)
-- Helper text explaining each setting
+- Helper text explaining that the setting applies to both cameras and plugs
 
 ### Enable Auto-Removal via API
 
 ```bash
-# Enable auto-removal with 24-hour timeout
+# Enable auto-removal with 24-hour timeout (applies to both cameras and plugs)
 curl -X POST http://localhost:5000/api/settings \
   -H "Content-Type: application/json" \
   -d '{
-    "camera-auto-remove-enabled": true,
-    "camera-auto-remove-hours": 24
+    "device-auto-remove-enabled": true,
+    "device-auto-remove-hours": 24
   }'
 ```
 
@@ -104,7 +109,7 @@ curl -X POST http://localhost:5000/api/settings \
 curl -X POST http://localhost:5000/api/settings \
   -H "Content-Type: application/json" \
   -d '{
-    "camera-auto-remove-enabled": false
+    "device-auto-remove-enabled": false
   }'
 ```
 
@@ -113,8 +118,8 @@ curl -X POST http://localhost:5000/api/settings \
 Edit `~/.config/pumaguard/pumaguard-settings.yaml`:
 
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 48 # Remove after 48 hours
+device-auto-remove-enabled: true
+device-auto-remove-hours: 48 # Remove after 48 hours (both cameras and plugs)
 ```
 
 Then restart the PumaGuard server for changes to take effect.
@@ -124,10 +129,10 @@ Then restart the PumaGuard server for changes to take effect.
 The server logs all auto-removal events and periodic status updates:
 
 ```bash
-# Watch server logs for removal events
-journalctl -u pumaguard -f | grep "Auto-removed camera"
+# Watch server logs for removal events (cameras and plugs)
+journalctl -u pumaguard -f | grep "Auto-removed"
 
-# Watch debug logs for offline camera status (debugging)
+# Watch debug logs for offline device status (debugging)
 journalctl -u pumaguard -f | grep "offline"
 ```
 
@@ -136,69 +141,71 @@ Example log output:
 ```
 # Debug logs (periodic updates during each heartbeat check)
 DEBUG: Camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) at 192.168.52.101 has been offline for 12.5 hours, will be auto-removed in 11.5 hours
-DEBUG: Camera 'Microseven-Cam2' (aa:bb:cc:dd:ee:02) at 192.168.52.102 has been offline for 5.2 hours, will be auto-removed in 18.8 hours
+DEBUG: Plug 'KasaPlug-1' (bb:cc:dd:ee:ff:01) at 192.168.52.201 has been offline for 5.2 hours, will be auto-removed in 18.8 hours
 
-# Info logs (when camera is scheduled for removal)
+# Info logs (when device is scheduled for removal)
 INFO: Camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) not seen for 25.3 hours, scheduling for auto-removal
 INFO: Auto-removed camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) at 192.168.52.101
+INFO: Plug 'KasaPlug-1' (bb:cc:dd:ee:ff:01) not seen for 24.5 hours, scheduling for auto-removal
+INFO: Auto-removed plug 'KasaPlug-1' (bb:cc:dd:ee:ff:01) at 192.168.52.201
 ```
 
-**Debug Logging**: When auto-removal is enabled and cameras are offline (disconnected), the heartbeat monitor logs periodic status updates showing:
-- How long each camera has been offline
-- How much time remains until the camera will be auto-removed
-- This helps with debugging and monitoring camera health
+**Debug Logging**: When auto-removal is enabled and devices are offline (disconnected), the heartbeat monitors log periodic status updates showing:
+- How long each device (camera or plug) has been offline
+- How much time remains until the device will be auto-removed
+- This helps with debugging and monitoring device health
 
-When auto-removal is disabled, offline cameras are still logged but with a note that auto-removal is disabled.
+When auto-removal is disabled, offline devices are still logged but with a note that auto-removal is disabled.
 
 ## Use Cases
 
-### Scenario 1: Temporary Test Cameras
+### Scenario 1: Temporary Test Devices
 
-**Problem**: Test cameras added during development clutter the production device list.
+**Problem**: Test cameras and plugs added during development clutter the production device lists.
 
 **Solution**: Enable auto-removal with a short timeout (e.g., 1-2 hours):
 
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 2
+device-auto-remove-enabled: true
+device-auto-remove-hours: 2
 ```
 
 Test cameras will be automatically removed 2 hours after they go offline.
 
-### Scenario 2: Seasonal Camera Deployment
+### Scenario 2: Seasonal Device Deployment
 
-**Problem**: Wildlife cameras are deployed seasonally but remain in the system when removed.
+**Problem**: Cameras and plugs are deployed seasonally and should be automatically cleaned up when not in use.
 
 **Solution**: Enable auto-removal with a longer timeout (e.g., 7 days):
 
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 168 # 7 days = 7 * 24 hours
+device-auto-remove-enabled: true
+device-auto-remove-hours: 168 # 7 days = 7 * 24 hours
 ```
 
 Cameras removed from the field will be automatically cleaned up after a week.
 
-### Scenario 3: Permanent Camera Installation
+### Scenario 3: Permanent Device Installation
 
-**Problem**: Cameras are permanently installed and should never be auto-removed.
+**Problem**: Cameras and plugs are permanently installed and should never be auto-removed.
 
-**Solution**: Keep auto-removal disabled (default):
+**Solution**: Disable auto-removal entirely:
 
 ```yaml
-camera-auto-remove-enabled: false
+device-auto-remove-enabled: false
 ```
 
 Cameras will remain in the list indefinitely, even if offline.
 
 ### Scenario 4: Mixed Environment
 
-**Problem**: Some cameras are permanent, others are temporary.
+**Problem**: Some devices may go offline temporarily (network issues, power outages) but should not be removed immediately.
 
-**Solution**: Use a moderate timeout (e.g., 30 days) and manually manage permanent cameras:
+**Solution**: Enable auto-removal with a very long timeout (e.g., 30 days):
 
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 720 # 30 days
+device-auto-remove-enabled: true
+device-auto-remove-hours: 720 # 30 days
 ```
 
 Temporary cameras are cleaned up automatically, while permanent cameras remain due to regular heartbeat checks.
@@ -207,35 +214,35 @@ Temporary cameras are cleaned up automatically, while permanent cameras remain d
 
 ### Conservative (Long Timeout)
 
-Suitable for permanent installations with occasional outages:
-
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 720 # 30 days
+device-auto-remove-enabled: true
+device-auto-remove-hours: 720 # 30 days
 camera-heartbeat-enabled: true
 camera-heartbeat-interval: 300 # Check every 5 minutes
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 300
 ```
 
 ### Moderate (Default-ish)
 
-Balanced approach for typical deployments:
-
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 168 # 7 days
+device-auto-remove-enabled: true
+device-auto-remove-hours: 168 # 7 days
 camera-heartbeat-enabled: true
 camera-heartbeat-interval: 60 # Check every minute
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 60
 ```
 
 ### Aggressive (Short Timeout)
 
-Suitable for development/testing environments:
-
 ```yaml
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 1 # 1 hour
+device-auto-remove-enabled: true
+device-auto-remove-hours: 1 # 1 hour
 camera-heartbeat-enabled: true
 camera-heartbeat-interval: 30 # Check every 30 seconds
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 30
 ```
 
 ### Disabled (No Auto-Removal)
@@ -243,9 +250,11 @@ camera-heartbeat-interval: 30 # Check every 30 seconds
 Preserves all cameras indefinitely:
 
 ```yaml
-camera-auto-remove-enabled: false
+device-auto-remove-enabled: false
 camera-heartbeat-enabled: true # Still monitor status
 camera-heartbeat-interval: 60
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 60
 ```
 
 ## Integration with Heartbeat Monitoring
@@ -261,89 +270,95 @@ Auto-removal **requires** camera heartbeat monitoring to be enabled. The heartbe
 ### Recommended Configuration
 
 ```yaml
-# Enable heartbeat monitoring (required for auto-removal)
+# Enable heartbeat monitoring for cameras
 camera-heartbeat-enabled: true
 camera-heartbeat-interval: 60 # seconds
 camera-heartbeat-method: "tcp" # or "icmp" or "both"
 
-# Enable auto-removal
-camera-auto-remove-enabled: true
-camera-auto-remove-hours: 24 # hours
+# Enable heartbeat monitoring for plugs
+plug-heartbeat-enabled: true
+plug-heartbeat-interval: 60 # seconds
+
+# Enable auto-removal for both cameras and plugs
+device-auto-remove-enabled: true
+device-auto-remove-hours: 24 # hours
 ```
 
 ## Troubleshooting
 
-### Cameras Not Being Removed
+### Devices Not Being Removed
 
-**Problem**: Cameras remain in the list despite being inactive for longer than configured timeout.
+**Problem**: Cameras or plugs remain in the list despite being inactive for longer than configured timeout.
 
 **Possible Causes**:
 
 1. Auto-removal is disabled
-2. Heartbeat monitoring is disabled
-3. Camera has no `last_seen` timestamp
-4. Camera `last_seen` is being updated (camera is reachable)
+2. Heartbeat monitoring is disabled for cameras/plugs
+3. Device has no `last_seen` timestamp
+4. Device `last_seen` is being updated (device is still reachable)
 
 **Solutions**:
 
 ```bash
 # Check configuration
-cat ~/.config/pumaguard/pumaguard-settings.yaml | grep -A 2 "camera-auto-remove"
+cat ~/.config/pumaguard/pumaguard-settings.yaml | grep -A 2 "device-auto-remove"
 
 # Verify auto-removal is enabled
-grep "camera-auto-remove-enabled: true" ~/.config/pumaguard/pumaguard-settings.yaml
+grep "device-auto-remove-enabled: true" ~/.config/pumaguard/pumaguard-settings.yaml
 
-# Verify heartbeat is enabled
+# Verify heartbeat is enabled for cameras and plugs
 grep "camera-heartbeat-enabled: true" ~/.config/pumaguard/pumaguard-settings.yaml
+grep "plug-heartbeat-enabled: true" ~/.config/pumaguard/pumaguard-settings.yaml
 
-# Check camera last_seen timestamp
+# Check device last_seen timestamps
 curl http://localhost:5000/api/dhcp/cameras | jq '.cameras[] | {hostname, last_seen}'
+curl http://localhost:5000/api/dhcp/plugs | jq '.plugs[] | {hostname, last_seen}'
 
 # Check server logs
 journalctl -u pumaguard -n 100 | grep -i "auto-remove"
 ```
 
-### Cameras Removed Too Quickly
+### Devices Removed Too Quickly
 
-**Problem**: Cameras are being removed sooner than expected.
+**Problem**: Devices are being removed sooner than expected.
 
-**Solution**: Increase the `camera-auto-remove-hours` setting:
+**Solution**: Increase the `device-auto-remove-hours` setting:
 
 ```bash
 curl -X POST http://localhost:5000/api/settings \
   -H "Content-Type: application/json" \
   -d '{
-    "camera-auto-remove-hours": 168
+    "device-auto-remove-hours": 168
   }'
 ```
 
-### Cameras Removed During Network Outage
+### Devices Removed During Network Outage
 
-**Problem**: Cameras are removed during temporary network outages.
+**Problem**: Devices are removed during temporary network outages.
 
 **Solutions**:
 
 1. Increase timeout to account for expected outages:
 
    ```yaml
-   camera-auto-remove-hours: 72 # 3 days
+   device-auto-remove-hours: 72 # 3 days
    ```
 
 2. Disable auto-removal if outages are frequent:
 
    ```yaml
-   camera-auto-remove-enabled: false
+   device-auto-remove-enabled: false
    ```
 
 3. Improve network reliability to reduce heartbeat check failures
 
-### Camera Re-appears After Removal
+### Device Re-appears After Removal
 
-**Problem**: Camera is auto-removed but immediately re-appears.
+**Problem**: A device is auto-removed but immediately re-appears.
 
-**Cause**: Camera is still connected to network and responds to DHCP/heartbeat checks.
+**Cause**: Device is still connected to network and responds to DHCP/heartbeat checks.
 
-**Solution**: This is expected behavior. The camera will be re-detected via:
+**Solution**: This is expected behavior. The device will be re-detected via:
 
 - DHCP lease events (if connected to PumaGuard hotspot)
 - Manual addition via API
@@ -352,11 +367,11 @@ To permanently remove a camera, disconnect it from the network or use manual rem
 
 ## API Reference
 
-### Camera Removal Event (SSE)
+### Device Removal Events (SSE)
 
-When a camera is auto-removed, an SSE event is broadcast to all connected clients:
+When a camera or plug is auto-removed, an SSE event is broadcast to all connected clients:
 
-**Event Type**: `camera_removed`
+**Event Types**: `camera_removed`, `plug_removed`
 
 **Event Data**:
 

@@ -110,8 +110,10 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "camera-heartbeat-tcp-port",
                 "camera-heartbeat-tcp-timeout",
                 "camera-heartbeat-icmp-timeout",
-                "camera-auto-remove-enabled",
-                "camera-auto-remove-hours",
+                "camera-auto-remove-enabled",  # Backward compatibility
+                "camera-auto-remove-hours",  # Backward compatibility
+                "device-auto-remove-enabled",  # New generic name
+                "device-auto-remove-hours",  # New generic name
             ]
 
             if len(data) == 0:
@@ -122,7 +124,15 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                     logger.info(
                         "Updating setting %s with value %s", key, value
                     )
-                    attr_name = key.replace("-", "_").replace("YOLO_", "yolo_")
+                    # Map old camera-specific names to new generic names
+                    if key == "camera-auto-remove-enabled":
+                        attr_name = "device_auto_remove_enabled"
+                    elif key == "camera-auto-remove-hours":
+                        attr_name = "device_auto_remove_hours"
+                    else:
+                        attr_name = key.replace("-", "_").replace(
+                            "YOLO_", "yolo_"
+                        )
                     setattr(webui.presets, attr_name, value)
                     # Log verification of volume setting
                     if key == "volume":

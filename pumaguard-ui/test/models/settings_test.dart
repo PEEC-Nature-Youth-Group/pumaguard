@@ -39,8 +39,8 @@ void main() {
           volume: 80,
           cameras: [camera],
           plugs: [plug],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloMinSize, 0.02);
@@ -69,8 +69,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.cameras.isEmpty, true);
@@ -126,8 +126,8 @@ void main() {
           volume: 80,
           cameras: cameras,
           plugs: plugs,
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.cameras.length, 2);
@@ -184,32 +184,44 @@ void main() {
         expect(settings.cameras[0].hostname, 'TestCamera');
         expect(settings.plugs.length, 1);
         expect(settings.plugs[0].hostname, 'TestPlug');
-        expect(settings.cameraAutoRemoveEnabled, false);
-        expect(settings.cameraAutoRemoveHours, 24);
+        expect(settings.deviceAutoRemoveEnabled, false);
+        expect(settings.deviceAutoRemoveHours, 24);
       });
 
-      test('handles camera-auto-remove-enabled from JSON', () {
+      test('handles device-auto-remove-enabled from JSON', () {
+        final json = {
+          'device-auto-remove-enabled': true,
+          'device-auto-remove-hours': 48,
+        };
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deviceAutoRemoveEnabled, true);
+        expect(settings.deviceAutoRemoveHours, 48);
+      });
+
+      test('handles null device auto-remove values with defaults', () {
+        final json = {
+          'device-auto-remove-enabled': null,
+          'device-auto-remove-hours': null,
+        };
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.deviceAutoRemoveEnabled, false);
+        expect(settings.deviceAutoRemoveHours, 24);
+      });
+
+      test('handles backward compatibility with camera-auto-remove names', () {
         final json = {
           'camera-auto-remove-enabled': true,
-          'camera-auto-remove-hours': 48,
+          'camera-auto-remove-hours': 36,
         };
 
         final settings = Settings.fromJson(json);
 
-        expect(settings.cameraAutoRemoveEnabled, true);
-        expect(settings.cameraAutoRemoveHours, 48);
-      });
-
-      test('handles null camera auto-remove values with defaults', () {
-        final json = {
-          'camera-auto-remove-enabled': null,
-          'camera-auto-remove-hours': null,
-        };
-
-        final settings = Settings.fromJson(json);
-
-        expect(settings.cameraAutoRemoveEnabled, false);
-        expect(settings.cameraAutoRemoveHours, 24);
+        expect(settings.deviceAutoRemoveEnabled, true);
+        expect(settings.deviceAutoRemoveHours, 36);
       });
 
       test('handles null values with defaults', () {
@@ -419,8 +431,8 @@ void main() {
           volume: 80,
           cameras: [camera],
           plugs: [plug],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         final json = settings.toJson();
@@ -438,8 +450,8 @@ void main() {
         expect(json['cameras'].length, 1);
         expect(json['plugs'], isA<List>());
         expect(json['plugs'].length, 1);
-        expect(json['camera-auto-remove-enabled'], false);
-        expect(json['camera-auto-remove-hours'], 24);
+        expect(json['device-auto-remove-enabled'], false);
+        expect(json['device-auto-remove-hours'], 24);
       });
 
       test('converts empty lists correctly', () {
@@ -455,8 +467,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         final json = settings.toJson();
@@ -480,8 +492,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         final json = settings.toJson();
@@ -491,7 +503,7 @@ void main() {
         expect(json['deterrent-sound-files'], ['']);
       });
 
-      test('includes camera auto-remove fields in JSON', () {
+      test('includes device auto-remove fields in JSON', () {
         final settings = Settings(
           yoloMinSize: 0.01,
           yoloConfThresh: 0.25,
@@ -504,14 +516,14 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: true,
-          cameraAutoRemoveHours: 72,
+          deviceAutoRemoveEnabled: true,
+          deviceAutoRemoveHours: 72,
         );
 
         final json = settings.toJson();
 
-        expect(json['camera-auto-remove-enabled'], true);
-        expect(json['camera-auto-remove-hours'], 72);
+        expect(json['device-auto-remove-enabled'], true);
+        expect(json['device-auto-remove-hours'], 72);
       });
     });
 
@@ -621,8 +633,8 @@ void main() {
           volume: 80,
           cameras: [camera],
           plugs: [plug],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
       });
 
@@ -653,12 +665,12 @@ void main() {
         expect(newSettings.cameras.length, originalSettings.cameras.length);
         expect(newSettings.plugs.length, originalSettings.plugs.length);
         expect(
-          newSettings.cameraAutoRemoveEnabled,
-          originalSettings.cameraAutoRemoveEnabled,
+          newSettings.deviceAutoRemoveEnabled,
+          originalSettings.deviceAutoRemoveEnabled,
         );
         expect(
-          newSettings.cameraAutoRemoveHours,
-          originalSettings.cameraAutoRemoveHours,
+          newSettings.deviceAutoRemoveHours,
+          originalSettings.deviceAutoRemoveHours,
         );
       });
 
@@ -802,27 +814,27 @@ void main() {
         expect(originalSettings.plugs.length, 1);
       });
 
-      test('updates cameraAutoRemoveEnabled', () {
+      test('updates deviceAutoRemoveEnabled', () {
         final newSettings = originalSettings.copyWith(
-          cameraAutoRemoveEnabled: true,
+          deviceAutoRemoveEnabled: true,
         );
 
-        expect(newSettings.cameraAutoRemoveEnabled, true);
+        expect(newSettings.deviceAutoRemoveEnabled, true);
         expect(
-          newSettings.cameraAutoRemoveHours,
-          originalSettings.cameraAutoRemoveHours,
+          newSettings.deviceAutoRemoveHours,
+          originalSettings.deviceAutoRemoveHours,
         );
       });
 
-      test('updates cameraAutoRemoveHours', () {
+      test('updates deviceAutoRemoveHours', () {
         final newSettings = originalSettings.copyWith(
-          cameraAutoRemoveHours: 48,
+          deviceAutoRemoveHours: 48,
         );
 
-        expect(newSettings.cameraAutoRemoveHours, 48);
+        expect(newSettings.deviceAutoRemoveHours, 48);
         expect(
-          newSettings.cameraAutoRemoveEnabled,
-          originalSettings.cameraAutoRemoveEnabled,
+          newSettings.deviceAutoRemoveEnabled,
+          originalSettings.deviceAutoRemoveEnabled,
         );
       });
 
@@ -854,8 +866,8 @@ void main() {
           volume: 0,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloMinSize, 0.0);
@@ -878,8 +890,8 @@ void main() {
           volume: 100,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloMinSize, 1.0);
@@ -902,8 +914,8 @@ void main() {
           volume: -10,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloMinSize, -0.5);
@@ -927,8 +939,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloModelFilename.length, 1000);
@@ -949,8 +961,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloModelFilename, 'model@#\$%^&*.pt');
@@ -971,8 +983,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         expect(settings.yoloMinSize, closeTo(0.0123456789, 0.0000000001));
@@ -1038,8 +1050,8 @@ void main() {
           volume: 80,
           cameras: [],
           plugs: [],
-          cameraAutoRemoveEnabled: false,
-          cameraAutoRemoveHours: 24,
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
         );
 
         // User enables sound and adjusts volume

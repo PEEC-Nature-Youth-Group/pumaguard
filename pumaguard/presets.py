@@ -145,9 +145,9 @@ class Settings:
         self.print_download_progress = True
         self.cameras: list[dict[str, str]] = []  # List of detected cameras
         self.plugs: list[dict[str, str]] = []  # List of detected plugs
-        self.device_history: dict[str, dict[str, str]] = (
-            {}
-        )  # Device history by MAC
+        self.device_history: dict[
+            str, dict[str, str]
+        ] = {}  # Device history by MAC
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False
@@ -160,9 +160,9 @@ class Settings:
         self.camera_heartbeat_tcp_timeout = 3  # TCP timeout in seconds
         self.camera_heartbeat_icmp_timeout = 2  # ICMP timeout in seconds
 
-        # Camera auto-removal settings
-        self.camera_auto_remove_enabled = False  # Disabled by default
-        self.camera_auto_remove_hours = 24  # Remove after 24 hours
+        # Device auto-removal settings (applies to both cameras and plugs)
+        self.device_auto_remove_enabled = False  # Disabled by default
+        self.device_auto_remove_hours = 24  # Remove after 24 hours
 
         # Plug heartbeat monitoring settings
         self.plug_heartbeat_enabled = True
@@ -352,12 +352,15 @@ class Settings:
             "camera-heartbeat-icmp-timeout", 2
         )
 
-        # Load camera auto-removal settings
-        self.camera_auto_remove_enabled = settings.get(
-            "camera-auto-remove-enabled", False
+        # Load device auto-removal settings (backward compatible)
+        # Check new generic names first, fall back to old camera-specific names
+        self.device_auto_remove_enabled = settings.get(
+            "device-auto-remove-enabled",
+            settings.get("camera-auto-remove-enabled", False),
         )
-        self.camera_auto_remove_hours = settings.get(
-            "camera-auto-remove-hours", 24
+        self.device_auto_remove_hours = settings.get(
+            "device-auto-remove-hours",
+            settings.get("camera-auto-remove-hours", 24),
         )
 
         # Load plug heartbeat settings
@@ -422,8 +425,8 @@ class Settings:
             "camera-heartbeat-tcp-port": self.camera_heartbeat_tcp_port,
             "camera-heartbeat-tcp-timeout": self.camera_heartbeat_tcp_timeout,
             "camera-heartbeat-icmp-timeout": self.camera_heartbeat_icmp_timeout,
-            "camera-auto-remove-enabled": self.camera_auto_remove_enabled,
-            "camera-auto-remove-hours": self.camera_auto_remove_hours,
+            "device-auto-remove-enabled": self.device_auto_remove_enabled,
+            "device-auto-remove-hours": self.device_auto_remove_hours,
             "plug-heartbeat-enabled": self.plug_heartbeat_enabled,
             "plug-heartbeat-interval": self.plug_heartbeat_interval,
             "plug-heartbeat-timeout": self.plug_heartbeat_timeout,

@@ -204,8 +204,8 @@ class WebUI:
             tcp_port=presets.camera_heartbeat_tcp_port,
             tcp_timeout=presets.camera_heartbeat_tcp_timeout,
             icmp_timeout=presets.camera_heartbeat_icmp_timeout,
-            auto_remove_enabled=presets.camera_auto_remove_enabled,
-            auto_remove_hours=presets.camera_auto_remove_hours,
+            auto_remove_enabled=presets.device_auto_remove_enabled,
+            auto_remove_hours=presets.device_auto_remove_hours,
             # Will be set after routes are registered
             status_change_callback=None,
         )
@@ -216,6 +216,8 @@ class WebUI:
             interval=presets.plug_heartbeat_interval,
             enabled=presets.plug_heartbeat_enabled,
             timeout=presets.plug_heartbeat_timeout,
+            auto_remove_enabled=presets.device_auto_remove_enabled,
+            auto_remove_hours=presets.device_auto_remove_hours,
             # Will be set after routes are registered
             status_change_callback=None,
         )

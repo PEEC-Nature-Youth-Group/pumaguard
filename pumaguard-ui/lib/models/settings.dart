@@ -13,6 +13,8 @@ class Settings {
   final int volume;
   final List<Camera> cameras;
   final List<Plug> plugs;
+  final bool cameraAutoRemoveEnabled;
+  final int cameraAutoRemoveHours;
 
   Settings({
     required this.yoloMinSize,
@@ -26,6 +28,8 @@ class Settings {
     required this.volume,
     required this.cameras,
     required this.plugs,
+    required this.cameraAutoRemoveEnabled,
+    required this.cameraAutoRemoveHours,
   });
 
   factory Settings.fromJson(Map<String, dynamic> json) {
@@ -79,6 +83,9 @@ class Settings {
       volume: json['volume'] as int? ?? 80,
       cameras: camerasList,
       plugs: plugsList,
+      cameraAutoRemoveEnabled:
+          json['camera-auto-remove-enabled'] as bool? ?? false,
+      cameraAutoRemoveHours: json['camera-auto-remove-hours'] as int? ?? 24,
     );
   }
 
@@ -95,6 +102,8 @@ class Settings {
       'volume': volume,
       'cameras': cameras.map((camera) => camera.toJson()).toList(),
       'plugs': plugs.map((plug) => plug.toJson()).toList(),
+      'camera-auto-remove-enabled': cameraAutoRemoveEnabled,
+      'camera-auto-remove-hours': cameraAutoRemoveHours,
     };
   }
 
@@ -110,6 +119,8 @@ class Settings {
     int? volume,
     List<Camera>? cameras,
     List<Plug>? plugs,
+    bool? cameraAutoRemoveEnabled,
+    int? cameraAutoRemoveHours,
   }) {
     return Settings(
       yoloMinSize: yoloMinSize ?? this.yoloMinSize,
@@ -125,6 +136,10 @@ class Settings {
       volume: volume ?? this.volume,
       cameras: cameras ?? this.cameras,
       plugs: plugs ?? this.plugs,
+      cameraAutoRemoveEnabled:
+          cameraAutoRemoveEnabled ?? this.cameraAutoRemoveEnabled,
+      cameraAutoRemoveHours:
+          cameraAutoRemoveHours ?? this.cameraAutoRemoveHours,
     );
   }
 }

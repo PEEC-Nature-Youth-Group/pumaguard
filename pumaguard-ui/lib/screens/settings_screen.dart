@@ -31,9 +31,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _yoloModelController;
   late TextEditingController _classifierModelController;
   late TextEditingController _fileStabilizationController;
+  late TextEditingController _cameraAutoRemoveHoursController;
   List<String> _selectedSoundFiles = [];
   bool _playSound = false;
   double _volume = 80.0;
+  bool _cameraAutoRemoveEnabled = false;
   List<Map<String, dynamic>> _availableModels = [];
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
@@ -59,6 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloModelController = TextEditingController();
     _classifierModelController = TextEditingController();
     _fileStabilizationController = TextEditingController();
+    _cameraAutoRemoveHoursController = TextEditingController();
 
     _loadSettings();
     _initializeCameraEvents();
@@ -80,6 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloModelController.dispose();
     _classifierModelController.dispose();
     _fileStabilizationController.dispose();
+    _cameraAutoRemoveHoursController.dispose();
     super.dispose();
   }
 
@@ -187,6 +191,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             .toString();
         _playSound = settings.playSound;
         _volume = settings.volume.toDouble();
+        _cameraAutoRemoveEnabled = settings.cameraAutoRemoveEnabled;
+        _cameraAutoRemoveHoursController.text = settings.cameraAutoRemoveHours
+            .toString();
         _isLoading = false;
       });
 
@@ -294,6 +301,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         volume: _volume.round(),
         cameras: _settings?.cameras ?? [],
         plugs: _settings?.plugs ?? [],
+        cameraAutoRemoveEnabled: _cameraAutoRemoveEnabled,
+        cameraAutoRemoveHours:
+            int.tryParse(_cameraAutoRemoveHoursController.text) ?? 24,
       );
 
       developer.log(
@@ -1293,6 +1303,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 24),
+            // Camera Auto-Removal Section
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_delete,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Camera Auto-Removal',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Automatically remove inactive cameras',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              title: const Text('Enable Auto-Removal'),
+              subtitle: const Text(
+                'Automatically remove cameras that have been inactive',
+              ),
+              value: _cameraAutoRemoveEnabled,
+              onChanged: (bool value) {
+                setState(() {
+                  _cameraAutoRemoveEnabled = value;
+                });
+                _saveSettings();
+              },
+            ),
+            if (_cameraAutoRemoveEnabled) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: _cameraAutoRemoveHoursController,
+                onChanged: (_) => _onTextFieldChanged(),
+                decoration: const InputDecoration(
+                  labelText: 'Inactivity Threshold (hours)',
+                  hintText: '24',
+                  helperText: 'Remove cameras inactive for this many hours',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.schedule),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+            ],
             const SizedBox(height: 24),
             // Server Time Section
             Row(

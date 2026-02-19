@@ -69,6 +69,22 @@ Auto-removal Check → Calculate: now - last_seen
 
 ## Usage
 
+### Enable Auto-Removal via Web UI
+
+The easiest way to configure camera auto-removal is through the web interface:
+
+1. Navigate to **Settings** page in the PumaGuard web UI
+2. Scroll to the **System Settings** section
+3. Find the **Camera Auto-Removal** subsection
+4. Toggle **Enable Auto-Removal** switch to turn the feature on/off
+5. When enabled, adjust the **Inactivity Threshold (hours)** field to set the timeout
+6. Settings are automatically saved when changed
+
+The UI will show:
+- A toggle switch to enable/disable the feature
+- An input field for the inactivity threshold (only visible when enabled)
+- Helper text explaining each setting
+
 ### Enable Auto-Removal via API
 
 ```bash

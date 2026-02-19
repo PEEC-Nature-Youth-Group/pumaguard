@@ -284,7 +284,7 @@ class CameraHeartbeat:
                     cameras_to_remove.append((mac_address, camera))
                     logger.info(
                         "Camera '%s' (%s) not seen for %.1f hours, "
-                        "scheduling for auto-removal",
+                        + "scheduling for auto-removal",
                         camera["hostname"],
                         mac_address,
                         time_since_seen.total_seconds() / 3600,
@@ -322,7 +322,7 @@ class CameraHeartbeat:
                     except Exception as e:  # pylint: disable=broad-except
                         logger.error(
                             "Error calling status change callback "
-                            "for removal: %s",
+                            + "for removal: %s",
                             str(e),
                         )
 

@@ -10,16 +10,16 @@
 
 ## Validation Summary
 
-| Check | Status | Details |
-|-------|--------|---------|
-| **Unit Tests** | ✅ PASS | 40/40 tests pass (100% success) |
-| **Pylint** | ✅ PASS | 10.00/10 rating |
-| **Black** | ✅ PASS | All files formatted correctly |
-| **isort** | ✅ PASS | Imports properly sorted |
-| **mypy** | ✅ PASS | No type errors |
-| **bashate** | ✅ PASS | Shell scripts validated |
-| **Integration** | ✅ PASS | Settings load/save works |
-| **Documentation** | ✅ COMPLETE | 4 comprehensive docs |
+| Check             | Status      | Details                         |
+| ----------------- | ----------- | ------------------------------- |
+| **Unit Tests**    | ✅ PASS     | 40/40 tests pass (100% success) |
+| **Pylint**        | ✅ PASS     | 10.00/10 rating                 |
+| **Black**         | ✅ PASS     | All files formatted correctly   |
+| **isort**         | ✅ PASS     | Imports properly sorted         |
+| **mypy**          | ✅ PASS     | No type errors                  |
+| **bashate**       | ✅ PASS     | Shell scripts validated         |
+| **Integration**   | ✅ PASS     | Settings load/save works        |
+| **Documentation** | ✅ COMPLETE | 4 comprehensive docs            |
 
 ---
 
@@ -147,13 +147,10 @@ Success: no issues found in 26 source files
 
 ### Settings Import
 
-```bash
-$ uv run python -c "from pumaguard.camera_heartbeat import CameraHeartbeat; from pumaguard.presets import Settings; print('Import successful'); s = Settings(); print(f'Auto-removal enabled: {s.camera_auto_remove_enabled}'); print(f'Auto-removal hours: {s.camera_auto_remove_hours}')"
-
-Import successful
 Auto-removal enabled: False
 Auto-removal hours: 24
-```
+
+````
 
 ✅ **Result**: Settings load successfully with correct defaults
 
@@ -167,7 +164,7 @@ from pumaguard.presets import Settings
 # All imports work correctly
 # No circular import issues
 # Type hints validated
-```
+````
 
 ✅ **Result**: All modules integrate correctly
 
@@ -183,16 +180,12 @@ from pumaguard.presets import Settings
    - Updated `_monitor_loop()` to call auto-removal check
    - Imported `timedelta` for time calculations
 
-2. **`pumaguard/presets.py`** (+36 lines)
-   - Added `camera_auto_remove_enabled` setting (default: `false`)
-   - Added `camera_auto_remove_hours` setting (default: `24`)
-   - Added settings load/save support
    - Added to `__iter__` serialization
 
-3. **`pumaguard/web_ui.py`** (+2 lines)
+2. **`pumaguard/web_ui.py`** (+2 lines)
    - Pass auto-removal settings to `CameraHeartbeat` constructor
 
-4. **`pumaguard/web_routes/settings.py`** (+8 lines)
+3. **`pumaguard/web_routes/settings.py`** (+8 lines)
    - Added auto-removal settings to `allowed_settings` list
    - Enables runtime configuration via REST API
 
@@ -290,14 +283,14 @@ from pumaguard.presets import Settings
 
 ## Documentation Completeness
 
-| Document | Lines | Status |
-|----------|-------|--------|
-| Full Documentation | 438 | ✅ Complete |
-| Quick Start Guide | 233 | ✅ Complete |
-| Implementation Summary | 365 | ✅ Complete |
-| User README | 314 | ✅ Complete |
-| Validation Report | This file | ✅ Complete |
-| **Total** | **1,350+** | **✅ Complete** |
+| Document               | Lines      | Status          |
+| ---------------------- | ---------- | --------------- |
+| Full Documentation     | 438        | ✅ Complete     |
+| Quick Start Guide      | 233        | ✅ Complete     |
+| Implementation Summary | 365        | ✅ Complete     |
+| User README            | 314        | ✅ Complete     |
+| Validation Report      | This file  | ✅ Complete     |
+| **Total**              | **1,350+** | **✅ Complete** |
 
 ---
 
@@ -319,6 +312,7 @@ from pumaguard.presets import Settings
 ### Rollback Plan
 
 If issues arise:
+
 1. Disable via API: `{"camera-auto-remove-enabled": false}`
 2. Or edit settings file: `camera-auto-remove-enabled: false`
 3. No code changes required

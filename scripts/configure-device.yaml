@@ -1,4 +1,16 @@
 ---
+# To enable a common SSH host key across all PumaGuard devices, create a
+# device_vault.yaml file in this directory (see device_vault.yaml.example)
+# and encrypt it with ansible-vault:
+#
+#   cp device_vault.yaml.example device_vault.yaml
+#   # Edit device_vault.yaml to add your generated key pair, then encrypt:
+#   ansible-vault encrypt device_vault.yaml
+#
+# Generate a fresh ed25519 key pair (do this ONCE and reuse for all devices):
+#   ssh-keygen -t ed25519 -f /tmp/pumaguard_ssh_host_key -N "" -C "pumaguard-host-key"
+#   # Private key: /tmp/pumaguard_ssh_host_key
+#   # Public key:  /tmp/pumaguard_ssh_host_key.pub
 - name: Configure PumaGuard Device
   hosts: all
   become: true
@@ -39,6 +51,19 @@
     dnsmasq_ipv6_address: fd00::52:1
 
   tasks:
+    - name: Check for optional device_vault.yaml
+      ansible.builtin.stat:
+        path: "{{ playbook_dir }}/device_vault.yaml"
+      delegate_to: localhost
+      become: false
+      register: device_vault_stat
+
+    - name: Load optional device vault (SSH host keys, etc.)
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/device_vault.yaml"
+      when: device_vault_stat.stat.exists
+      no_log: true
+
     - name: Check the current size of the swap file
       ansible.builtin.stat:
         path: /var/swap
@@ -301,6 +326,31 @@
         policy: deny
       tags:
         - firewall
+
+    - name: Deploy common SSH host ed25519 private key
+      ansible.builtin.copy:
+        content: "{{ ssh_host_ed25519_private_key }}"
+        dest: /etc/ssh/ssh_host_ed25519_key
+        owner: root
+        group: root
+        mode: "0600"
+      when: ssh_host_ed25519_private_key is defined
+      notify: Restart sshd
+      no_log: true
+      tags:
+        - ssh
+
+    - name: Deploy common SSH host ed25519 public key
+      ansible.builtin.copy:
+        content: "{{ ssh_host_ed25519_public_key }}"
+        dest: /etc/ssh/ssh_host_ed25519_key.pub
+        owner: root
+        group: root
+        mode: "0644"
+      when: ssh_host_ed25519_public_key is defined
+      notify: Restart sshd
+      tags:
+        - ssh
 
     - name: Upgrade all packages
       ansible.builtin.apt:
@@ -964,3 +1014,8 @@
         name: pumaguard
         state: restarted
         daemon_reload: true
+
+    - name: Restart sshd
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted

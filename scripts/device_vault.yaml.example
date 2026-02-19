@@ -1,0 +1,49 @@
+---
+# PumaGuard Device Vault - Shared secrets for all PumaGuard devices
+#
+# This file is a template. Follow these steps to set it up:
+#
+# 1. Generate a single ed25519 key pair (do this ONCE, reuse for all devices):
+#
+#      ssh-keygen -t ed25519 -f /tmp/pumaguard_ssh_host_key -N "" -C "pumaguard-host-key"
+#
+# 2. Copy this file and fill in the key material:
+#
+#      cp device_vault.yaml.example device_vault.yaml
+#
+# 3. Set ssh_host_ed25519_private_key to the contents of /tmp/pumaguard_ssh_host_key
+#    Set ssh_host_ed25519_public_key  to the contents of /tmp/pumaguard_ssh_host_key.pub
+#
+#    The private key must include the header/footer lines and all newlines preserved.
+#    Use the YAML literal block scalar (|) to keep newlines intact.
+#
+# 4. Encrypt the file with your Ansible Vault password:
+#
+#      ansible-vault encrypt device_vault.yaml
+#
+# 5. Delete the temporary key files from /tmp:
+#
+#      rm /tmp/pumaguard_ssh_host_key /tmp/pumaguard_ssh_host_key.pub
+#
+# 6. Commit device_vault.yaml to version control alongside wireless_credentials.yaml.
+#    Both files are safe to commit once encrypted - the vault password protects them.
+#
+# NOTE: After deploying a new host key, all SSH clients that have previously
+# connected to a PumaGuard device will see a "host key changed" warning.
+# Update your ~/.ssh/known_hosts or run:
+#
+#   ssh-keygen -R <device-ip>
+#
+# Once all devices share the same key, this warning will never appear again
+# for devices at the same IP address.
+
+# ed25519 private key - content of /tmp/pumaguard_ssh_host_key
+# Replace the placeholder below with your actual private key:
+ssh_host_ed25519_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  <paste private key content here>
+  -----END OPENSSH PRIVATE KEY-----
+
+# ed25519 public key - content of /tmp/pumaguard_ssh_host_key.pub
+# Replace the placeholder below with your actual public key (single line):
+ssh_host_ed25519_public_key: "ssh-ed25519 AAAA<paste public key content here> pumaguard-host-key"

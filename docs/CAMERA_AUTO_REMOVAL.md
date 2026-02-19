@@ -121,19 +121,34 @@ Then restart the PumaGuard server for changes to take effect.
 
 ### Monitor Removal Events
 
-The server logs all auto-removal events:
+The server logs all auto-removal events and periodic status updates:
 
 ```bash
 # Watch server logs for removal events
 journalctl -u pumaguard -f | grep "Auto-removed camera"
+
+# Watch debug logs for offline camera status (debugging)
+journalctl -u pumaguard -f | grep "offline"
 ```
 
 Example log output:
 
 ```
+# Debug logs (periodic updates during each heartbeat check)
+DEBUG: Camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) at 192.168.52.101 has been offline for 12.5 hours, will be auto-removed in 11.5 hours
+DEBUG: Camera 'Microseven-Cam2' (aa:bb:cc:dd:ee:02) at 192.168.52.102 has been offline for 5.2 hours, will be auto-removed in 18.8 hours
+
+# Info logs (when camera is scheduled for removal)
 INFO: Camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) not seen for 25.3 hours, scheduling for auto-removal
 INFO: Auto-removed camera 'Microseven-Cam1' (aa:bb:cc:dd:ee:01) at 192.168.52.101
 ```
+
+**Debug Logging**: When auto-removal is enabled and cameras are offline (disconnected), the heartbeat monitor logs periodic status updates showing:
+- How long each camera has been offline
+- How much time remains until the camera will be auto-removed
+- This helps with debugging and monitoring camera health
+
+When auto-removal is disabled, offline cameras are still logged but with a note that auto-removal is disabled.
 
 ## Use Cases
 

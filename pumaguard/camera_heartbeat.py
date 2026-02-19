@@ -257,9 +257,6 @@ class CameraHeartbeat:
         configured hours threshold. Called during heartbeat
         monitoring loop if auto-removal is enabled.
         """
-        if not self.auto_remove_enabled:
-            return
-
         now = datetime.now(timezone.utc)
         removal_threshold = timedelta(hours=self.auto_remove_hours)
 
@@ -278,17 +275,49 @@ class CameraHeartbeat:
 
                 # Calculate time since last seen
                 time_since_seen = now - last_seen
+                hours_offline = time_since_seen.total_seconds() / 3600
 
                 # Check if camera exceeds removal threshold
                 if time_since_seen > removal_threshold:
                     cameras_to_remove.append((mac_address, camera))
                     logger.info(
                         "Camera '%s' (%s) not seen for %.1f hours, "
-                        + "scheduling for auto-removal",
+                        "scheduling for auto-removal",
                         camera["hostname"],
                         mac_address,
-                        time_since_seen.total_seconds() / 3600,
+                        hours_offline,
                     )
+                # Log status for offline cameras (debugging)
+                elif camera["status"] == "disconnected":
+                    if self.auto_remove_enabled:
+                        # Calculate time until removal
+                        time_until_removal = (
+                            removal_threshold - time_since_seen
+                        )
+                        hours_until_removal = (
+                            time_until_removal.total_seconds() / 3600
+                        )
+
+                        logger.debug(
+                            "Camera '%s' (%s) at %s has been offline "
+                            "for %.1f hours, will be auto-removed "
+                            "in %.1f hours",
+                            camera["hostname"],
+                            mac_address,
+                            camera["ip_address"],
+                            hours_offline,
+                            hours_until_removal,
+                        )
+                    else:
+                        # Auto-removal disabled, log offline duration
+                        logger.debug(
+                            "Camera '%s' (%s) at %s has been offline "
+                            "for %.1f hours (auto-removal disabled)",
+                            camera["hostname"],
+                            mac_address,
+                            camera["ip_address"],
+                            hours_offline,
+                        )
 
             except (ValueError, AttributeError) as e:
                 logger.warning(
@@ -297,39 +326,49 @@ class CameraHeartbeat:
                     str(e),
                 )
 
-        # Remove cameras outside the iteration loop
-        for mac_address, camera in cameras_to_remove:
-            try:
-                # Remove from in-memory dictionary
-                del self.webui.cameras[mac_address]
+        # Remove cameras outside iteration loop
+        # (only if auto-removal is enabled)
+        if self.auto_remove_enabled:
+            for mac_address, camera in cameras_to_remove:
+                try:
+                    # Remove from in-memory dictionary
+                    del self.webui.cameras[mac_address]
 
-                # Persist changes
-                self._save_camera_list()
+                    # Persist changes
+                    self._save_camera_list()
 
-                logger.info(
-                    "Auto-removed camera '%s' (%s) at %s",
-                    camera["hostname"],
-                    mac_address,
-                    camera["ip_address"],
-                )
+                    logger.info(
+                        "Auto-removed camera '%s' (%s) at %s",
+                        camera["hostname"],
+                        mac_address,
+                        camera["ip_address"],
+                    )
 
-                # Notify via SSE if callback is available
-                if self.status_change_callback:
-                    try:
-                        self.status_change_callback(
-                            "camera_removed", dict(camera)
-                        )
-                    except Exception as e:  # pylint: disable=broad-except
-                        logger.error(
-                            "Error calling status change callback "
-                            + "for removal: %s",
-                            str(e),
-                        )
+                    # Notify via SSE if callback is available
+                    if self.status_change_callback:
+                        try:
+                            self.status_change_callback(
+                                "camera_removed", dict(camera)
+                            )
+                        except Exception as e:  # pylint: disable=broad-except
+                            logger.error(
+                                "Error calling status change callback "
+                                + "for removal: %s",
+                                str(e),
+                            )
 
-            except Exception as e:  # pylint: disable=broad-except
-                logger.error(
-                    "Failed to auto-remove camera %s: %s", mac_address, str(e)
-                )
+                except Exception as e:  # pylint: disable=broad-except
+                    logger.error(
+                        "Failed to auto-remove camera %s: %s",
+                        mac_address,
+                        str(e),
+                    )
+        elif cameras_to_remove:
+            # Auto-removal disabled but cameras would have been removed
+            logger.debug(
+                "%d camera(s) would be auto-removed but feature is disabled",
+                len(cameras_to_remove),
+            )
 
     def _monitor_loop(self) -> None:
         """Main monitoring loop that runs in a background thread."""

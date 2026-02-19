@@ -145,9 +145,9 @@ class Settings:
         self.print_download_progress = True
         self.cameras: list[dict[str, str]] = []  # List of detected cameras
         self.plugs: list[dict[str, str]] = []  # List of detected plugs
-        self.device_history: dict[
-            str, dict[str, str]
-        ] = {}  # Device history by MAC
+        self.device_history: dict[str, dict[str, str]] = (
+            {}
+        )  # Device history by MAC
         self.no_lion_directories: list[str] = []
         self.validation_no_lion_directories: list[str] = []
         self.with_augmentation = False

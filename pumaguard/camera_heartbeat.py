@@ -282,7 +282,7 @@ class CameraHeartbeat:
                     cameras_to_remove.append((mac_address, camera))
                     logger.info(
                         "Camera '%s' (%s) not seen for %.1f hours, "
-                        "scheduling for auto-removal",
+                        + "scheduling for auto-removal",
                         camera["hostname"],
                         mac_address,
                         hours_offline,
@@ -300,8 +300,8 @@ class CameraHeartbeat:
 
                         logger.debug(
                             "Camera '%s' (%s) at %s has been offline "
-                            "for %.1f hours, will be auto-removed "
-                            "in %.1f hours",
+                            + "for %.1f hours, will be auto-removed "
+                            + "in %.1f hours",
                             camera["hostname"],
                             mac_address,
                             camera["ip_address"],
@@ -312,7 +312,7 @@ class CameraHeartbeat:
                         # Auto-removal disabled, log offline duration
                         logger.debug(
                             "Camera '%s' (%s) at %s has been offline "
-                            "for %.1f hours (auto-removal disabled)",
+                            + "for %.1f hours (auto-removal disabled)",
                             camera["hostname"],
                             mac_address,
                             camera["ip_address"],

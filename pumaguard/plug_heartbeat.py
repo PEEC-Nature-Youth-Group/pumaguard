@@ -231,7 +231,7 @@ class PlugHeartbeat:
                     plugs_to_remove.append((mac_address, plug))
                     logger.info(
                         "Plug '%s' (%s) not seen for %.1f hours, "
-                        "scheduling for auto-removal",
+                        + "scheduling for auto-removal",
                         plug["hostname"],
                         mac_address,
                         hours_offline,
@@ -249,8 +249,8 @@ class PlugHeartbeat:
 
                         logger.debug(
                             "Plug '%s' (%s) at %s has been offline "
-                            "for %.1f hours, will be auto-removed "
-                            "in %.1f hours",
+                            + "for %.1f hours, will be auto-removed "
+                            + "in %.1f hours",
                             plug["hostname"],
                             mac_address,
                             plug["ip_address"],
@@ -261,7 +261,7 @@ class PlugHeartbeat:
                         # Auto-removal disabled, log offline duration
                         logger.debug(
                             "Plug '%s' (%s) at %s has been offline "
-                            "for %.1f hours (auto-removal disabled)",
+                            + "for %.1f hours (auto-removal disabled)",
                             plug["hostname"],
                             mac_address,
                             plug["ip_address"],

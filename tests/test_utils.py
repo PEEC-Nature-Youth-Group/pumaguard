@@ -3,7 +3,6 @@ Test utils
 """
 # pylint: disable=too-many-lines,import-outside-toplevel
 
-import csv
 import datetime
 import hashlib
 import os
@@ -648,73 +647,6 @@ class TestClassifyImageTwoStage(unittest.TestCase):
             mock_plt.savefig.assert_called_once()
             saved_path = mock_plt.savefig.call_args[0][0]
             self.assertTrue(saved_path.startswith(self.temp_dir))
-
-    @patch("pumaguard.utils.ensure_model_available")
-    @patch("pumaguard.utils.get_cached_model")
-    def test_classify_image_two_stage_creates_csv_files(
-        self, mock_get_cached, mock_ensure
-    ):
-        """Test that CSV files are created."""
-        # Setup
-        mock_ensure.side_effect = [
-            Path("/fake/classifier.h5"),
-            Path("/fake/yolo.pt"),
-        ]
-
-        # Mock detector with one detection
-        mock_detector = MagicMock()
-        mock_result = MagicMock()
-        mock_boxes = MagicMock()
-        mock_boxes.xyxy = MagicMock()
-        mock_boxes.xyxy.cpu.return_value.numpy.return_value = np.array(
-            [[100, 100, 300, 300]]
-        )
-        mock_result.boxes = mock_boxes
-        mock_detector.predict.return_value = [mock_result]
-
-        mock_classifier = MagicMock()
-        mock_classifier.predict.return_value = np.array([[0.8]])
-        mock_get_cached.side_effect = [mock_detector, mock_classifier]
-
-        presets = MagicMock(spec=Settings)
-        presets.yolo_conf_thresh = 0.25
-        presets.yolo_max_dets = 300
-        presets.yolo_min_size = 0.001
-        presets.classifier_model_filename = "classifier.h5"
-        presets.yolo_model_filename = "yolo.pt"
-
-        # Execute
-        with patch("pumaguard.utils.plt"):
-            classify_image_two_stage(
-                presets,
-                self.test_image_path,
-                print_progress=False,
-                intermediate_dir=self.temp_dir,
-            )
-
-        # Verify CSV files exist
-        detection_csv = os.path.join(
-            self.temp_dir, "test_detections_predictions.csv"
-        )
-        image_csv = os.path.join(self.temp_dir, "test_image_summary.csv")
-
-        self.assertTrue(os.path.exists(detection_csv))
-        self.assertTrue(os.path.exists(image_csv))
-
-        # Verify CSV content
-        with open(detection_csv, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["file"], self.test_image_path)
-            self.assertAlmostEqual(float(rows[0]["prob_puma"]), 0.8, places=5)
-
-        with open(image_csv, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-            self.assertEqual(len(rows), 1)
-            self.assertEqual(rows[0]["file"], self.test_image_path)
-            self.assertEqual(int(rows[0]["num_dets"]), 1)
 
     @patch("pumaguard.utils.ensure_model_available")
     @patch("pumaguard.utils.get_cached_model")

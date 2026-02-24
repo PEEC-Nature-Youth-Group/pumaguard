@@ -286,7 +286,7 @@ def register_dhcp_routes(
                     )
                     # Preserve existing mode if plug already exists
                     existing_mode = (
-                        webui.plugs[mac_address].get("mode", "off")
+                        webui.plugs[mac_address].get("mode", "automatic")
                         if mac_address in webui.plugs
                         else "off"
                     )
@@ -324,7 +324,7 @@ def register_dhcp_routes(
                                 "mac_address": plug_info["mac_address"],
                                 "last_seen": plug_info["last_seen"],
                                 "status": plug_info["status"],
-                                "mode": plug_info.get("mode", "off"),
+                                "mode": plug_info.get("mode", "automatic"),
                             }
                         )
 
@@ -349,7 +349,7 @@ def register_dhcp_routes(
                         webui.plugs[mac_address]["last_seen"] = timestamp
                         # Preserve mode
                         if "mode" not in webui.plugs[mac_address]:
-                            webui.plugs[mac_address]["mode"] = "off"
+                            webui.plugs[mac_address]["mode"] = "automatic"
 
                         # Notify SSE clients
                         notify_camera_change(
@@ -366,7 +366,7 @@ def register_dhcp_routes(
                                     "mac_address": plug_info["mac_address"],
                                     "last_seen": plug_info["last_seen"],
                                     "status": plug_info["status"],
-                                    "mode": plug_info.get("mode", "off"),
+                                    "mode": plug_info.get("mode", "automatic"),
                                 }
                             )
 
@@ -780,7 +780,7 @@ def register_dhcp_routes(
                     "mac_address": p_info["mac_address"],
                     "last_seen": p_info["last_seen"],
                     "status": p_info["status"],
-                    "mode": p_info.get("mode", "off"),
+                    "mode": p_info.get("mode", "automatic"),
                 }
             )
         webui.presets.plugs = plug_list
@@ -866,7 +866,7 @@ def register_dhcp_routes(
                         "mac_address": plug_info["mac_address"],
                         "last_seen": plug_info["last_seen"],
                         "status": plug_info["status"],
-                        "mode": plug_info.get("mode", "off"),
+                        "mode": plug_info.get("mode", "automatic"),
                     }
                 )
 
@@ -1000,7 +1000,7 @@ def register_dhcp_routes(
                         "mac_address": plug_info["mac_address"],
                         "last_seen": plug_info["last_seen"],
                         "status": plug_info["status"],
-                        "mode": plug_info.get("mode", "off"),
+                        "mode": plug_info.get("mode", "automatic"),
                     }
                 )
 
@@ -1112,7 +1112,7 @@ def register_dhcp_routes(
             )
 
         plug = webui.plugs[mac_address]
-        mode = plug.get("mode", "off")
+        mode = plug.get("mode", "automatic")
 
         return (
             jsonify(

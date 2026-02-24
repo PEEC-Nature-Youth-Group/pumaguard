@@ -77,11 +77,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
       case CameraEventType.cameraConnected:
       case CameraEventType.cameraDisconnected:
       case CameraEventType.cameraAdded:
+      case CameraEventType.cameraRemoved:
       case CameraEventType.cameraStatusChangedOnline:
       case CameraEventType.cameraStatusChangedOffline:
       case CameraEventType.plugConnected:
       case CameraEventType.plugDisconnected:
       case CameraEventType.plugAdded:
+      case CameraEventType.plugRemoved:
       case CameraEventType.plugStatusChangedOnline:
       case CameraEventType.plugStatusChangedOffline:
       case CameraEventType.plugModeChanged:

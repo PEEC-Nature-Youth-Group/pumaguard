@@ -9,6 +9,9 @@ import time
 from pathlib import (
     Path,
 )
+from unittest import (
+    mock,
+)
 from unittest.mock import (
     MagicMock,
 )
@@ -148,6 +151,55 @@ class TestListArtifacts:
         for artifact in data["artifacts"]:
             expected_kind = files[artifact["filename"]]
             assert artifact["kind"] == expected_kind
+
+    def test_list_artifacts_filter_by_extension(
+        self, client, temp_intermediate_dir
+    ):
+        """Test filtering artifacts by extension."""
+        files = ["img1.jpg", "img2.png", "data.csv", "notes.txt"]
+        for filename in files:
+            filepath = os.path.join(temp_intermediate_dir, filename)
+            Path(filepath).write_text("test", encoding="utf-8")
+
+        response = client.get("/api/artifacts?ext=.jpg,.png")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["total"] == 2
+        filenames = [a["filename"] for a in data["artifacts"]]
+        assert "img1.jpg" in filenames
+        assert "img2.png" in filenames
+        assert "data.csv" not in filenames
+
+    def test_list_artifacts_with_limit(self, client, temp_intermediate_dir):
+        """Test limiting number of artifacts returned."""
+        for i in range(10):
+            filepath = os.path.join(temp_intermediate_dir, f"file{i}.txt")
+            Path(filepath).write_text("test", encoding="utf-8")
+            time.sleep(0.01)  # Ensure different modification times
+
+        response = client.get("/api/artifacts?limit=5")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert len(data["artifacts"]) == 5
+
+    def test_list_artifacts_os_error(self, app, webui_mock):
+        """Test handling OSError when reading artifacts."""
+        webui_mock.presets.intermediate_dir = "/valid/path"
+        register_artifacts_routes(app, webui_mock)
+        client = app.test_client()
+
+        with mock.patch("os.path.exists", return_value=True):
+            with mock.patch(
+                "os.listdir", side_effect=OSError("Permission denied")
+            ):
+                response = client.get("/api/artifacts")
+                assert response.status_code == 500
+                data = response.get_json()
+                assert "error" in data
+
+
+class TestGetArtifact:
+    """Test the get_artifact endpoint."""
 
     def test_list_artifacts_filter_by_extension(
         self, client, temp_intermediate_dir

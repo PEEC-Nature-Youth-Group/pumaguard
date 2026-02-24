@@ -23,8 +23,10 @@ domain=local
 # Expand hostnames with domain
 expand-hosts
 
-# Static DNS entry for pumaguard.local
+# Static DNS entries for pumaguard domains
 address=/pumaguard.local/{{ dnsmasq_gateway }}
+address=/pumaguard.com/{{ dnsmasq_gateway }}
+address=/pumaguard.io/{{ dnsmasq_gateway }}
 
 # Captive Portal Detection Configuration
 # Hijack only captive portal detection domains to trigger portal on client devices

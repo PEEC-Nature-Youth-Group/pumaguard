@@ -28,6 +28,14 @@ pumaguard.classify module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.device\_heartbeat module
+----------------------------------
+
+.. automodule:: pumaguard.device_heartbeat
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.lock\_manager module
 ------------------------------
 

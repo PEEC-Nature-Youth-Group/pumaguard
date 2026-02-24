@@ -530,7 +530,7 @@ def test_check_and_remove_stale_cameras_removes_old_camera(mock_webui):
     callback = MagicMock()
     heartbeat.status_change_callback = callback
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -564,7 +564,7 @@ def test_check_and_remove_stale_cameras_keeps_recent_camera(mock_webui):
         mock_webui, auto_remove_enabled=True, auto_remove_hours=24
     )
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -606,7 +606,7 @@ def test_check_and_remove_stale_cameras_handles_missing_last_seen(mock_webui):
         mock_webui, auto_remove_enabled=True, auto_remove_hours=24
     )
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -628,7 +628,7 @@ def test_check_and_remove_stale_cameras_handles_invalid_timestamp(mock_webui):
         mock_webui, auto_remove_enabled=True, auto_remove_hours=24
     )
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -658,7 +658,7 @@ def test_check_and_remove_stale_cameras_removes_multiple(mock_webui):
     callback = MagicMock()
     heartbeat.status_change_callback = callback
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -690,7 +690,7 @@ def test_check_and_remove_stale_cameras_handles_callback_exception(
     callback = MagicMock(side_effect=Exception("Callback error"))
     heartbeat.status_change_callback = callback
 
-    with patch("pumaguard.camera_heartbeat.datetime") as mock_datetime:
+    with patch("pumaguard.device_heartbeat.datetime") as mock_datetime:
         mock_datetime.now.return_value = now
         mock_datetime.fromisoformat = datetime.fromisoformat
 
@@ -714,7 +714,7 @@ def test_monitor_loop_calls_auto_removal(mock_webui):
     with patch.object(heartbeat, "check_camera", return_value=True):
         with patch.object(heartbeat, "_save_camera_list"):
             with patch.object(
-                heartbeat, "_check_and_remove_stale_cameras"
+                heartbeat, "_check_and_remove_stale_devices"
             ) as mock_remove:
                 heartbeat.start()
                 time.sleep(0.3)

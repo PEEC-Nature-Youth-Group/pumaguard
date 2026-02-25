@@ -51,7 +51,7 @@ dev = [
     "pip ~= 26.0",
     "pylint ~= 4.0",
     "pytest-cov ~= 7.0",
-    "pytest ~= 8.3",
+    "pytest ~= 9.0",
     "types-Flask-Cors",
     "types-protobuf",
     "types-PyYAML",

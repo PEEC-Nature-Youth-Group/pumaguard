@@ -3,6 +3,7 @@ Sounds
 """
 
 import logging
+import re
 import subprocess
 import sys
 import threading
@@ -17,9 +18,99 @@ _current_process: Optional[subprocess.Popen] = None
 _process_lock = threading.Lock()
 
 
+def get_volume(control: str = "PCM") -> Optional[int]:
+    """
+    Get the current ALSA mixer volume using amixer.
+
+    Args:
+        control: ALSA mixer control name (default: "PCM")
+
+    Returns:
+        Current volume level as an integer from 0-100, or None if it
+        could not be determined.
+    """
+    logger.debug("Reading ALSA volume: control=%s", control)
+    try:
+        cmd = ["amixer", "get", control]
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "amixer get %s failed (rc=%d): %s",
+                control,
+                result.returncode,
+                result.stderr.decode().strip(),
+            )
+            return None
+
+        output = result.stdout.decode()
+        # amixer output contains lines like:
+        #   Mono: Playback 192 [75%] [on]
+        #   Front Left: Playback 49152 [75%] [on]
+        # Extract the first percentage value found.
+        match = re.search(r"\[(\d+)%\]", output)
+        if match:
+            volume = int(match.group(1))
+            logger.debug(
+                "ALSA volume read: %d%% on control %s", volume, control
+            )
+            return volume
+
+        logger.warning(
+            "Could not parse volume from amixer output: %s", output.strip()
+        )
+        return None
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        logger.warning("Could not read ALSA volume via amixer: %s", e)
+        return None
+
+
+def set_volume(volume: int, control: str = "PCM"):
+    """
+    Set the ALSA mixer volume using amixer.
+
+    Args:
+        volume: Volume level from 0-100
+        control: ALSA mixer control name (default: "PCM")
+    """
+    logger.info(
+        "Setting ALSA volume: control=%s, volume=%d%%", control, volume
+    )
+    try:
+        cmd = ["amixer", "set", control, f"{volume}%"]
+        result = subprocess.run(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "amixer set %s %d%% failed (rc=%d): %s",
+                control,
+                volume,
+                result.returncode,
+                result.stderr.decode().strip(),
+            )
+        else:
+            logger.debug(
+                "ALSA volume set to %d%% on control %s", volume, control
+            )
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        logger.warning("Could not set ALSA volume via amixer: %s", e)
+
+
 def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
     """
     Play a sound file with specified volume.
+
+    The volume is applied via the ALSA mixer (amixer) before playback,
+    so the system output level is adjusted rather than using mpg123's
+    software scaling.
 
     Args:
         soundfile: Path to the sound file to play
@@ -36,17 +127,8 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
         blocking,
     )
 
-    # mpg123 -f flag scales output samples (soft gain)
-    # Default/normal is 32768 (100%)
-    # Valid range: 0 to much higher than 32768
-    # Convert 0-100 percentage to mpg123 scale:
-    # 0% = 0 (muted), 100% = 32768 (normal), 200% = 65536 (double)
-    # Linear scaling: mpg123_volume = (volume / 100) * 32768
-    mpg123_volume = int((volume / 100.0) * 32768)
-
-    logger.debug(
-        "Volume conversion: %d%% -> mpg123 scale %d", volume, mpg123_volume
-    )
+    # Set the ALSA mixer volume before playback
+    set_volume(volume)
 
     try:
         with _process_lock:
@@ -63,8 +145,6 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
                 "mpg123",
                 "-o",
                 "alsa,pulse",
-                "--scale",
-                str(mpg123_volume),
                 soundfile,
             ]
             logger.info("Executing command: %s", " ".join(cmd))

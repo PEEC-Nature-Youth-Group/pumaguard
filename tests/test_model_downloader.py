@@ -3,12 +3,20 @@
 import hashlib
 import json
 from unittest.mock import (
+    Mock,
     patch,
 )
 
+import pytest
+import requests
+
 from pumaguard.model_downloader import (
     MODEL_REGISTRY,
+    assemble_model_fragments,
+    clear_model_cache,
     create_registry,
+    download_file,
+    ensure_model_available,
     get_models_directory,
     list_available_models,
     verify_file_checksum,
@@ -233,3 +241,474 @@ def test_model_registry_has_sha256_checksums():
             else:
                 # Regular model should have sha256
                 assert "sha256" in model_info or "fragments" in model_info
+
+
+# Tests for download_file
+
+
+def test_download_file_success(tmp_path):
+    """Test download_file successfully downloads a file."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    content = b"model data" * 1000
+    expected_hash = hashlib.sha256(content).hexdigest()
+
+    mock_response = Mock()
+    mock_response.headers = {"content-length": str(len(content))}
+    mock_response.iter_content = lambda chunk_size: [content]
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+
+        result = download_file(
+            url, destination, expected_hash, print_progress=False
+        )
+
+        assert result is True
+        assert destination.exists()
+        assert destination.read_bytes() == content
+        mock_get.assert_called_once()
+
+
+def test_download_file_checksum_failure(tmp_path):
+    """Test download_file removes file on checksum mismatch."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    content = b"corrupted data"
+    wrong_hash = "0" * 64
+
+    mock_response = Mock()
+    mock_response.headers = {"content-length": str(len(content))}
+    mock_response.iter_content = lambda chunk_size: [content]
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+
+        result = download_file(
+            url, destination, wrong_hash, print_progress=False
+        )
+
+        assert result is False
+        assert not destination.exists()
+
+
+def test_download_file_http_error(tmp_path):
+    """Test download_file handles HTTP errors."""
+    url = "https://example.com/missing.h5"
+    destination = tmp_path / "model.h5"
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.side_effect = requests.HTTPError("404 Not Found")
+
+        result = download_file(url, destination, print_progress=False)
+
+        assert result is False
+        assert not destination.exists()
+
+
+def test_download_file_without_checksum(tmp_path):
+    """Test download_file works without checksum verification."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    content = b"model data"
+
+    mock_response = Mock()
+    mock_response.headers = {"content-length": str(len(content))}
+    mock_response.iter_content = lambda chunk_size: [content]
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+
+        result = download_file(
+            url, destination, expected_sha256=None, print_progress=False
+        )
+
+        assert result is True
+        assert destination.exists()
+
+
+def test_download_file_no_content_length(tmp_path):
+    """Test download_file works when content-length header is missing."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    content = b"model data"
+
+    mock_response = Mock()
+    mock_response.headers = {}  # No content-length
+    mock_response.iter_content = lambda chunk_size: [content]
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+
+        result = download_file(url, destination, print_progress=False)
+
+        assert result is True
+        assert destination.exists()
+
+
+def test_download_file_with_custom_ca_bundle(tmp_path):
+    """Test download_file respects custom CA bundle environment variable."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    content = b"model data"
+    ca_bundle = tmp_path / "custom-ca.crt"
+    ca_bundle.write_text("fake CA bundle")
+
+    mock_response = Mock()
+    mock_response.headers = {"content-length": str(len(content))}
+    mock_response.iter_content = lambda chunk_size: [content]
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+        with patch.dict("os.environ", {"PUMAGUARD_CA_BUNDLE": str(ca_bundle)}):
+            result = download_file(url, destination, print_progress=False)
+
+            assert result is True
+            # Verify that verify parameter was set to ca_bundle path
+            call_kwargs = mock_get.call_args[1]
+            assert call_kwargs["verify"] == str(ca_bundle)
+
+
+def test_download_file_chunked_download(tmp_path):
+    """Test download_file handles chunked downloads correctly."""
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    chunks = [b"chunk1", b"chunk2", b"chunk3"]
+    content = b"".join(chunks)
+
+    mock_response = Mock()
+    mock_response.headers = {"content-length": str(len(content))}
+    mock_response.iter_content = lambda chunk_size: chunks
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.return_value = mock_response
+
+        result = download_file(url, destination, print_progress=False)
+
+        assert result is True
+        assert destination.read_bytes() == content
+
+
+# Tests for assemble_model_fragments
+
+
+def test_assemble_model_fragments_success(tmp_path):
+    """Test assemble_model_fragments successfully assembles fragments."""
+    fragment1 = tmp_path / "fragment1"
+    fragment2 = tmp_path / "fragment2"
+    fragment3 = tmp_path / "fragment3"
+
+    fragment1.write_bytes(b"part1")
+    fragment2.write_bytes(b"part2")
+    fragment3.write_bytes(b"part3")
+
+    output = tmp_path / "assembled.h5"
+    expected_content = b"part1part2part3"
+    expected_hash = hashlib.sha256(expected_content).hexdigest()
+
+    result = assemble_model_fragments(
+        [fragment1, fragment2, fragment3], output, expected_hash
+    )
+
+    assert result is True
+    assert output.exists()
+    assert output.read_bytes() == expected_content
+
+
+def test_assemble_model_fragments_missing_fragment(tmp_path):
+    """Test assemble_model_fragments fails if fragment is missing."""
+    fragment1 = tmp_path / "fragment1"
+    fragment2 = tmp_path / "missing"
+
+    fragment1.write_bytes(b"part1")
+    # fragment2 doesn't exist
+
+    output = tmp_path / "assembled.h5"
+
+    result = assemble_model_fragments([fragment1, fragment2], output)
+
+    assert result is False
+    # Output file may be partially created before error
+
+
+def test_assemble_model_fragments_checksum_failure(tmp_path):
+    """Test assemble_model_fragments removes output on checksum mismatch."""
+    fragment1 = tmp_path / "fragment1"
+    fragment1.write_bytes(b"data")
+
+    output = tmp_path / "assembled.h5"
+    wrong_hash = "0" * 64
+
+    result = assemble_model_fragments([fragment1], output, wrong_hash)
+
+    assert result is False
+    assert not output.exists()
+
+
+def test_assemble_model_fragments_large_chunks(tmp_path):
+    """Test assemble_model_fragments handles large chunks correctly."""
+    fragment1 = tmp_path / "fragment1"
+    # Create fragment larger than 8192 bytes (chunk size)
+    large_content = b"x" * 20000
+    fragment1.write_bytes(large_content)
+
+    output = tmp_path / "assembled.h5"
+    expected_hash = hashlib.sha256(large_content).hexdigest()
+
+    result = assemble_model_fragments([fragment1], output, expected_hash)
+
+    assert result is True
+    assert output.read_bytes() == large_content
+
+
+def test_assemble_model_fragments_without_checksum(tmp_path):
+    """Test assemble_model_fragments works without checksum verification."""
+    fragment1 = tmp_path / "fragment1"
+    fragment1.write_bytes(b"data")
+
+    output = tmp_path / "assembled.h5"
+
+    result = assemble_model_fragments(
+        [fragment1], output, expected_sha256=None
+    )
+
+    assert result is True
+    assert output.exists()
+
+
+# Tests for ensure_model_available
+
+
+def test_ensure_model_available_already_cached(tmp_path):
+    """Test ensure_model_available returns cached model if valid."""
+    # Get a real model name from registry
+    model_name = list(MODEL_REGISTRY.keys())[0]
+    model_info = MODEL_REGISTRY[model_name]
+
+    # Create fake cached model with correct checksum
+    if "sha256" in model_info and isinstance(model_info["sha256"], str):
+        content = b"cached model data"
+
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+            model_path = tmp_path / model_name
+            model_path.write_bytes(content)
+
+            # Mock verify_file_checksum to return True for cached model
+            with patch(
+                "pumaguard.model_downloader.verify_file_checksum"
+            ) as mock_verify:
+                mock_verify.return_value = True
+
+                result = ensure_model_available(
+                    model_name, print_progress=False
+                )
+
+                assert result == model_path
+                assert model_path.exists()
+
+
+def test_ensure_model_available_invalid_model_name():
+    """Test ensure_model_available raises ValueError for unknown model."""
+    with pytest.raises(ValueError, match="Unknown model"):
+        ensure_model_available("nonexistent_model.h5", print_progress=False)
+
+
+def test_ensure_model_available_download_single_file(tmp_path):
+    """Test ensure_model_available downloads single-file model."""
+    # Create a mock registry entry for a single-file model
+    test_model = "test_single.h5"
+    test_content = b"single file model"
+    test_hash = hashlib.sha256(test_content).hexdigest()
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {test_model: {"sha256": test_hash}},
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+
+            with patch(
+                "pumaguard.model_downloader.download_file"
+            ) as mock_download:
+                mock_download.return_value = True
+
+                # Simulate the file being created by download
+                def create_file(*_args, **_kwargs):
+                    (tmp_path / test_model).write_bytes(test_content)
+                    return True
+
+                mock_download.side_effect = create_file
+
+                result = ensure_model_available(
+                    test_model, print_progress=False
+                )
+
+                assert result == tmp_path / test_model
+                mock_download.assert_called_once()
+
+
+def test_ensure_model_available_download_fragmented_model(tmp_path):
+    """Test ensure_model_available downloads and assembles fragmented model."""
+    test_model = "test_fragmented.h5"
+    frag1_content = b"frag1"
+    frag2_content = b"frag2"
+    combined = frag1_content + frag2_content
+    test_hash = hashlib.sha256(combined).hexdigest()
+    frag1_hash = hashlib.sha256(frag1_content).hexdigest()
+    frag2_hash = hashlib.sha256(frag2_content).hexdigest()
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {
+            test_model: {
+                "sha256": test_hash,
+                "fragments": {
+                    "test_fragmented.h5_aa": {"sha256": frag1_hash},
+                    "test_fragmented.h5_ab": {"sha256": frag2_hash},
+                },
+            }
+        },
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+
+            with patch(
+                "pumaguard.model_downloader.download_file"
+            ) as mock_download:
+                # Simulate fragment downloads
+                def create_fragment(
+                    _url, dest, sha256=None, print_progress=True
+                ):  # pylint: disable=unused-argument
+                    if "_aa" in dest.name:
+                        dest.write_bytes(frag1_content)
+                    elif "_ab" in dest.name:
+                        dest.write_bytes(frag2_content)
+                    return True
+
+                mock_download.side_effect = create_fragment
+
+                with patch(
+                    "pumaguard.model_downloader.assemble_model_fragments"
+                ) as mock_assemble:
+
+                    def create_assembled(*args, **_kwargs):
+                        args[1].write_bytes(combined)  # output_path
+                        return True
+
+                    mock_assemble.side_effect = create_assembled
+
+                    result = ensure_model_available(
+                        test_model, print_progress=False
+                    )
+
+                    assert result == tmp_path / test_model
+                    # Should download 2 fragments
+                    assert mock_download.call_count == 2
+                    mock_assemble.assert_called_once()
+
+
+def test_ensure_model_available_redownload_on_checksum_fail(tmp_path):
+    """Test ensure_model_available re-downloads if checksum fails."""
+    test_model = "test_redownload.h5"
+    test_content = b"new content"
+    test_hash = hashlib.sha256(test_content).hexdigest()
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {test_model: {"sha256": test_hash}},
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+            model_path = tmp_path / test_model
+            model_path.write_bytes(b"old corrupted data")
+
+            # First checksum check fails, triggering re-download
+            with patch(
+                "pumaguard.model_downloader.verify_file_checksum"
+            ) as mock_verify:
+                mock_verify.return_value = False
+
+                with patch(
+                    "pumaguard.model_downloader.download_file"
+                ) as mock_download:
+
+                    def create_file(*_args, **_kwargs):
+                        model_path.write_bytes(test_content)
+                        return True
+
+                    mock_download.side_effect = create_file
+
+                    result = ensure_model_available(
+                        test_model, print_progress=False
+                    )
+                    assert result is not None
+
+                    # Should have attempted download
+                    mock_download.assert_called_once()
+
+
+def test_ensure_model_available_download_failure_raises(tmp_path):
+    """Test ensure_model_available raises RuntimeError on download failure."""
+    test_model = "test_failure.h5"
+    test_hash = hashlib.sha256(b"data").hexdigest()
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {test_model: {"sha256": test_hash}},
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+
+            with patch(
+                "pumaguard.model_downloader.download_file"
+            ) as mock_download:
+                mock_download.return_value = False
+
+                with pytest.raises(
+                    RuntimeError, match="Failed to download model"
+                ):
+                    ensure_model_available(test_model, print_progress=False)
+
+
+# Tests for clear_model_cache
+
+
+def test_clear_model_cache(tmp_path):
+    """Test clear_model_cache removes models directory."""
+    with patch("pumaguard.model_downloader.get_models_directory") as mock_dir:
+        mock_dir.return_value = tmp_path
+        # Create some fake model files
+        (tmp_path / "model1.h5").write_bytes(b"data1")
+        (tmp_path / "model2.pt").write_bytes(b"data2")
+
+        assert tmp_path.exists()
+        assert len(list(tmp_path.iterdir())) == 2
+
+        clear_model_cache()
+
+        # Directory should be removed
+        assert not tmp_path.exists()
+
+
+def test_clear_model_cache_nonexistent_directory(tmp_path):
+    """Test clear_model_cache handles nonexistent directory gracefully."""
+    nonexistent = tmp_path / "nonexistent"
+
+    with patch("pumaguard.model_downloader.get_models_directory") as mock_dir:
+        mock_dir.return_value = nonexistent
+
+        # Should not raise an error
+        clear_model_cache()
+
+        assert not nonexistent.exists()

@@ -795,6 +795,7 @@ def test_dhcp_event_add_plug(test_app):
     assert plug["hostname"] == "shellyplugsg4-abcdef"
     assert plug["ip_address"] == "192.168.52.150"
     assert plug["status"] == "connected"
+    assert plug["mode"] == "automatic"
 
     # Verify settings were updated
     assert len(webui.presets.plugs) == 1
@@ -1012,6 +1013,7 @@ def test_add_plug_manually(test_app):
     assert plug["hostname"] == "ManualPlug"
     assert plug["ip_address"] == "192.168.52.200"
     assert plug["status"] == "connected"
+    assert plug["mode"] == "automatic"
 
     # Verify settings were updated
     assert len(webui.presets.plugs) == 1
@@ -1061,6 +1063,7 @@ def test_add_plug_default_status(test_app):
     assert response.status_code == 201
     data = json.loads(response.data)
     assert data["plug"]["status"] == "connected"  # Default status
+    assert data["plug"]["mode"] == "automatic"  # Default mode
 
 
 def test_clear_plugs(test_app):

@@ -288,7 +288,7 @@ def register_dhcp_routes(
                     existing_mode = (
                         webui.plugs[mac_address].get("mode", "automatic")
                         if mac_address in webui.plugs
-                        else "off"
+                        else "automatic"
                     )
                     # Add to webui.plugs (or update)
                     webui.plugs[mac_address] = {
@@ -853,7 +853,7 @@ def register_dhcp_routes(
                 "mac_address": mac_address,
                 "last_seen": timestamp,
                 "status": status,
-                "mode": data.get("mode", "off"),
+                "mode": data.get("mode", "automatic"),
             }
 
             # Update settings with plug list

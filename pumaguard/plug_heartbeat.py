@@ -153,7 +153,7 @@ class PlugHeartbeat(DeviceHeartbeat):
                         "mac_address": plug_info["mac_address"],
                         "last_seen": plug_info["last_seen"],
                         "status": plug_info["status"],
-                        "mode": plug_info.get("mode", "off"),
+                        "mode": plug_info.get("mode", "automatic"),
                     }
                 )
             self.webui.presets.plugs = plug_list

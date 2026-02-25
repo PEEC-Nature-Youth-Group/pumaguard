@@ -117,6 +117,72 @@ def test_get_settings(test_app):
     assert data["plugs"][0]["hostname"] == "Plug1"
 
 
+def test_get_settings_stored_volume_not_overwritten_by_alsa(test_app):
+    """
+    Test GET /api/settings does not overwrite stored volume with live ALSA
+    value.
+
+    When moving an SD card to a different Pi, the ALSA device may reset to a
+    different default volume. The stored volume in the settings file represents
+    the user's intent and must not be silently replaced by whatever the
+    hardware currently reports.
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    # Simulate stored volume of 75% but ALSA reporting a different value
+    # (e.g. after moving to a new Pi whose audio device defaulted to 40%)
+    webui.presets.volume = 75
+
+    with patch("pumaguard.web_routes.settings.get_volume", return_value=40):
+        response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    # The stored preset volume must remain unchanged
+    assert webui.presets.volume == 75
+
+
+def test_get_settings_alsa_volume_included_in_response(test_app):
+    """Test GET /api/settings includes live ALSA volume as supplementary field.
+
+    The response should contain both the stored 'volume' (user intent) and the
+    live 'alsa_volume' (hardware state) so the UI can surface any discrepancy.
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    with patch("pumaguard.web_routes.settings.get_volume", return_value=40):
+        response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    # Supplementary hardware state field must be present
+    assert "alsa_volume" in data
+    assert data["alsa_volume"] == 40
+    # Stored user-intent volume must also be present and unaffected
+    assert data["volume"] == 75
+
+
+def test_get_settings_alsa_volume_omitted_when_unavailable(test_app):
+    """Test GET /api/settings omits alsa_volume when amixer is unavailable.
+
+    On systems without amixer (or with an unrecognised audio device),
+    get_volume returns None. In that case the response should simply not
+    include the alsa_volume field rather than exposing a null value.
+    """
+    app, webui = test_app
+    client = app.test_client()
+
+    with patch("pumaguard.web_routes.settings.get_volume", return_value=None):
+        response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert "alsa_volume" not in data
+    # Stored volume must still be present
+    assert data["volume"] == 75
+
+
 def test_get_settings_empty_cameras_and_plugs():
     """Test GET /api/settings with no cameras or plugs."""
     app = Flask(__name__)

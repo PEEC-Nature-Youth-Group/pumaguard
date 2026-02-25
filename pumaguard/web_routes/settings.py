@@ -84,13 +84,15 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 }
             )
         settings_dict["plugs"] = plug_list
-        # Override the stored volume with the live ALSA value so the UI
-        # always reflects any manual amixer adjustments made outside of
-        # PumaGuard.
+        # Read the live ALSA value and include it as a supplementary field so
+        # the UI can reflect the hardware state, but do NOT overwrite the
+        # stored "volume" — the settings file represents the user's intent and
+        # must survive device changes (e.g. moving an SD card to a different
+        # Pi).
         current_volume = get_volume()
         if current_volume is not None:
-            settings_dict["volume"] = current_volume
-            webui.presets.volume = current_volume
+            settings_dict["alsa_volume"] = current_volume
+        # "volume" in settings_dict already comes from presets (user intent)
         return jsonify(settings_dict)
 
     @app.route("/api/settings", methods=["PUT"])

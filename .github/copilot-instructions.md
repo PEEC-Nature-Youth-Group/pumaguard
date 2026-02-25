@@ -36,14 +36,12 @@ Models are **split into fragments** (e.g., `color_103025.h5_aa`, `_ab`, etc.) du
 The web UI is a **Git submodule** (`pumaguard-ui/`) built separately then bundled into the Python package:
 
 ```
-pumaguard-ui/              # Flutter source (submodule)
+pumaguard-ui/              # Flutter source
 └── build/web/            # Flutter build output
 
 pumaguard/pumaguard-ui/   # Built files copied here for packaging
 └── (included in Python wheel)
 ```
-
-**Critical**: Always run `make build-ui` before `make build` to ensure Flutter app is built and copied to the Python package directory.
 
 The Flask server (`web_ui.py::WebUI`) serves the built Flutter files and provides REST endpoints under `/api/*`.
 

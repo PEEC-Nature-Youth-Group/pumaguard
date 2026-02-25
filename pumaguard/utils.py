@@ -329,6 +329,9 @@ def classify_image_two_stage(
 
     start_time = datetime.datetime.now()
     image_file = Path(image_path)
+    if not image_file.exists():
+        logger.error("Could not find file %s", image_file)
+        raise FileNotFoundError(f"Could not find file {image_file}")
     try:
         PIL.ImageFile.LOAD_TRUNCATED_IMAGES = True
         with PIL.Image.open(image_path) as img:

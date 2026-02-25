@@ -750,7 +750,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final mode = json['mode'] as String? ?? 'off';
+        final mode = json['mode'] as String? ?? 'automatic';
         debugPrint('[ApiService.getPlugMode] Mode: $mode');
         return mode;
       } else {

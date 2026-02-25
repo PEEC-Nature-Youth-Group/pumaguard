@@ -34,7 +34,7 @@ class Plug {
       macAddress: json['mac_address'] as String? ?? '',
       lastSeen: json['last_seen'] as String? ?? '',
       status: json['status'] as String? ?? 'unknown',
-      mode: json['mode'] as String? ?? 'off',
+      mode: json['mode'] as String? ?? 'automatic',
       output: json['output'] as bool?,
       apower: (json['apower'] as num?)?.toDouble(),
       voltage: (json['voltage'] as num?)?.toDouble(),

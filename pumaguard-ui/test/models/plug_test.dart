@@ -82,7 +82,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
-        expect(plug.mode, 'off');
+        expect(plug.mode, 'automatic');
       });
 
       test('handles missing fields with defaults', () {
@@ -95,7 +95,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
-        expect(plug.mode, 'off');
+        expect(plug.mode, 'automatic');
       });
 
       test('handles partial JSON with some fields missing', () {
@@ -111,7 +111,7 @@ void main() {
         expect(plug.macAddress, '');
         expect(plug.lastSeen, '');
         expect(plug.status, 'unknown');
-        expect(plug.mode, 'off');
+        expect(plug.mode, 'automatic');
       });
     });
 
@@ -535,7 +535,7 @@ void main() {
         expect(plug.displayName, '192.168.52.250');
         expect(plug.status, 'unknown');
         expect(plug.isConnected, false);
-        expect(plug.mode, 'off');
+        expect(plug.mode, 'automatic');
       });
     });
   });

@@ -264,7 +264,7 @@ class WebUI:
                     mac_address=mac,
                     last_seen=plug.get("last_seen", ""),
                     status=plug.get("status", "disconnected"),
-                    mode=plug.get("mode", "off"),
+                    mode=plug.get("mode", "automatic"),
                 )
                 # Ensure device is in history (if not already from persisted)
                 if mac not in self.device_history:

@@ -1038,5 +1038,5 @@ class TestWebUIEdgeCases:
         with patch("pumaguard.web_ui.CORS"):
             webui = WebUI(presets=presets)
 
-            # Default mode should be "off"
-            assert webui.plugs["AA:BB:CC:DD:EE:08"]["mode"] == "off"
+            # Default mode should be "automatic"
+            assert webui.plugs["AA:BB:CC:DD:EE:08"]["mode"] == "automatic"

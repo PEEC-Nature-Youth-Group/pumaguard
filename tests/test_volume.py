@@ -36,7 +36,7 @@ class TestPlaysound(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+            pumaguard.sound._CURRENT_PROCESS = (  # pylint: disable=protected-access
                 None
             )
 
@@ -151,7 +151,7 @@ class TestPlaysound(unittest.TestCase):
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
             self.assertIsNone(
-                pumaguard.sound._current_process  # pylint: disable=protected-access
+                pumaguard.sound._CURRENT_PROCESS  # pylint: disable=protected-access
             )
 
     @patch("pumaguard.sound.set_volume")
@@ -185,7 +185,7 @@ class TestStopSound(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+            pumaguard.sound._CURRENT_PROCESS = (  # pylint: disable=protected-access
                 None
             )
 
@@ -396,7 +396,7 @@ class TestIsPlaying(unittest.TestCase):
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
 
         with pumaguard.sound._process_lock:  # pylint: disable=protected-access
-            pumaguard.sound._current_process = (  # pylint: disable=protected-access
+            pumaguard.sound._CURRENT_PROCESS = (  # pylint: disable=protected-access
                 None
             )
 

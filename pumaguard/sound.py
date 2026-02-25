@@ -26,7 +26,7 @@ _VOLUME_CONTROL_PRIORITY = [
 
 # Cached result of detect_volume_control() so we only probe amixer once per
 # process lifetime.
-_detected_volume_control: Union[str, None] = None
+_DETECTED_VOLUME_CONTROL: Union[str, None] = None
 
 logger = logging.getLogger(__name__)
 
@@ -46,10 +46,10 @@ def detect_volume_control() -> Optional[str]:
         ``"PCM"``, ``"Master"``), or ``None`` if amixer is unavailable or no
         suitable control could be found.
     """
-    global _detected_volume_control  # pylint: disable=global-statement
+    global _DETECTED_VOLUME_CONTROL  # pylint: disable=global-statement
 
-    if _detected_volume_control is not None:
-        return _detected_volume_control
+    if _DETECTED_VOLUME_CONTROL is not None:
+        return _DETECTED_VOLUME_CONTROL
 
     logger.debug("Auto-detecting ALSA playback volume control")
     try:
@@ -96,20 +96,20 @@ def detect_volume_control() -> Optional[str]:
         # Pick the highest-priority preferred control that is available.
         for preferred in _VOLUME_CONTROL_PRIORITY:
             if preferred in playback_controls:
-                _detected_volume_control = preferred
+                _DETECTED_VOLUME_CONTROL = preferred
                 logger.debug(
                     "Selected ALSA volume control: %s (preferred)",
-                    _detected_volume_control,
+                    _DETECTED_VOLUME_CONTROL,
                 )
-                return _detected_volume_control
+                return _DETECTED_VOLUME_CONTROL
 
         # None of the preferred names matched — use the first available one.
-        _detected_volume_control = playback_controls[0]
+        _DETECTED_VOLUME_CONTROL = playback_controls[0]
         logger.debug(
             "Selected ALSA volume control: %s (first available)",
-            _detected_volume_control,
+            _DETECTED_VOLUME_CONTROL,
         )
-        return _detected_volume_control
+        return _DETECTED_VOLUME_CONTROL
 
     except (subprocess.SubprocessError, FileNotFoundError) as e:
         logger.warning("Could not detect ALSA volume control: %s", e)
@@ -123,13 +123,13 @@ def reset_volume_control_cache():
     next call.  Intended for use in tests and for situations where the audio
     device has changed at runtime.
     """
-    global _detected_volume_control  # pylint: disable=global-statement
+    global _DETECTED_VOLUME_CONTROL  # pylint: disable=global-statement
 
-    _detected_volume_control = None
+    _DETECTED_VOLUME_CONTROL = None
 
 
 # Global variable to track the current playing process
-_current_process: Optional[subprocess.Popen] = None
+_CURRENT_PROCESS: Optional[subprocess.Popen] = None
 _process_lock = threading.Lock()
 
 
@@ -247,7 +247,7 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
         blocking: If True, wait for sound to finish. If False, return
         immediately (default: True)
     """
-    global _current_process  # pylint: disable=global-statement
+    global _CURRENT_PROCESS  # pylint: disable=global-statement
 
     logger.info(
         "playsound called: file=%s, volume=%d, blocking=%s",
@@ -262,13 +262,13 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
     try:
         with _process_lock:
             # Stop any currently playing sound
-            if _current_process is not None:
+            if _CURRENT_PROCESS is not None:
                 try:
-                    _current_process.terminate()
-                    _current_process.wait(timeout=1)
+                    _CURRENT_PROCESS.terminate()
+                    _CURRENT_PROCESS.wait(timeout=1)
                 except (subprocess.TimeoutExpired, ProcessLookupError):
                     pass
-                _current_process = None
+                _CURRENT_PROCESS = None
 
             cmd = [
                 "mpg123",
@@ -279,26 +279,26 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
             logger.info("Executing command: %s", " ".join(cmd))
 
             # pylint: disable=consider-using-with
-            _current_process = subprocess.Popen(
+            _CURRENT_PROCESS = subprocess.Popen(
                 cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
 
             logger.info(
-                "Sound playback started, PID: %d", _current_process.pid
+                "Sound playback started, PID: %d", _CURRENT_PROCESS.pid
             )
 
             if blocking:
                 # Wait for completion
-                _current_process.wait()
-                _current_process = None
+                _CURRENT_PROCESS.wait()
+                _CURRENT_PROCESS = None
 
     except subprocess.SubprocessError as e:
         logger.error("Error playing soundfile %s: %s", soundfile, e)
         print(f"Error playing soundfile {soundfile}: {e}")
         with _process_lock:
-            _current_process = None
+            _CURRENT_PROCESS = None
 
 
 def stop_sound():
@@ -308,27 +308,27 @@ def stop_sound():
     Returns:
         bool: True if a sound was stopped, False if nothing was playing
     """
-    global _current_process  # pylint: disable=global-statement
+    global _CURRENT_PROCESS  # pylint: disable=global-statement
 
     with _process_lock:
-        if _current_process is not None:
+        if _CURRENT_PROCESS is not None:
             try:
                 logger.info(
-                    "Stopping sound playback, PID: %d", _current_process.pid
+                    "Stopping sound playback, PID: %d", _CURRENT_PROCESS.pid
                 )
-                _current_process.terminate()
-                _current_process.wait(timeout=1)
+                _CURRENT_PROCESS.terminate()
+                _CURRENT_PROCESS.wait(timeout=1)
                 logger.info("Sound playback stopped successfully")
                 return True
             except (subprocess.TimeoutExpired, ProcessLookupError):
                 try:
-                    _current_process.kill()
-                    _current_process.wait(timeout=1)
+                    _CURRENT_PROCESS.kill()
+                    _CURRENT_PROCESS.wait(timeout=1)
                 except (subprocess.TimeoutExpired, ProcessLookupError):
                     pass
                 return True
             finally:
-                _current_process = None
+                _CURRENT_PROCESS = None
         return False
 
 
@@ -339,15 +339,15 @@ def is_playing():
     Returns:
         bool: True if a sound is currently playing, False otherwise
     """
-    global _current_process  # pylint: disable=global-statement
+    global _CURRENT_PROCESS  # pylint: disable=global-statement
 
     with _process_lock:
-        if _current_process is not None:
+        if _CURRENT_PROCESS is not None:
             # Check if process is still running
-            if _current_process.poll() is None:
+            if _CURRENT_PROCESS.poll() is None:
                 return True
             # Process finished, clean up
-            _current_process = None
+            _CURRENT_PROCESS = None
         return False
 
 

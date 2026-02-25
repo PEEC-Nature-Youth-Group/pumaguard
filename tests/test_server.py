@@ -758,8 +758,9 @@ class TestFolderManager(unittest.TestCase):
         self.manager.start_all()
         mock_start.assert_called_once()
 
+    @patch.object(FolderObserver, "start")
     @patch.object(FolderObserver, "stop")
-    def test_stop_all(self, mock_stop):
+    def test_stop_all(self, mock_stop, mock_start):  # pylint: disable=unused-argument
         """
         Test the stop_all method.
         """

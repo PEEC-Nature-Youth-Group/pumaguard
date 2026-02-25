@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:developer' as developer;
 import '../services/api_service.dart';
+import '../services/image_events_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_picker/file_picker.dart';
 import '../utils/download_helper.dart';
@@ -32,11 +34,67 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   ImageSize _imageSize = ImageSize.large;
   bool _showFolderPanel = true;
 
+  ImageEventsService? _imageEventsService;
+  StreamSubscription<ImageEvent>? _imageEventsSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadGroupingPreference();
     _loadFolders();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _startImageEventsService();
+  }
+
+  void _startImageEventsService() {
+    // Only start once – if the service is already running, do nothing.
+    if (_imageEventsService != null) {
+      return;
+    }
+
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final baseUrl = apiService.getApiUrl('').replaceAll('/api/', '');
+
+    _imageEventsService = ImageEventsService(baseUrl);
+
+    _imageEventsSubscription = _imageEventsService!.events.listen(
+      _onImageEvent,
+      onError: (Object error) {
+        developer.log(
+          'ImageEventsService stream error: $error',
+          name: 'ImageBrowser',
+        );
+      },
+    );
+
+    _imageEventsService!.startListening();
+  }
+
+  void _onImageEvent(ImageEvent event) {
+    developer.log(
+      'Received image event: ${event.type} – ${event.data}',
+      name: 'ImageBrowser',
+    );
+
+    if (event.type == ImageEventType.imageAdded ||
+        event.type == ImageEventType.imageDeleted) {
+      // Reload the folder list (updates image counts) and, if a folder is
+      // already selected, reload its images too.
+      if (mounted) {
+        _loadFolders();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _imageEventsSubscription?.cancel();
+    _imageEventsService?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadGroupingPreference() async {

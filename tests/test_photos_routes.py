@@ -457,3 +457,51 @@ class TestDeletePhoto:
         response = client.delete(f"/api/photos/subdir/{filename}")
         # Should either succeed or deny access depending on implementation
         assert response.status_code in [200, 403, 404]
+
+    def test_delete_photo_calls_image_notification_callback(
+        self, app, webui_mock, temp_dirs
+    ):
+        """
+        Deleting a photo via the REST API must invoke
+        image_notification_callback with 'image_deleted' and the file path.
+        """
+        tmpdir1, _ = temp_dirs
+        notification_callback = MagicMock()
+        webui_mock.image_notification_callback = notification_callback
+
+        register_photos_routes(app, webui_mock)
+        test_client = app.test_client()
+
+        filename = "deleteme.jpg"
+        filepath = os.path.join(tmpdir1, filename)
+        Path(filepath).write_text("image content", encoding="utf-8")
+
+        response = test_client.delete(f"/api/photos/{filename}")
+        assert response.status_code == 200
+
+        notification_callback.assert_called_once()
+        event_type, event_data = notification_callback.call_args[0]
+        assert event_type == "image_deleted"
+        assert "path" in event_data
+        assert filename in event_data["path"]
+
+    def test_delete_photo_notification_callback_none_does_not_raise(
+        self, app, webui_mock, temp_dirs
+    ):
+        """
+        When image_notification_callback is None, deleting a photo must
+        succeed without raising an exception.
+        """
+        tmpdir1, _ = temp_dirs
+        webui_mock.image_notification_callback = None
+
+        register_photos_routes(app, webui_mock)
+        test_client = app.test_client()
+
+        filename = "safe_delete.jpg"
+        filepath = os.path.join(tmpdir1, filename)
+        Path(filepath).write_text("image content", encoding="utf-8")
+
+        response = test_client.delete(f"/api/photos/{filename}")
+        assert response.status_code == 200
+        assert not os.path.exists(filepath)

@@ -131,4 +131,10 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
         if ext not in IMAGE_EXTS:
             return jsonify({"error": "Access denied"}), 403
         os.remove(abs_filepath)
+        # Notify SSE clients that an image was deleted
+        if webui.image_notification_callback is not None:
+            webui.image_notification_callback(
+                "image_deleted",
+                {"path": filepath},
+            )
         return jsonify({"success": True, "message": "Photo deleted"})

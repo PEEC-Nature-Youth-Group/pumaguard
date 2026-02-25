@@ -445,13 +445,19 @@ class TestFolderObserver(unittest.TestCase):
             with open(test_file, "wb") as f:
                 f.write(truncated_data)
 
-            # The file will always be truncated
-            # pylint: disable=protected-access
-            result = self.observer._wait_for_file_stability(
-                test_file, timeout=1, interval=0.01
-            )
+            # Mock Image.open to always raise OSError (truncated image),
+            # bypassing the ultralytics monkey-patch that attempts to install
+            # pi_heif when PIL.UnidentifiedImageError is raised.
+            with patch(
+                "pumaguard.server.Image.open",
+                side_effect=OSError("image file is truncated"),
+            ):
+                # pylint: disable=protected-access
+                result = self.observer._wait_for_file_stability(
+                    test_file, timeout=1, interval=0.01
+                )
 
-            # Should return None after timeout
+            # Should return False after timeout
             self.assertFalse(result)
 
 

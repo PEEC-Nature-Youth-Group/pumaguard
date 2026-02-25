@@ -897,6 +897,51 @@ def test_get_available_sounds_empty_directory(test_app):
     assert data["sounds"] == []
 
 
+def test_update_settings_volume_applies_alsa_volume(test_app):
+    """Test that updating volume via PUT /api/settings calls set_volume."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {"volume": 65}
+
+    with patch("builtins.open", mock_open()):
+        with patch("pumaguard.web_routes.settings.yaml.dump"):
+            with patch(
+                "pumaguard.web_routes.settings.set_volume"
+            ) as mock_set_volume:
+                response = client.put(
+                    "/api/settings",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+    assert response.status_code == 200
+    mock_set_volume.assert_called_once_with(65)
+    assert webui.presets.volume == 65
+
+
+def test_update_settings_non_volume_does_not_apply_alsa_volume(test_app):
+    """Test that updating non-volume settings does not call set_volume."""
+    app, webui = test_app
+    client = app.test_client()
+
+    payload = {"play-sound": False, "YOLO-min-size": 0.05}
+
+    with patch("builtins.open", mock_open()):
+        with patch("pumaguard.web_routes.settings.yaml.dump"):
+            with patch(
+                "pumaguard.web_routes.settings.set_volume"
+            ) as mock_set_volume:
+                response = client.put(
+                    "/api/settings",
+                    data=json.dumps(payload),
+                    content_type="application/json",
+                )
+
+    assert response.status_code == 200
+    mock_set_volume.assert_not_called()
+
+
 def test_update_settings_all_allowed_fields(test_app):
     """Test PUT /api/settings with all allowed fields."""
     app, webui = test_app

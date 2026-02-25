@@ -37,6 +37,7 @@ from pumaguard.sound import (
     get_volume,
     is_playing,
     playsound,
+    set_volume,
     stop_sound,
 )
 
@@ -145,8 +146,9 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                             "YOLO_", "yolo_"
                         )
                     setattr(webui.presets, attr_name, value)
-                    # Log verification of volume setting
+                    # Apply ALSA volume immediately when the setting changes
                     if key == "volume":
+                        set_volume(value)
                         logger.info(
                             "Volume setting updated to %d, verified: %d",
                             value,

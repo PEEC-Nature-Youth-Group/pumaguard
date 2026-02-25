@@ -21,7 +21,7 @@ from pumaguard.lock_manager import (
 
 def test_pumaguard_lock_initialization():
     """Test PumaGuardLock initialization."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     lock = PumaGuardLock(mock_lock)
 
     assert lock._lock == mock_lock
@@ -30,7 +30,7 @@ def test_pumaguard_lock_initialization():
 
 def test_pumaguard_lock_acquire_success():
     """Test acquiring lock successfully."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -43,7 +43,7 @@ def test_pumaguard_lock_acquire_success():
 
 def test_pumaguard_lock_acquire_failure():
     """Test acquiring lock when it fails."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = False
     lock = PumaGuardLock(mock_lock)
 
@@ -55,7 +55,7 @@ def test_pumaguard_lock_acquire_failure():
 
 def test_pumaguard_lock_release():
     """Test releasing lock."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -72,7 +72,7 @@ def test_pumaguard_lock_release():
 
 def test_pumaguard_lock_time_waited_not_acquired():
     """Test time_waited when lock not acquired."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     lock = PumaGuardLock(mock_lock)
 
     waited = lock.time_waited()
@@ -82,7 +82,7 @@ def test_pumaguard_lock_time_waited_not_acquired():
 
 def test_pumaguard_lock_time_waited_acquired():
     """Test time_waited returns elapsed time since acquire."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -96,7 +96,7 @@ def test_pumaguard_lock_time_waited_acquired():
 
 def test_pumaguard_lock_time_waited_after_release():
     """Test time_waited returns 0 after release."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -110,7 +110,7 @@ def test_pumaguard_lock_time_waited_after_release():
 
 def test_release_function():
     """Test release function calls lock.release()."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
     lock.acquire()
@@ -173,7 +173,7 @@ def test_acquire_lock_blocks_other_threads():
 
 def test_pumaguard_lock_multiple_acquire_release_cycles():
     """Test multiple acquire/release cycles."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -195,7 +195,7 @@ def test_pumaguard_lock_multiple_acquire_release_cycles():
 
 def test_pumaguard_lock_time_waited_precision():
     """Test time_waited provides reasonable precision."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
 
@@ -246,7 +246,7 @@ def test_acquire_lock_with_real_global_lock():
 
 def test_release_function_logs_debug(caplog):
     """Test release function logs debug message."""
-    mock_lock = MagicMock(spec=threading.Lock)
+    mock_lock = MagicMock(spec=threading.Lock())
     mock_lock.acquire.return_value = True
     lock = PumaGuardLock(mock_lock)
     lock.acquire()

@@ -329,11 +329,17 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   }
 
   String _formatFolderName(String folderName) {
-    // Replace "intermediate" with "AI" for display
-    if (folderName.toLowerCase() == 'intermediate') {
-      return 'AI';
+    switch (folderName.toLowerCase()) {
+      case 'intermediate-puma':
+        return 'AI - Puma';
+      case 'intermediate-other':
+        return 'AI - other';
+      case 'intermediate':
+        // Legacy / staging directory – keep the generic label
+        return 'AI';
+      default:
+        return folderName;
     }
-    return folderName;
   }
 
   Future<void> _downloadSelectedImages() async {

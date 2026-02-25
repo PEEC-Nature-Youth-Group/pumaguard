@@ -579,6 +579,148 @@ class TestHandleNewFileNotification(unittest.TestCase):
         mock_move.assert_called_once()
 
 
+class TestHandleNewFileVizMove(unittest.TestCase):
+    """
+    Tests verifying that the bounding-box viz image is moved to the correct
+    split intermediate folder (intermediate-puma or intermediate-other) after
+    classification.
+    """
+
+    def setUp(self):
+        self.presets = Settings()
+        self.presets.notebook_number = 6
+        self.presets.model_version = "pre-trained"
+        self.presets.image_dimensions = (512, 512)
+        self.mock_webui = MagicMock()
+        self.mock_webui.plugs = {}
+        self.mock_notification = MagicMock()
+        self.mock_webui.image_notification_callback = self.mock_notification
+        self.observer = FolderObserver(
+            "test_folder", "inotify", self.presets, self.mock_webui
+        )
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.9)
+    @patch("pumaguard.server.playsound")
+    def test_viz_image_moved_to_intermediate_puma_on_puma_detection(
+        self,
+        mock_playsound,  # pylint: disable=unused-argument
+        mock_classify,  # pylint: disable=unused-argument
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,
+    ):
+        """
+        When a puma is detected, the viz image should be moved from
+        intermediate_dir to intermediate_puma_dir.
+        """
+        intermediate_dir = self.presets.intermediate_dir
+        intermediate_puma_dir = self.presets.intermediate_puma_dir
+        viz_filename = "puma_image_viz.jpg"
+        viz_src = os.path.join(intermediate_dir, viz_filename)
+
+        # Simulate the viz file existing in intermediate_dir
+        with patch("pumaguard.server.Path.exists", return_value=True):
+            self.observer._handle_new_file(  # pylint: disable=protected-access
+                filepath="test_folder/puma_image.jpg"
+            )
+
+        # shutil.move should be called at least twice:
+        # once for the original image, once for the viz
+        self.assertGreaterEqual(mock_move.call_count, 2)
+
+        # Find the viz-related move call
+        move_calls = [str(c) for c in mock_move.call_args_list]
+        viz_move_found = any(viz_filename in c for c in move_calls)
+        self.assertTrue(
+            viz_move_found,
+            f"Expected a move call for {viz_filename}, got: {move_calls}",
+        )
+
+        # Verify the destination is inside intermediate_puma_dir
+        viz_dest_calls = [
+            c
+            for c in mock_move.call_args_list
+            if viz_filename in str(c.args[0])
+        ]
+        self.assertTrue(
+            len(viz_dest_calls) >= 1,
+            "No move call found with viz source path",
+        )
+        dest_path = str(viz_dest_calls[0].args[1])
+        self.assertIn(
+            os.path.basename(intermediate_puma_dir),
+            dest_path,
+            f"Viz dest {dest_path} should be inside intermediate_puma_dir "
+            f"{intermediate_puma_dir}",
+        )
+        _ = viz_src  # consumed for clarity
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.1)
+    def test_viz_image_moved_to_intermediate_other_on_no_puma(
+        self,
+        mock_classify,  # pylint: disable=unused-argument
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,
+    ):
+        """
+        When no puma is detected, the viz image should be moved from
+        intermediate_dir to intermediate_other_dir.
+        """
+        intermediate_other_dir = self.presets.intermediate_other_dir
+        viz_filename = "other_image_viz.jpg"
+
+        with patch("pumaguard.server.Path.exists", return_value=True):
+            self.observer._handle_new_file(  # pylint: disable=protected-access
+                filepath="test_folder/other_image.jpg"
+            )
+
+        self.assertGreaterEqual(mock_move.call_count, 2)
+
+        viz_dest_calls = [
+            c
+            for c in mock_move.call_args_list
+            if viz_filename in str(c.args[0])
+        ]
+        self.assertTrue(
+            len(viz_dest_calls) >= 1,
+            "No move call found with viz source path",
+        )
+        dest_path = str(viz_dest_calls[0].args[1])
+        self.assertIn(
+            os.path.basename(intermediate_other_dir),
+            dest_path,
+            f"Viz dest {dest_path} should be inside intermediate_other_dir "
+            f"{intermediate_other_dir}",
+        )
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.9)
+    @patch("pumaguard.server.playsound")
+    def test_viz_move_skipped_when_viz_file_absent(
+        self,
+        mock_playsound,  # pylint: disable=unused-argument
+        mock_classify,  # pylint: disable=unused-argument
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,
+    ):
+        """
+        When no viz file exists in intermediate_dir, _handle_new_file should
+        not attempt to move it and should not raise.
+        """
+        with patch("pumaguard.server.Path.exists", return_value=False):
+            # Should not raise even when the viz file is absent
+            self.observer._handle_new_file(  # pylint: disable=protected-access
+                filepath="test_folder/puma_image.jpg"
+            )
+
+        # Only one move call: for the original classified image
+        self.assertEqual(mock_move.call_count, 1)
+
+
 class TestFolderManager(unittest.TestCase):
     """
     Unit tests for FolderManager class

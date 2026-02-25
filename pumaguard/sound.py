@@ -9,26 +9,147 @@ import sys
 import threading
 from typing import (
     Optional,
+    Union,
 )
 
+# Controls to try in order of preference when auto-detecting the ALSA playback
+# control.  The first entry that exists on the device and supports playback
+# volume will be used.
+_VOLUME_CONTROL_PRIORITY = [
+    "PCM",
+    "Master",
+    "Speaker",
+    "Headphone",
+    "Digital",
+    "Lineout",
+]
+
+# Cached result of detect_volume_control() so we only probe amixer once per
+# process lifetime.
+_detected_volume_control: Union[str, None] = None
+
 logger = logging.getLogger(__name__)
+
+
+def detect_volume_control() -> Optional[str]:
+    """Auto-detect the ALSA simple-mixer control to use for volume.
+
+    Runs ``amixer scontents`` once and finds all controls that advertise
+    ``pvolume`` (playback volume) capability.  From those, the first name that
+    appears in :data:`_VOLUME_CONTROL_PRIORITY` is returned.  If none of the
+    preferred names match, the first playback-capable control found is returned
+    instead.  The result is cached so that ``amixer`` is only invoked once for
+    the lifetime of the process.
+
+    Returns:
+        The name of the best available playback volume control (e.g.
+        ``"PCM"``, ``"Master"``), or ``None`` if amixer is unavailable or no
+        suitable control could be found.
+    """
+    global _detected_volume_control  # pylint: disable=global-statement
+
+    if _detected_volume_control is not None:
+        return _detected_volume_control
+
+    logger.debug("Auto-detecting ALSA playback volume control")
+    try:
+        result = subprocess.run(
+            ["amixer", "scontents"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "amixer scontents failed (rc=%d): %s",
+                result.returncode,
+                result.stderr.decode().strip(),
+            )
+            return None
+
+        # Parse output: collect control names that have 'pvolume' capability.
+        # amixer scontents output looks like:
+        #   Simple mixer control 'Master',0
+        #     Capabilities: pvolume pswitch pswitch-joined
+        #     ...
+        #   Simple mixer control 'Capture',0
+        #     Capabilities: cvolume cswitch cswitch-joined
+        #     ...
+        playback_controls: list[str] = []
+        current_control: Optional[str] = None
+        for line in result.stdout.decode().splitlines():
+            ctrl_match = re.match(r"Simple mixer control '([^']+)'", line)
+            if ctrl_match:
+                current_control = ctrl_match.group(1)
+            elif current_control is not None and "Capabilities:" in line:
+                if "pvolume" in line:
+                    playback_controls.append(current_control)
+                # Either way, reset so we don't re-check on subsequent lines.
+                current_control = None
+
+        if not playback_controls:
+            logger.warning(
+                "No ALSA controls with playback volume capability found"
+            )
+            return None
+
+        # Pick the highest-priority preferred control that is available.
+        for preferred in _VOLUME_CONTROL_PRIORITY:
+            if preferred in playback_controls:
+                _detected_volume_control = preferred
+                logger.debug(
+                    "Selected ALSA volume control: %s (preferred)",
+                    _detected_volume_control,
+                )
+                return _detected_volume_control
+
+        # None of the preferred names matched — use the first available one.
+        _detected_volume_control = playback_controls[0]
+        logger.debug(
+            "Selected ALSA volume control: %s (first available)",
+            _detected_volume_control,
+        )
+        return _detected_volume_control
+
+    except (subprocess.SubprocessError, FileNotFoundError) as e:
+        logger.warning("Could not detect ALSA volume control: %s", e)
+        return None
+
+
+def reset_volume_control_cache():
+    """Reset the cached ALSA volume control detection result.
+
+    This forces :func:`detect_volume_control` to re-probe ``amixer`` on its
+    next call.  Intended for use in tests and for situations where the audio
+    device has changed at runtime.
+    """
+    global _detected_volume_control  # pylint: disable=global-statement
+
+    _detected_volume_control = None
+
 
 # Global variable to track the current playing process
 _current_process: Optional[subprocess.Popen] = None
 _process_lock = threading.Lock()
 
 
-def get_volume(control: str = "PCM") -> Optional[int]:
+def get_volume(control: Optional[str] = None) -> Optional[int]:
     """
     Get the current ALSA mixer volume using amixer.
 
     Args:
-        control: ALSA mixer control name (default: "PCM")
+        control: ALSA mixer control name.  When ``None`` (the default) the
+            control is auto-detected via :func:`detect_volume_control`.
 
     Returns:
         Current volume level as an integer from 0-100, or None if it
         could not be determined.
     """
+    if control is None:
+        control = detect_volume_control()
+        if control is None:
+            logger.warning("Could not determine ALSA volume control")
+            return None
     logger.debug("Reading ALSA volume: control=%s", control)
     try:
         cmd = ["amixer", "get", control]
@@ -69,14 +190,22 @@ def get_volume(control: str = "PCM") -> Optional[int]:
         return None
 
 
-def set_volume(volume: int, control: str = "PCM"):
+def set_volume(volume: int, control: Optional[str] = None):
     """
     Set the ALSA mixer volume using amixer.
 
     Args:
         volume: Volume level from 0-100
-        control: ALSA mixer control name (default: "PCM")
+        control: ALSA mixer control name.  When ``None`` (the default) the
+        control is auto-detected via :func:`detect_volume_control`.
     """
+    if control is None:
+        control = detect_volume_control()
+        if control is None:
+            logger.warning(
+                "Could not determine ALSA volume control; skipping set_volume"
+            )
+            return
     logger.info(
         "Setting ALSA volume: control=%s, volume=%d%%", control, volume
     )

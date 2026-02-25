@@ -19,6 +19,7 @@ from pumaguard.sound import (
     get_volume,
     is_playing,
     playsound,
+    reset_volume_control_cache,
     set_volume,
     stop_sound,
 )
@@ -514,8 +515,13 @@ class TestSetVolume(unittest.TestCase):
     Test the set_volume function which calls amixer to set ALSA volume.
     """
 
+    def setUp(self):
+        """Reset the cached volume control before each test."""
+        reset_volume_control_cache()
+
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_calls_amixer(self, mock_run):
+    def test_set_volume_calls_amixer(self, mock_run, _mock_detect):
         """Test that set_volume calls amixer with the correct arguments."""
         mock_run.return_value = MagicMock(returncode=0)
 
@@ -525,9 +531,12 @@ class TestSetVolume(unittest.TestCase):
         args = mock_run.call_args[0][0]
         self.assertEqual(args, ["amixer", "set", "PCM", "75%"])
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_default_control_is_pcm(self, mock_run):
-        """Test that the default ALSA control is PCM."""
+    def test_set_volume_default_control_is_auto_detected(
+        self, mock_run, _mock_detect
+    ):
+        """Test that set_volume uses the auto-detected ALSA control."""
         mock_run.return_value = MagicMock(returncode=0)
 
         set_volume(50)
@@ -537,7 +546,7 @@ class TestSetVolume(unittest.TestCase):
 
     @patch("pumaguard.sound.subprocess.run")
     def test_set_volume_custom_control(self, mock_run):
-        """Test set_volume with a custom ALSA control name."""
+        """Test set_volume with an explicitly supplied ALSA control name."""
         mock_run.return_value = MagicMock(returncode=0)
 
         set_volume(60, control="Master")
@@ -545,8 +554,9 @@ class TestSetVolume(unittest.TestCase):
         args = mock_run.call_args[0][0]
         self.assertEqual(args, ["amixer", "set", "Master", "60%"])
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_boundary_zero(self, mock_run):
+    def test_set_volume_boundary_zero(self, mock_run, _mock_detect):
         """Test set_volume at 0%."""
         mock_run.return_value = MagicMock(returncode=0)
 
@@ -555,8 +565,9 @@ class TestSetVolume(unittest.TestCase):
         args = mock_run.call_args[0][0]
         self.assertEqual(args[3], "0%")
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_boundary_hundred(self, mock_run):
+    def test_set_volume_boundary_hundred(self, mock_run, _mock_detect):
         """Test set_volume at 100%."""
         mock_run.return_value = MagicMock(returncode=0)
 
@@ -565,8 +576,11 @@ class TestSetVolume(unittest.TestCase):
         args = mock_run.call_args[0][0]
         self.assertEqual(args[3], "100%")
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_amixer_failure_does_not_raise(self, mock_run):
+    def test_set_volume_amixer_failure_does_not_raise(
+        self, mock_run, _mock_detect
+    ):
         """Test that a non-zero amixer return code does not raise."""
         mock_run.return_value = MagicMock(
             returncode=1, stderr=b"No such control"
@@ -575,7 +589,8 @@ class TestSetVolume(unittest.TestCase):
         # Should not raise
         set_volume(80)
 
-    def test_set_volume_amixer_not_found_does_not_raise(self):
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
+    def test_set_volume_amixer_not_found_does_not_raise(self, _mock_detect):
         """Test that a missing amixer binary does not raise."""
         with patch(
             "pumaguard.sound.subprocess.run",
@@ -584,19 +599,35 @@ class TestSetVolume(unittest.TestCase):
             # Should not raise
             set_volume(80)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_set_volume_subprocess_error_does_not_raise(self, mock_run):
+    def test_set_volume_subprocess_error_does_not_raise(
+        self, mock_run, _mock_detect
+    ):
         """Test that a SubprocessError does not raise."""
         mock_run.side_effect = subprocess.SubprocessError("failed")
 
         # Should not raise
         set_volume(80)
 
+    def test_set_volume_skipped_when_no_control_detected(self):
+        """
+        Test that set_volume does nothing when no control can be detected.
+        """
+        with patch("pumaguard.sound.detect_volume_control", return_value=None):
+            with patch("pumaguard.sound.subprocess.run") as mock_run:
+                set_volume(80)
+                mock_run.assert_not_called()
+
 
 class TestGetVolume(unittest.TestCase):
     """
     Test the get_volume function which reads the ALSA volume via amixer.
     """
+
+    def setUp(self):
+        """Reset the cached volume control before each test."""
+        reset_volume_control_cache()
 
     @patch("pumaguard.sound.subprocess.run")
     def test_get_volume_parses_mono_output(self, mock_run):
@@ -636,9 +667,14 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertEqual(result, 75)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_default_control_is_pcm(self, mock_run):
-        """Test that get_volume queries the PCM control by default."""
+    def test_get_volume_uses_auto_detected_control(
+        self, mock_run, _mock_detect
+    ):
+        """
+        Test that get_volume queries the auto-detected control by default.
+        """
         mock_run.return_value = MagicMock(
             returncode=0, stdout=b"Mono: Playback 128 [50%] [on]\n"
         )
@@ -660,8 +696,11 @@ class TestGetVolume(unittest.TestCase):
         args = mock_run.call_args[0][0]
         self.assertEqual(args, ["amixer", "get", "Headphone"])
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_returns_none_on_amixer_failure(self, mock_run):
+    def test_get_volume_returns_none_on_amixer_failure(
+        self, mock_run, _mock_detect
+    ):
         """Test that get_volume returns None when amixer exits with error."""
         mock_run.return_value = MagicMock(
             returncode=1, stdout=b"", stderr=b"No such control"
@@ -671,9 +710,10 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
     def test_get_volume_returns_none_when_no_percentage_in_output(
-        self, mock_run
+        self, mock_run, _mock_detect
     ):
         """Test that get_volume returns None when output has no percentage."""
         mock_run.return_value = MagicMock(
@@ -684,7 +724,8 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    def test_get_volume_returns_none_when_amixer_not_found(self):
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
+    def test_get_volume_returns_none_when_amixer_not_found(self, _mock_detect):
         """Test that get_volume returns None when amixer is not installed."""
         with patch(
             "pumaguard.sound.subprocess.run",
@@ -694,8 +735,11 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_returns_none_on_subprocess_error(self, mock_run):
+    def test_get_volume_returns_none_on_subprocess_error(
+        self, mock_run, _mock_detect
+    ):
         """Test that get_volume returns None on a SubprocessError."""
         mock_run.side_effect = subprocess.SubprocessError("failed")
 
@@ -703,8 +747,9 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_boundary_zero(self, mock_run):
+    def test_get_volume_boundary_zero(self, mock_run, _mock_detect):
         """Test parsing of 0% volume."""
         mock_run.return_value = MagicMock(
             returncode=0, stdout=b"Mono: Playback 0 [0%] [off]\n"
@@ -714,8 +759,9 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertEqual(result, 0)
 
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_boundary_hundred(self, mock_run):
+    def test_get_volume_boundary_hundred(self, mock_run, _mock_detect):
         """Test parsing of 100% volume."""
         mock_run.return_value = MagicMock(
             returncode=0, stdout=b"Mono: Playback 255 [100%] [on]\n"
@@ -725,8 +771,20 @@ class TestGetVolume(unittest.TestCase):
 
         self.assertEqual(result, 100)
 
+    def test_get_volume_returns_none_when_no_control_detected(self):
+        """
+        Test that get_volume returns None when no control can be detected.
+        """
+        with patch("pumaguard.sound.detect_volume_control", return_value=None):
+            result = get_volume()
+
+        self.assertIsNone(result)
+
+    @patch("pumaguard.sound.detect_volume_control", return_value="PCM")
     @patch("pumaguard.sound.subprocess.run")
-    def test_get_volume_returns_first_percentage_for_stereo(self, mock_run):
+    def test_get_volume_returns_first_percentage_for_stereo(
+        self, mock_run, _mock_detect
+    ):
         """Test that get_volume returns the first channel's percentage."""
         amixer_output = (
             "  Front Left: Playback 32768 [50%] [on]\n"

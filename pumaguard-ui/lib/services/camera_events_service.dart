@@ -97,6 +97,9 @@ class CameraEventsService {
   http.Client? _client;
   bool _isListening = false;
 
+  /// When [_disposed] is true no further reconnect attempts are made.
+  bool _disposed = false;
+
   CameraEventsService(this.baseUrl);
 
   /// Stream of camera events
@@ -107,8 +110,11 @@ class CameraEventsService {
 
   /// Start listening for camera events
   Future<void> startListening() async {
-    if (_isListening) {
-      debugPrint('[CameraEventsService] Already listening');
+    if (_isListening || _disposed) {
+      debugPrint(
+        '[CameraEventsService] startListening called while '
+        'isListening=$_isListening disposed=$_disposed – ignoring',
+      );
       return;
     }
 
@@ -130,6 +136,7 @@ class CameraEventsService {
           '[CameraEventsService] Failed to connect: ${response.statusCode}',
         );
         _isListening = false;
+        _scheduleReconnect();
         return;
       }
 
@@ -156,6 +163,7 @@ class CameraEventsService {
       _isListening = false;
       _client?.close();
       _client = null;
+      _scheduleReconnect();
     }
   }
 
@@ -205,17 +213,27 @@ class CameraEventsService {
     _client?.close();
     _client = null;
 
-    // Attempt to reconnect after a delay
+    _scheduleReconnect();
+  }
+
+  /// Schedule a reconnect attempt after a short delay, unless disposed.
+  void _scheduleReconnect() {
+    if (_disposed) {
+      return;
+    }
+
     debugPrint('[CameraEventsService] Attempting to reconnect in 5 seconds');
     Future.delayed(const Duration(seconds: 5), () {
-      if (!_isListening) {
+      if (!_disposed && !_isListening) {
         startListening();
       }
     });
   }
 
-  /// Dispose of resources
+  /// Release all resources. After calling [dispose] this instance must not
+  /// be used again.
   void dispose() {
+    _disposed = true;
     stopListening();
     _eventController.close();
   }

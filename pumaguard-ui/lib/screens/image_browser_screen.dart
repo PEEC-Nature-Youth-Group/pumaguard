@@ -36,6 +36,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
   ImageEventsService? _imageEventsService;
   StreamSubscription<ImageEvent>? _imageEventsSubscription;
+  Timer? _folderReloadDebounceTimer;
 
   @override
   void initState() {
@@ -82,16 +83,21 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
     if (event.type == ImageEventType.imageAdded ||
         event.type == ImageEventType.imageDeleted) {
-      // Reload the folder list (updates image counts) and, if a folder is
-      // already selected, reload its images too.
-      if (mounted) {
-        _loadFolders();
-      }
+      // Debounce folder reloads so that a rapid batch of incoming images
+      // (e.g. a camera dump) collapses into a single reload rather than
+      // firing one concurrent _loadFolders() call per event.
+      _folderReloadDebounceTimer?.cancel();
+      _folderReloadDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _loadFolders();
+        }
+      });
     }
   }
 
   @override
   void dispose() {
+    _folderReloadDebounceTimer?.cancel();
     _imageEventsSubscription?.cancel();
     _imageEventsService?.dispose();
     super.dispose();

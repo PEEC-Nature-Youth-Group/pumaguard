@@ -40,14 +40,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _availableModels = [];
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
-  Timer? _cameraRefreshTimer;
+  Timer? _eventDebounceTimer;
   Timer? _shellyRefreshTimer;
+  bool _isLoadingSettings = false;
+  bool _isLoadingShellyStatus = false;
   CameraEventsService? _cameraEventsService;
   StreamSubscription<CameraEvent>? _eventsSubscription;
   final Map<String, Plug> _shellyStatus = {};
-
-  // Camera refresh interval (in seconds)
-  static const int _cameraRefreshInterval = 30;
 
   // Server time synchronization
   String? _serverTime;
@@ -67,7 +66,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     _loadSettings();
     _initializeCameraEvents();
-    _startCameraRefresh();
     _startShellyRefresh();
     _refreshServerTime();
   }
@@ -75,7 +73,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _cameraRefreshTimer?.cancel();
+    _eventDebounceTimer?.cancel();
     _shellyRefreshTimer?.cancel();
     _eventsSubscription?.cancel();
     _cameraEventsService?.dispose();
@@ -100,13 +98,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Subscribe to camera events
       _eventsSubscription = _cameraEventsService!.events.listen(
         (event) {
-          // Reload settings when camera status changes
+          // Reload settings when camera status changes, debounced to coalesce
+          // rapid bursts of events into a single reload.
           if (event.type != CameraEventType.connected &&
               event.type != CameraEventType.unknown) {
             debugPrint(
-              '[SettingsScreen] Camera event: ${event.type}, reloading settings',
+              '[SettingsScreen] Camera event: ${event.type}, scheduling settings reload',
             );
-            _loadSettings();
+            _eventDebounceTimer?.cancel();
+            _eventDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+              if (mounted) _loadSettings();
+            });
           }
         },
         onError: (error) {
@@ -122,14 +124,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _startCameraRefresh() {
-    // Set up periodic timer to refresh camera status
-    _cameraRefreshTimer = Timer.periodic(
-      const Duration(seconds: _cameraRefreshInterval),
-      (_) => _loadSettings(),
-    );
-  }
-
   void _startShellyRefresh() {
     // Refresh Shelly status every 5 seconds
     _shellyRefreshTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
@@ -140,40 +134,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadShellyStatus() async {
+    if (_isLoadingShellyStatus) {
+      debugPrint(
+        '[SettingsScreen] Shelly status load already in progress, skipping',
+      );
+      return;
+    }
+    _isLoadingShellyStatus = true;
+
     final apiService = Provider.of<ApiService>(context, listen: false);
+
+    // Collect all updates locally then apply in a single setState.
+    final updatedStatus = Map<String, Plug>.from(_shellyStatus);
 
     for (final plug in _settings!.plugs) {
       if (plug.isConnected) {
         try {
           final shellyPlug = await apiService.getShellyStatus(plug.macAddress);
-          if (mounted) {
-            setState(() {
-              _shellyStatus[plug.macAddress] = shellyPlug;
-            });
-          }
+          updatedStatus[plug.macAddress] = shellyPlug;
         } catch (e) {
           debugPrint(
             '[SettingsScreen._loadShellyStatus] Error loading Shelly status for ${plug.macAddress}: $e',
           );
           // Remove stale status on error
-          if (mounted) {
-            setState(() {
-              _shellyStatus.remove(plug.macAddress);
-            });
-          }
+          updatedStatus.remove(plug.macAddress);
         }
       } else {
         // Remove status for disconnected plugs
-        if (mounted && _shellyStatus.containsKey(plug.macAddress)) {
-          setState(() {
-            _shellyStatus.remove(plug.macAddress);
-          });
-        }
+        updatedStatus.remove(plug.macAddress);
       }
     }
+
+    if (mounted) {
+      setState(() {
+        _shellyStatus
+          ..clear()
+          ..addAll(updatedStatus);
+      });
+    }
+
+    _isLoadingShellyStatus = false;
   }
 
   Future<void> _loadSettings() async {
+    if (_isLoadingSettings) {
+      debugPrint(
+        '[SettingsScreen] Settings load already in progress, skipping',
+      );
+      return;
+    }
+    _isLoadingSettings = true;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -208,6 +219,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    } finally {
+      _isLoadingSettings = false;
     }
   }
 

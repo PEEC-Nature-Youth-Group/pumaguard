@@ -22,6 +22,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
   String? _error;
   final Map<String, Plug> _shellyStatus = {};
   Timer? _refreshTimer;
+  Timer? _eventDebounceTimer;
+  bool _isLoadingDevices = false;
+  bool _isLoadingShellyStatus = false;
   CameraEventsService? _cameraEventsService;
   StreamSubscription<CameraEvent>? _eventsSubscription;
 
@@ -36,6 +39,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    _eventDebounceTimer?.cancel();
     _eventsSubscription?.cancel();
     _cameraEventsService?.dispose();
     super.dispose();
@@ -88,8 +92,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
       case CameraEventType.plugStatusChangedOffline:
       case CameraEventType.plugModeChanged:
       case CameraEventType.plugSwitchChanged:
-        // Camera or plug status changed - reload device list
-        _loadDevices();
+        // Debounce: coalesce rapid bursts of events into a single reload.
+        _eventDebounceTimer?.cancel();
+        _eventDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+          if (mounted) _loadDevices();
+        });
         break;
 
       case CameraEventType.unknown:
@@ -108,6 +115,12 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _loadDevices() async {
+    if (_isLoadingDevices) {
+      debugPrint('[DevicesScreen] Load already in progress, skipping');
+      return;
+    }
+    _isLoadingDevices = true;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -139,41 +152,52 @@ class _DevicesScreenState extends State<DevicesScreen> {
           _isLoading = false;
         });
       }
+    } finally {
+      _isLoadingDevices = false;
     }
   }
 
   Future<void> _loadShellyStatus() async {
+    if (_isLoadingShellyStatus) {
+      debugPrint(
+        '[DevicesScreen] Shelly status load already in progress, skipping',
+      );
+      return;
+    }
+    _isLoadingShellyStatus = true;
+
     final apiService = Provider.of<ApiService>(context, listen: false);
+
+    // Collect all updates locally then apply in a single setState.
+    final updatedStatus = Map<String, Plug>.from(_shellyStatus);
 
     for (final plug in _plugs) {
       if (plug.isConnected) {
         try {
           final shellyPlug = await apiService.getShellyStatus(plug.macAddress);
-          if (mounted) {
-            setState(() {
-              _shellyStatus[plug.macAddress] = shellyPlug;
-            });
-          }
+          updatedStatus[plug.macAddress] = shellyPlug;
         } catch (e) {
           debugPrint(
             '[DevicesScreen._loadShellyStatus] Error loading Shelly status for ${plug.macAddress}: $e',
           );
           // Remove stale status on error
-          if (mounted) {
-            setState(() {
-              _shellyStatus.remove(plug.macAddress);
-            });
-          }
+          updatedStatus.remove(plug.macAddress);
         }
       } else {
         // Remove status for disconnected plugs
-        if (mounted && _shellyStatus.containsKey(plug.macAddress)) {
-          setState(() {
-            _shellyStatus.remove(plug.macAddress);
-          });
-        }
+        updatedStatus.remove(plug.macAddress);
       }
     }
+
+    if (mounted) {
+      setState(() {
+        _shellyStatus
+          ..clear()
+          ..addAll(updatedStatus);
+      });
+    }
+
+    _isLoadingShellyStatus = false;
   }
 
   Future<void> _openCamera(Camera camera) async {

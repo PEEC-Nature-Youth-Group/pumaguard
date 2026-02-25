@@ -176,7 +176,7 @@ release:
 
 .PHONY: configure-device
 configure-device: install-dev build
-	@ANSIBLE_CMD="ANSIBLE_STDOUT_CALLBACK=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --extra-vars \"pumaguard_install_method=local\""; \
+	@ANSIBLE_CMD="ANSIBLE_CALLBACK_RESULT_FORMAT=yaml uv run ansible-playbook --inventory $(DEVICE), --user $(DEVICE_USER) --diff --ask-become-pass --ask-vault-pass --extra-vars \"pumaguard_install_method=local\""; \
 	if [ -n "$(ANSIBLE_TAGS)" ]; then \
 		ANSIBLE_CMD="$$ANSIBLE_CMD --tags $(ANSIBLE_TAGS)"; \
 	fi; \

@@ -33,6 +33,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
@@ -63,6 +64,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -120,6 +122,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s.pt',
           classifierModelFilename: 'classifier.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['sound.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
@@ -398,6 +401,38 @@ void main() {
 
         expect(settings.deterrentSoundFiles, ['']);
       });
+
+      test('handles puma-threshold from JSON', () {
+        final json = {'puma-threshold': 0.75};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.pumaThreshold, 0.75);
+      });
+
+      test('uses default puma-threshold when missing', () {
+        final json = <String, dynamic>{};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.pumaThreshold, 0.5);
+      });
+
+      test('handles null puma-threshold with default', () {
+        final json = {'puma-threshold': null};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.pumaThreshold, 0.5);
+      });
+
+      test('handles integer puma-threshold value', () {
+        final json = {'puma-threshold': 1};
+
+        final settings = Settings.fromJson(json);
+
+        expect(settings.pumaThreshold, 1.0);
+      });
     });
 
     group('toJson', () {
@@ -425,6 +460,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
@@ -461,6 +497,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -486,6 +523,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -510,6 +548,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -517,13 +556,36 @@ void main() {
           cameras: [],
           plugs: [],
           deviceAutoRemoveEnabled: true,
-          deviceAutoRemoveHours: 72,
+          deviceAutoRemoveHours: 48,
         );
 
         final json = settings.toJson();
 
         expect(json['device-auto-remove-enabled'], true);
-        expect(json['device-auto-remove-hours'], 72);
+        expect(json['device-auto-remove-hours'], 48);
+      });
+
+      test('includes puma-threshold in JSON', () {
+        final settings = Settings(
+          yoloMinSize: 0.01,
+          yoloConfThresh: 0.25,
+          yoloMaxDets: 10,
+          yoloModelFilename: '',
+          classifierModelFilename: '',
+          pumaThreshold: 0.65,
+          deterrentSoundFiles: [''],
+          fileStabilizationExtraWait: 2.0,
+          playSound: false,
+          volume: 80,
+          cameras: [],
+          plugs: [],
+          deviceAutoRemoveEnabled: false,
+          deviceAutoRemoveHours: 24,
+        );
+
+        final json = settings.toJson();
+
+        expect(json['puma-threshold'], 0.65);
       });
     });
 
@@ -535,6 +597,7 @@ void main() {
           'YOLO-max-dets': 10,
           'YOLO-model-filename': 'yolov8s_101425.pt',
           'classifier-model-filename': 'colorbw_111325.h5',
+          'puma-threshold': 0.5,
           'deterrent-sound-files': ['alarm.wav'],
           'file-stabilization-extra-wait': 2.0,
           'play-sound': true,
@@ -627,6 +690,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: true,
@@ -838,6 +902,13 @@ void main() {
         );
       });
 
+      test('updates pumaThreshold', () {
+        final newSettings = originalSettings.copyWith(pumaThreshold: 0.75);
+
+        expect(newSettings.pumaThreshold, 0.75);
+        expect(newSettings.yoloMinSize, originalSettings.yoloMinSize);
+      });
+
       test('does not modify original object', () {
         final newSettings = originalSettings.copyWith(
           yoloMinSize: 0.99,
@@ -860,6 +931,7 @@ void main() {
           yoloMaxDets: 0,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 0.0,
           playSound: false,
@@ -884,6 +956,7 @@ void main() {
           yoloMaxDets: 1000,
           yoloModelFilename: 'model',
           classifierModelFilename: 'classifier',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['sound'],
           fileStabilizationExtraWait: 999.99,
           playSound: true,
@@ -908,6 +981,7 @@ void main() {
           yoloMaxDets: -10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: -1.0,
           playSound: false,
@@ -933,6 +1007,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: longFilename,
           classifierModelFilename: longFilename,
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [longFilename],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -955,6 +1030,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'model@#\$%^&*.pt',
           classifierModelFilename: 'classifier!@#.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['sound-file_123.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: false,
@@ -977,6 +1053,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: '',
           classifierModelFilename: '',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: [''],
           fileStabilizationExtraWait: 1.23456789,
           playSound: false,
@@ -1044,6 +1121,7 @@ void main() {
           yoloMaxDets: 10,
           yoloModelFilename: 'yolov8s_101425.pt',
           classifierModelFilename: 'colorbw_111325.h5',
+          pumaThreshold: 0.5,
           deterrentSoundFiles: ['alarm.wav'],
           fileStabilizationExtraWait: 2.0,
           playSound: false,

@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _yoloMaxDetsController;
   late TextEditingController _yoloModelController;
   late TextEditingController _classifierModelController;
+  late TextEditingController _pumaThresholdController;
   late TextEditingController _fileStabilizationController;
   late TextEditingController _deviceAutoRemoveHoursController;
   List<String> _selectedSoundFiles = [];
@@ -60,6 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloMaxDetsController = TextEditingController();
     _yoloModelController = TextEditingController();
     _classifierModelController = TextEditingController();
+    _pumaThresholdController = TextEditingController();
     _fileStabilizationController = TextEditingController();
     _deviceAutoRemoveHoursController = TextEditingController();
 
@@ -82,6 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _yoloMaxDetsController.dispose();
     _yoloModelController.dispose();
     _classifierModelController.dispose();
+    _pumaThresholdController.dispose();
     _fileStabilizationController.dispose();
     _deviceAutoRemoveHoursController.dispose();
     super.dispose();
@@ -186,6 +189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _yoloMaxDetsController.text = settings.yoloMaxDets.toString();
         _yoloModelController.text = settings.yoloModelFilename;
         _classifierModelController.text = settings.classifierModelFilename;
+        _pumaThresholdController.text = settings.pumaThreshold.toString();
         _selectedSoundFiles = List.from(settings.deterrentSoundFiles);
         _fileStabilizationController.text = settings.fileStabilizationExtraWait
             .toString();
@@ -294,6 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         yoloMaxDets: int.tryParse(_yoloMaxDetsController.text) ?? 10,
         yoloModelFilename: _yoloModelController.text,
         classifierModelFilename: _classifierModelController.text,
+        pumaThreshold: double.tryParse(_pumaThresholdController.text) ?? 0.5,
         deterrentSoundFiles: _selectedSoundFiles,
         fileStabilizationExtraWait:
             double.tryParse(_fileStabilizationController.text) ?? 2.0,
@@ -999,10 +1004,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Configure EfficientNet classifier',
+              'Configure EfficientNet classifier and detection threshold',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _pumaThresholdController,
+              onChanged: (_) => _onTextFieldChanged(),
+              decoration: const InputDecoration(
+                labelText: 'Puma Classification Threshold',
+                hintText: '0.5',
+                helperText:
+                    'Confidence threshold for puma detection (0.0 - 1.0)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
             TextField(

@@ -456,7 +456,7 @@ def test_removed_camera_readded_on_lease_renewal_with_unknown_hostname(
 
 def test_known_camera_lease_renewal_preserves_hostname(test_app):
     """
-    Test that lease renewal with unknown hostname preserves original 
+    Test that lease renewal with unknown hostname preserves original
     hostname.
 
     This test verifies that when a known camera renews its lease but doesn't

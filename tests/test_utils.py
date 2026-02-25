@@ -1,6 +1,7 @@
 """
 Test utils
 """
+
 # pylint: disable=too-many-lines,import-outside-toplevel
 
 import datetime
@@ -444,9 +445,10 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets = MagicMock(spec=Settings)
         presets.yolo_conf_thresh = 0.25
         presets.yolo_max_dets = 300
-        presets.yolo_min_size = 0.02
+        presets.yolo_min_size = 0.1
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt"):
@@ -498,6 +500,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         )
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt"):
@@ -543,6 +546,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets.yolo_min_size = 0.1  # High threshold to filter small boxes
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt"):
@@ -596,6 +600,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets.yolo_min_size = 0.001
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt"):
@@ -633,6 +638,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets.yolo_min_size = 0.02
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt") as mock_plt:
@@ -666,6 +672,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets = MagicMock(spec=Settings)
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         with self.assertRaises(FileNotFoundError):
             classify_image_two_stage(
@@ -699,6 +706,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets.yolo_min_size = 0.02
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Execute
         with patch("pumaguard.utils.plt"):
@@ -734,6 +742,7 @@ class TestClassifyImageTwoStage(unittest.TestCase):
         presets.yolo_min_size = 0.02
         presets.classifier_model_filename = "classifier.h5"
         presets.yolo_model_filename = "yolo.pt"
+        presets.puma_threshold = 0.5
 
         # Test with print_progress=True
         with patch("pumaguard.utils.plt"):

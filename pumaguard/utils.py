@@ -325,7 +325,7 @@ def classify_image_two_stage(
 
     detector = get_cached_model("detector", yolo_model_path)
     classifier = get_cached_model("classifier", classifier_model_path)
-    best_t = 0.5
+    best_t = presets.puma_threshold
 
     start_time = datetime.datetime.now()
     image_file = Path(image_path)

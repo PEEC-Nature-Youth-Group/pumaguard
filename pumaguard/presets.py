@@ -122,6 +122,7 @@ class Settings:
         self.yolo_max_dets = 2
         self.yolo_model_filename = "yolov8s_101425.pt"
         self.classifier_model_filename = "colorbw_111325.h5"
+        self.puma_threshold = 0.5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"
         )
@@ -243,6 +244,7 @@ class Settings:
         self.classifier_model_filename = settings.get(
             "classifier-model-filename", "colorbw_111325.h5"
         )
+        self.puma_threshold = settings.get("puma-threshold", 0.5)
         self.sound_path = settings.get(
             "sound-path", os.path.dirname(__file__) + "../pumaguard-sounds"
         )
@@ -398,6 +400,7 @@ class Settings:
             "YOLO-max-dets": self.yolo_max_dets,
             "YOLO-model-filename": self.yolo_model_filename,
             "classifier-model-filename": self.classifier_model_filename,
+            "puma-threshold": self.puma_threshold,
             "sound-path": self.sound_path,
             "deterrent-sound-files": self.deterrent_sound_files,
             "play-sound": self.play_sound,
@@ -527,6 +530,26 @@ class Settings:
         if not isinstance(classifier_model_filename, str):
             raise TypeError("classifier_model_filename needs to be a string")
         self._classifier_model_filename = classifier_model_filename
+
+    @property
+    def puma_threshold(self) -> float:
+        """
+        Get the puma classification threshold.
+        """
+        return self._puma_threshold
+
+    @puma_threshold.setter
+    def puma_threshold(self, puma_threshold: float):
+        """
+        Set the puma classification threshold.
+        """
+        if not isinstance(puma_threshold, (float, int)):
+            raise TypeError(
+                "puma_threshold needs to be a floating point number"
+            )
+        if puma_threshold <= 0 or puma_threshold > 1:
+            raise ValueError("puma_threshold needs to be between (0, 1]")
+        self._puma_threshold = float(puma_threshold)
 
     @property
     def base_output_directory(self) -> str:

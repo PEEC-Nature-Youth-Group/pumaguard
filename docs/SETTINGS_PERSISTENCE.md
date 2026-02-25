@@ -42,6 +42,7 @@ GET /api/settings HTTP/1.1
   "YOLO-max-dets": 12,
   "YOLO-model-filename": "yolov8s_101425.pt",
   "classifier-model-filename": "colorbw_111325.h5",
+  "puma-threshold": 0.5,
   "deterrent-sound-file": "deterrent_puma.mp3",
   "file-stabilization-extra-wait": 2.0,
   "play-sound": true,
@@ -96,6 +97,7 @@ Content-Type: application/json
 - `YOLO-max-dets`
 - `YOLO-model-filename`
 - `classifier-model-filename`
+- `puma-threshold` (classification threshold for puma detection, 0.0-1.0)
 - `deterrent-sound-file` (deprecated, use `deterrent-sound-files`)
 - `deterrent-sound-files` (list of sound filenames)
 - `file-stabilization-extra-wait`
@@ -363,6 +365,7 @@ def yolo_min_size(self, value: float):
 - `yolo_min_size`: 0 < x ≤ 1
 - `yolo_conf_thresh`: 0 < x ≤ 1
 - `yolo_max_dets`: positive integer
+- `puma_threshold`: 0 < x ≤ 1
 - `file_stabilization_extra_wait`: positive number
 
 ## Development Notes

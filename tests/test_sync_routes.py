@@ -127,7 +127,9 @@ def test_calculate_checksums_mismatch(test_app, temp_dirs):
     assert "modified" in file_info
 
 
-def test_calculate_checksums_bad_request(test_app, temp_dirs):  # pylint: disable=unused-argument
+def test_calculate_checksums_bad_request(
+    test_app, temp_dirs
+):  # pylint: disable=unused-argument
     """Test POST /api/sync/checksums with multiple files."""
     app, webui = test_app
     client = app.test_client()
@@ -222,7 +224,9 @@ def test_calculate_checksums_nonexistent_file(test_app):
     assert len(data["files_to_download"]) == 0
 
 
-def test_calculate_checksums_path_traversal_attack(test_app, temp_dirs):  # pylint: disable=unused-argument
+def test_calculate_checksums_path_traversal_attack(
+    test_app, temp_dirs
+):  # pylint: disable=unused-argument
     """Test POST /api/sync/checksums prevents path traversal."""
     app, webui = test_app
     client = app.test_client()
@@ -244,7 +248,9 @@ def test_calculate_checksums_path_traversal_attack(test_app, temp_dirs):  # pyli
     assert len(data["files_to_download"]) == 0
 
 
-def test_calculate_checksums_no_files(test_app, temp_dirs):  # pylint: disable=unused-argument
+def test_calculate_checksums_no_files(
+    test_app, temp_dirs
+):  # pylint: disable=unused-argument
     """Test POST /api/sync/checksums with relative paths."""
     app, webui = test_app
     client = app.test_client()
@@ -413,7 +419,9 @@ def test_download_mixed_valid_invalid_files(test_app, temp_dirs):
     assert response.data == b"fake image data 1"
 
 
-def test_download_relative_path(test_app, temp_dirs):  # pylint: disable=unused-argument
+def test_download_relative_path(
+    test_app, temp_dirs
+):  # pylint: disable=unused-argument
     """Test POST /api/sync/download with relative path."""
     app, webui = test_app
     client = app.test_client()

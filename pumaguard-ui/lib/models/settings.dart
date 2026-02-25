@@ -7,6 +7,7 @@ class Settings {
   final int yoloMaxDets;
   final String yoloModelFilename;
   final String classifierModelFilename;
+  final double pumaThreshold;
   final List<String> deterrentSoundFiles;
   final double fileStabilizationExtraWait;
   final bool playSound;
@@ -22,6 +23,7 @@ class Settings {
     required this.yoloMaxDets,
     required this.yoloModelFilename,
     required this.classifierModelFilename,
+    required this.pumaThreshold,
     required this.deterrentSoundFiles,
     required this.fileStabilizationExtraWait,
     required this.playSound,
@@ -76,6 +78,7 @@ class Settings {
       yoloModelFilename: json['YOLO-model-filename'] as String? ?? '',
       classifierModelFilename:
           json['classifier-model-filename'] as String? ?? '',
+      pumaThreshold: (json['puma-threshold'] as num?)?.toDouble() ?? 0.5,
       deterrentSoundFiles: soundFilesList,
       fileStabilizationExtraWait:
           (json['file-stabilization-extra-wait'] as num?)?.toDouble() ?? 2.0,
@@ -102,6 +105,7 @@ class Settings {
       'YOLO-max-dets': yoloMaxDets,
       'YOLO-model-filename': yoloModelFilename,
       'classifier-model-filename': classifierModelFilename,
+      'puma-threshold': pumaThreshold,
       'deterrent-sound-files': deterrentSoundFiles,
       'file-stabilization-extra-wait': fileStabilizationExtraWait,
       'play-sound': playSound,
@@ -119,6 +123,7 @@ class Settings {
     int? yoloMaxDets,
     String? yoloModelFilename,
     String? classifierModelFilename,
+    double? pumaThreshold,
     List<String>? deterrentSoundFiles,
     double? fileStabilizationExtraWait,
     bool? playSound,
@@ -135,6 +140,7 @@ class Settings {
       yoloModelFilename: yoloModelFilename ?? this.yoloModelFilename,
       classifierModelFilename:
           classifierModelFilename ?? this.classifierModelFilename,
+      pumaThreshold: pumaThreshold ?? this.pumaThreshold,
       deterrentSoundFiles: deterrentSoundFiles ?? this.deterrentSoundFiles,
       fileStabilizationExtraWait:
           fileStabilizationExtraWait ?? this.fileStabilizationExtraWait,

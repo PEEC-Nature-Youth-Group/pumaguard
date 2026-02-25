@@ -110,6 +110,7 @@ Get current PumaGuard settings.
   "YOLO-max-dets": 12,
   "YOLO-model-filename": "yolov8s_101425.pt",
   "classifier-model-filename": "colorbw_111325.h5",
+  "puma-threshold": 0.5,
   "sound-path": "/path/to/sounds",
   "deterrent-sound-file": "cougar_call.mp3",
   "play-sound": true
@@ -131,6 +132,7 @@ Update PumaGuard settings.
   "YOLO-min-size": 0.03,
   "YOLO-conf-thresh": 0.30,
   "YOLO-max-dets": 15,
+  "puma-threshold": 0.75,
   "play-sound": false
 }
 ```
@@ -141,6 +143,7 @@ Update PumaGuard settings.
 - `YOLO-max-dets` (int): Maximum detections
 - `YOLO-model-filename` (string): YOLO model file
 - `classifier-model-filename` (string): Classifier model file
+- `puma-threshold` (float): Classification threshold for puma detection (0.0-1.0, default: 0.5)
 - `sound-path` (string): Path to sound files
 - `deterrent-sound-file` (string): Deterrent sound filename (deprecated, use deterrent-sound-files)
 - `deterrent-sound-files` (array of strings): List of deterrent sound filenames

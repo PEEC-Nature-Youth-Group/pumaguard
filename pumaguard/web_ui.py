@@ -8,11 +8,15 @@ import logging
 import socket
 import threading
 import time
+from collections.abc import (
+    Callable,
+)
 from pathlib import (
     Path,
 )
 from typing import (
     TYPE_CHECKING,
+    Any,
     TypedDict,
 )
 
@@ -56,6 +60,9 @@ from pumaguard.web_routes.directories import (
 )
 from pumaguard.web_routes.folders import (
     register_folders_routes,
+)
+from pumaguard.web_routes.images_events import (
+    register_images_events_routes,
 )
 from pumaguard.web_routes.photos import (
     register_photos_routes,
@@ -194,6 +201,11 @@ class WebUI:
         # Format: {mac_address: {"type": "camera"|"plug", "hostname": str}}
         # Load from persisted settings
         self.device_history: dict[str, dict[str, str]] = presets.device_history
+
+        # Image change notification callback (set after routes registered)
+        self.image_notification_callback: (
+            Callable[[str, dict[str, Any]], None] | None
+        ) = None
 
         # Camera heartbeat monitoring (callback set after routes registered)
         self.heartbeat: CameraHeartbeat = CameraHeartbeat(
@@ -361,6 +373,11 @@ class WebUI:
         register_diagnostics_routes(self.app, self)
 
         register_system_routes(self.app, self)
+
+        # Register image events SSE route and store the notification callback
+        self.image_notification_callback = register_images_events_routes(
+            self.app, self
+        )
 
         # Register DHCP routes and get the SSE notification callback
         camera_notification_callback = register_dhcp_routes(self.app, self)

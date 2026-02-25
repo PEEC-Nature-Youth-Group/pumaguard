@@ -307,6 +307,15 @@ class FolderObserver:
             logger.info(
                 "Moved %s to classification folder %s", filepath, dest_path
             )
+            # Notify SSE clients that a new image is available
+            if self.webui.image_notification_callback is not None:
+                self.webui.image_notification_callback(
+                    "image_added",
+                    {
+                        "path": str(dest_path),
+                        "folder": dest_root,
+                    },
+                )
         except Exception as exc:  # pylint: disable=broad-except
             logger.error(
                 "Failed to move %s into classification folder: %s",

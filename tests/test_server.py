@@ -455,6 +455,130 @@ class TestFolderObserver(unittest.TestCase):
             self.assertFalse(result)
 
 
+class TestHandleNewFileNotification(unittest.TestCase):
+    """
+    Tests verifying that image_notification_callback is invoked by
+    _handle_new_file after a classified image is moved.
+    """
+
+    def setUp(self):
+        self.presets = Settings()
+        self.presets.notebook_number = 6
+        self.presets.model_version = "pre-trained"
+        self.presets.image_dimensions = (512, 512)
+        self.mock_webui = MagicMock()
+        self.mock_webui.plugs = {}
+        self.mock_notification = MagicMock()
+        self.mock_webui.image_notification_callback = self.mock_notification
+        self.observer = FolderObserver(
+            "test_folder", "inotify", self.presets, self.mock_webui
+        )
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.3)
+    def test_notification_called_after_move_non_puma(
+        self,
+        mock_classify,
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,
+    ):
+        """
+        image_notification_callback must be called with 'image_added' after a
+        non-puma image is successfully moved to its classification folder.
+        """
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="test_folder/other.jpg"
+        )
+
+        mock_classify.assert_called_once()
+        mock_move.assert_called_once()
+        self.mock_notification.assert_called_once()
+        event_type, event_data = self.mock_notification.call_args[0]
+        self.assertEqual(event_type, "image_added")
+        self.assertIn("path", event_data)
+        self.assertIn("folder", event_data)
+        # Non-puma images go to classified_other_dir
+        self.assertEqual(
+            event_data["folder"], self.presets.classified_other_dir
+        )
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.9)
+    @patch("pumaguard.server.playsound")
+    def test_notification_called_after_move_puma(
+        self,
+        mock_playsound,  # pylint: disable=unused-argument
+        mock_classify,
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,  # pylint: disable=unused-argument
+    ):
+        """
+        image_notification_callback must be called with 'image_added' after a
+        puma image is moved to the puma classification folder.
+        """
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="test_folder/puma.jpg"
+        )
+
+        mock_classify.assert_called_once()
+        mock_move.assert_called_once()
+        self.mock_notification.assert_called_once()
+        event_type, event_data = self.mock_notification.call_args[0]
+        self.assertEqual(event_type, "image_added")
+        self.assertIn("path", event_data)
+        self.assertIn("folder", event_data)
+        # Puma images go to classified_puma_dir
+        self.assertEqual(
+            event_data["folder"], self.presets.classified_puma_dir
+        )
+
+    @patch("pumaguard.server.shutil.move", side_effect=OSError("disk full"))
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.3)
+    def test_notification_not_called_when_move_fails(
+        self,
+        mock_classify,
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,  # pylint: disable=unused-argument
+    ):
+        """
+        image_notification_callback must NOT be called when shutil.move raises,
+        because no image was actually placed in the destination folder.
+        """
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="test_folder/other.jpg"
+        )
+
+        mock_classify.assert_called_once()
+        mock_move.assert_called_once()
+        self.mock_notification.assert_not_called()
+
+    @patch("pumaguard.server.shutil.move")
+    @patch("pumaguard.server.Path.mkdir")
+    @patch("pumaguard.server.classify_image_two_stage", return_value=0.3)
+    def test_notification_not_called_when_callback_is_none(
+        self,
+        mock_classify,
+        mock_mkdir,  # pylint: disable=unused-argument
+        mock_move,  # pylint: disable=unused-argument
+    ):
+        """
+        _handle_new_file must not raise when image_notification_callback is
+        None (i.e. the WebUI was started without the SSE route registered).
+        """
+        self.mock_webui.image_notification_callback = None
+
+        # Should not raise
+        self.observer._handle_new_file(  # pylint: disable=protected-access
+            filepath="test_folder/other.jpg"
+        )
+
+        mock_classify.assert_called_once()
+        mock_move.assert_called_once()
+
+
 class TestFolderManager(unittest.TestCase):
     """
     Unit tests for FolderManager class
@@ -471,9 +595,7 @@ class TestFolderManager(unittest.TestCase):
         self.manager = FolderManager(self.presets, self.mock_webui)
 
     @patch("pumaguard.server.FolderObserver")
-    def test_register_folder(
-        self, MockFolderObserver
-    ):  # pylint: disable=invalid-name
+    def test_register_folder(self, MockFolderObserver):  # pylint: disable=invalid-name
         """
         Test register folder.
         """

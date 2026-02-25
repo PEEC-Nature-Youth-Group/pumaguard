@@ -44,6 +44,14 @@ pumaguard.web\_routes.folders module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.web\_routes.images\_events module
+-------------------------------------------
+
+.. automodule:: pumaguard.web_routes.images_events
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 pumaguard.web\_routes.photos module
 -----------------------------------
 

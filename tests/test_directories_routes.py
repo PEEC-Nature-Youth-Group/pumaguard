@@ -104,7 +104,9 @@ def test_get_classification_directories(test_app, temp_dirs):
     assert temp_dirs["output1"] in data["directories"]
 
 
-def test_get_classification_directories_empty(temp_dirs):  # pylint: disable=unused-argument
+def test_get_classification_directories_empty(
+    temp_dirs,
+):  # pylint: disable=unused-argument
     """Test GET /api/directories/classification with no directories."""
     app = Flask(__name__)
     app.config["TESTING"] = True

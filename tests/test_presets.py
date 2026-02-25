@@ -426,6 +426,97 @@ deterrent-sound-files:
         self.assertEqual(serialized["deterrent-sound-files"][2], "sound3.mp3")
 
 
+class TestPumaThreshold(unittest.TestCase):
+    """
+    Test the puma_threshold property validation.
+    """
+
+    def setUp(self):
+        self.preset = Settings()
+
+    def test_default_puma_threshold(self):
+        """Test that puma_threshold defaults to 0.5."""
+        self.assertEqual(self.preset.puma_threshold, 0.5)
+
+    def test_set_valid_puma_threshold(self):
+        """Test setting valid puma_threshold values."""
+        self.preset.puma_threshold = 0.7
+        self.assertEqual(self.preset.puma_threshold, 0.7)
+
+        self.preset.puma_threshold = 0.1
+        self.assertEqual(self.preset.puma_threshold, 0.1)
+
+        # Test edge cases
+        self.preset.puma_threshold = 0.01
+        self.assertEqual(self.preset.puma_threshold, 0.01)
+
+        self.preset.puma_threshold = 1.0
+        self.assertEqual(self.preset.puma_threshold, 1.0)
+
+    def test_puma_threshold_accepts_int(self):
+        """Test that puma_threshold accepts integer values."""
+        self.preset.puma_threshold = 1
+        self.assertEqual(self.preset.puma_threshold, 1.0)
+
+    def test_puma_threshold_type_error(self):
+        """Test that puma_threshold raises TypeError for non-numeric values."""
+        with self.assertRaises(TypeError) as type_error:
+            self.preset.puma_threshold = "0.5"  # type: ignore
+        self.assertEqual(
+            str(type_error.exception),
+            "puma_threshold needs to be a floating point number",
+        )
+
+    def test_puma_threshold_value_error_zero(self):
+        """Test that puma_threshold raises ValueError for zero."""
+        with self.assertRaises(ValueError) as value_error:
+            self.preset.puma_threshold = 0
+        self.assertEqual(
+            str(value_error.exception),
+            "puma_threshold needs to be between (0, 1]",
+        )
+
+    def test_puma_threshold_value_error_negative(self):
+        """Test that puma_threshold raises ValueError for negative values."""
+        with self.assertRaises(ValueError) as value_error:
+            self.preset.puma_threshold = -0.1
+        self.assertEqual(
+            str(value_error.exception),
+            "puma_threshold needs to be between (0, 1]",
+        )
+
+    def test_puma_threshold_value_error_too_large(self):
+        """Test that puma_threshold raises ValueError for values > 1."""
+        with self.assertRaises(ValueError) as value_error:
+            self.preset.puma_threshold = 1.1
+        self.assertEqual(
+            str(value_error.exception),
+            "puma_threshold needs to be between (0, 1]",
+        )
+
+    @patch(
+        "builtins.open",
+        new_callable=mock_open,
+        read_data="""
+image-dimensions: [128, 128]
+puma-threshold: 0.75
+""",
+    )
+    def test_load_puma_threshold(
+        self, mock_file
+    ):  # pylint: disable=unused-argument
+        """Test loading puma_threshold from settings file."""
+        self.preset.load("/fake/path/to/settings.yaml")
+        self.assertEqual(self.preset.puma_threshold, 0.75)
+
+    def test_serialize_puma_threshold(self):
+        """Test that puma_threshold is included in serialization."""
+        self.preset.puma_threshold = 0.65
+        serialized = dict(self.preset)
+        self.assertIn("puma-threshold", serialized)
+        self.assertEqual(serialized["puma-threshold"], 0.65)
+
+
 class TestPresetSave(unittest.TestCase):
     """
     Test the Preset.save() method writes to disk correctly.

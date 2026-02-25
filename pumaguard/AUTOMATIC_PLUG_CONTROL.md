@@ -2,13 +2,13 @@
 
 ## Overview
 
-When the PumaGuard server detects a puma in an image (prediction > 0.5), it now automatically controls Shelly smart plugs that are configured in "automatic" mode. This feature allows lights, sirens, or other deterrents connected to smart plugs to activate automatically during puma detection.
+When the PumaGuard server detects a puma in an image (prediction exceeds the configured `puma-threshold`), it now automatically controls Shelly smart plugs that are configured in "automatic" mode. This feature allows lights, sirens, or other deterrents connected to smart plugs to activate automatically during puma detection.
 
 ## How It Works
 
 ### Detection Flow
 
-1. **Image Classification**: When a new image is detected and classified with >50% puma probability
+1. **Image Classification**: When a new image is detected and classified above the configured puma threshold (default: 50%)
 2. **Plug Activation**: All plugs in "automatic" mode are turned ON
 3. **Sound Playback**: Deterrent sound plays (if enabled)
 4. **Plug Deactivation**: All automatic plugs are turned OFF after sound finishes

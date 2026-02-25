@@ -98,6 +98,7 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 "YOLO-max-dets",
                 "YOLO-model-filename",
                 "classifier-model-filename",
+                "puma-threshold",
                 "deterrent-sound-file",
                 "deterrent-sound-files",
                 "file-stabilization-extra-wait",

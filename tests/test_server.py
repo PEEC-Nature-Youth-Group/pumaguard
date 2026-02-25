@@ -471,7 +471,9 @@ class TestFolderManager(unittest.TestCase):
         self.manager = FolderManager(self.presets, self.mock_webui)
 
     @patch("pumaguard.server.FolderObserver")
-    def test_register_folder(self, MockFolderObserver):  # pylint: disable=invalid-name
+    def test_register_folder(
+        self, MockFolderObserver
+    ):  # pylint: disable=invalid-name
         """
         Test register folder.
         """

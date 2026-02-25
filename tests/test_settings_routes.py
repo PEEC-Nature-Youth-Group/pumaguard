@@ -842,6 +842,7 @@ def test_update_settings_all_allowed_fields(test_app):
         "YOLO-max-dets": 500,
         "YOLO-model-filename": "new_yolo.pt",
         "classifier-model-filename": "new_classifier.h5",
+        "puma-threshold": 0.75,
         "deterrent-sound-file": "new_sound.mp3",
         "deterrent-sound-files": ["sound1.mp3", "sound2.mp3"],
         "file-stabilization-extra-wait": 3,

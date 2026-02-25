@@ -278,7 +278,7 @@ class FolderObserver:
             intermediate_dir=self.presets.intermediate_dir,
         )
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
-        if prediction > 0.5:
+        if prediction > self.presets.puma_threshold:
             logger.info("Puma detected in %s", filepath)
             if self.presets.play_sound:
                 # Turn on automatic plugs before playing sound
@@ -298,7 +298,7 @@ class FolderObserver:
         try:
             dest_root = (
                 self.presets.classified_puma_dir
-                if prediction > 0.5
+                if prediction > self.presets.puma_threshold
                 else self.presets.classified_other_dir
             )
             Path(dest_root).mkdir(parents=True, exist_ok=True)

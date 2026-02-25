@@ -16,7 +16,7 @@ name = "pumaguard"
 dynamic = ["version"]
 description = ""
 readme = "README.md"
-requires-python = ">= 3.10, < 4.0"
+requires-python = ">= 3.12, < 4.0"
 authors = [
     {name = "Nicolas Bock", email = "nicolasbock@gmail.com"}
 ]

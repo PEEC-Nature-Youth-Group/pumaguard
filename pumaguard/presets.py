@@ -186,6 +186,12 @@ class Settings:
         self.intermediate_dir = str(
             Path(self.classification_root_dir) / "intermediate"
         )
+        self.intermediate_puma_dir = str(
+            Path(self.classification_root_dir) / "intermediate-puma"
+        )
+        self.intermediate_other_dir = str(
+            Path(self.classification_root_dir) / "intermediate-other"
+        )
         # Default watch directory (incoming images)
         self.default_watch_dir = str(data_root / "watch")
 
@@ -195,6 +201,8 @@ class Settings:
             self.classified_puma_dir,
             self.classified_other_dir,
             self.intermediate_dir,
+            self.intermediate_puma_dir,
+            self.intermediate_other_dir,
             self.default_watch_dir,
         ]:
             try:

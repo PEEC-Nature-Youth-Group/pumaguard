@@ -278,7 +278,8 @@ class FolderObserver:
             intermediate_dir=self.presets.intermediate_dir,
         )
         logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
-        if prediction > self.presets.puma_threshold:
+        is_puma = prediction > self.presets.puma_threshold
+        if is_puma:
             logger.info("Puma detected in %s", filepath)
             if self.presets.play_sound:
                 # Turn on automatic plugs before playing sound
@@ -298,7 +299,7 @@ class FolderObserver:
         try:
             dest_root = (
                 self.presets.classified_puma_dir
-                if prediction > self.presets.puma_threshold
+                if is_puma
                 else self.presets.classified_other_dir
             )
             Path(dest_root).mkdir(parents=True, exist_ok=True)
@@ -322,6 +323,24 @@ class FolderObserver:
                 filepath,
                 exc,
             )
+        # Move viz bounding-box image into the appropriate split folder
+        viz_filename = Path(filepath).stem + "_viz.jpg"
+        viz_src = Path(self.presets.intermediate_dir) / viz_filename
+        if viz_src.exists():
+            viz_dest_root = (
+                self.presets.intermediate_puma_dir
+                if is_puma
+                else self.presets.intermediate_other_dir
+            )
+            try:
+                Path(viz_dest_root).mkdir(parents=True, exist_ok=True)
+                viz_dest = Path(viz_dest_root) / viz_filename
+                shutil.move(str(viz_src), viz_dest)
+                logger.info("Moved viz image %s to %s", viz_src, viz_dest)
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.error("Failed to move viz image %s: %s", viz_src, exc)
+        else:
+            logger.debug("No viz image found at %s, skipping move", viz_src)
         lock.release()
         logger.debug("Exiting (%s)", me.name)
 
@@ -485,17 +504,22 @@ def main(options: argparse.Namespace, presets: Settings):
         Path(presets.classified_puma_dir).mkdir(parents=True, exist_ok=True)
         Path(presets.classified_other_dir).mkdir(parents=True, exist_ok=True)
         Path(presets.intermediate_dir).mkdir(parents=True, exist_ok=True)
+        Path(presets.intermediate_puma_dir).mkdir(parents=True, exist_ok=True)
+        Path(presets.intermediate_other_dir).mkdir(parents=True, exist_ok=True)
     except OSError as exc:  # pragma: no cover
         logger.error("Could not ensure classified folders exist: %s", exc)
 
     webui.add_classification_directory(presets.classified_puma_dir)
     webui.add_classification_directory(presets.classified_other_dir)
-    webui.add_classification_directory(presets.intermediate_dir)
+    webui.add_classification_directory(presets.intermediate_puma_dir)
+    webui.add_classification_directory(presets.intermediate_other_dir)
     logger.info(
-        "Classification browsing enabled for: %s, %s; intermediate: %s",
+        "Classification browsing enabled for: %s, %s; "
+        "intermediate-puma: %s, intermediate-other: %s",
         presets.classified_puma_dir,
         presets.classified_other_dir,
-        presets.intermediate_dir,
+        presets.intermediate_puma_dir,
+        presets.intermediate_other_dir,
     )
 
     manager.start_all()

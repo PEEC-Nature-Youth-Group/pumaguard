@@ -34,6 +34,7 @@ from pumaguard.shelly_control import (
     set_shelly_switch,
 )
 from pumaguard.sound import (
+    get_volume,
     is_playing,
     playsound,
     stop_sound,
@@ -83,6 +84,13 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
                 }
             )
         settings_dict["plugs"] = plug_list
+        # Override the stored volume with the live ALSA value so the UI
+        # always reflects any manual amixer adjustments made outside of
+        # PumaGuard.
+        current_volume = get_volume()
+        if current_volume is not None:
+            settings_dict["volume"] = current_volume
+            webui.presets.volume = current_volume
         return jsonify(settings_dict)
 
     @app.route("/api/settings", methods=["PUT"])

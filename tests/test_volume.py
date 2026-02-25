@@ -1,21 +1,25 @@
 """
 Unit tests for sound module functionality.
 
-Tests the playsound, stop_sound, and is_playing functions with proper mocking
-to avoid actual audio playback during testing.
+Tests the playsound, stop_sound, is_playing, get_volume, and set_volume
+functions with proper mocking to avoid actual audio playback or amixer
+calls during testing.
 """
 
 import subprocess
 import threading
 import unittest
 from unittest.mock import (
+    MagicMock,
     Mock,
     patch,
 )
 
 from pumaguard.sound import (
+    get_volume,
     is_playing,
     playsound,
+    set_volume,
     stop_sound,
 )
 
@@ -35,8 +39,9 @@ class TestPlaysound(unittest.TestCase):
                 None
             )
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_basic(self, mock_popen):
+    def test_playsound_basic(self, mock_popen, mock_set_volume):
         """Test basic sound playback with default parameters."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -44,21 +49,23 @@ class TestPlaysound(unittest.TestCase):
 
         playsound("/path/to/sound.mp3")
 
-        # Verify subprocess was called with correct arguments
+        # Verify set_volume was called with default volume
+        mock_set_volume.assert_called_once_with(80)
+
+        # Verify mpg123 was called with correct arguments (no --scale)
         mock_popen.assert_called_once()
         args = mock_popen.call_args[0][0]
         self.assertEqual(args[0], "mpg123")
         self.assertEqual(args[1], "-o")
         self.assertEqual(args[2], "alsa,pulse")
-        self.assertEqual(args[3], "--scale")
-        self.assertEqual(args[4], "26214")  # 80% of 32768
-        self.assertEqual(args[5], "/path/to/sound.mp3")
+        self.assertEqual(args[3], "/path/to/sound.mp3")
 
         # Verify wait was called (blocking=True by default)
         mock_process.wait.assert_called_once()
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_volume_levels(self, mock_popen):
+    def test_playsound_volume_levels(self, mock_popen, mock_set_volume):
         """Test playsound with different volume levels."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -66,21 +73,22 @@ class TestPlaysound(unittest.TestCase):
 
         # Test volume 0%
         playsound("/path/to/sound.mp3", volume=0)
-        args = mock_popen.call_args[0][0]
-        self.assertEqual(args[4], "0")
+        mock_set_volume.assert_called_with(0)
 
         # Test volume 50%
         playsound("/path/to/sound.mp3", volume=50)
-        args = mock_popen.call_args[0][0]
-        self.assertEqual(args[4], "16384")  # 50% of 32768
+        mock_set_volume.assert_called_with(50)
 
         # Test volume 100%
         playsound("/path/to/sound.mp3", volume=100)
-        args = mock_popen.call_args[0][0]
-        self.assertEqual(args[4], "32768")  # 100% of 32768
+        mock_set_volume.assert_called_with(100)
 
+        # Verify set_volume was called once per playsound call
+        self.assertEqual(mock_set_volume.call_count, 3)
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_non_blocking(self, mock_popen):
+    def test_playsound_non_blocking(self, mock_popen, mock_set_volume):
         """Test playsound with blocking=False."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -88,14 +96,18 @@ class TestPlaysound(unittest.TestCase):
 
         playsound("/path/to/sound.mp3", blocking=False)
 
+        # Verify set_volume was called
+        mock_set_volume.assert_called_once_with(80)
+
         # Verify subprocess was called
         mock_popen.assert_called_once()
 
         # Verify wait was NOT called (non-blocking)
         mock_process.wait.assert_not_called()
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_stops_previous_sound(self, mock_popen):
+    def test_playsound_stops_previous_sound(self, mock_popen, mock_set_volume):
         """Test that playsound stops any currently playing sound."""
         # First sound
         mock_process1 = Mock()
@@ -118,13 +130,20 @@ class TestPlaysound(unittest.TestCase):
         mock_process1.terminate.assert_called_once()
         mock_process1.wait.assert_called_once_with(timeout=1)
 
+        # set_volume called once per playsound
+        self.assertEqual(mock_set_volume.call_count, 2)
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_subprocess_error(self, mock_popen):
+    def test_playsound_subprocess_error(self, mock_popen, mock_set_volume):
         """Test playsound handles subprocess errors gracefully."""
         mock_popen.side_effect = subprocess.SubprocessError("Command failed")
 
         # Should not raise exception
         playsound("/path/to/sound.mp3")
+
+        # set_volume should still have been called before the error
+        mock_set_volume.assert_called_once_with(80)
 
         # Process should be cleaned up
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
@@ -134,14 +153,19 @@ class TestPlaysound(unittest.TestCase):
                 pumaguard.sound._current_process  # pylint: disable=protected-access
             )
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_stdout_stderr_devnull(self, mock_popen):
+    def test_playsound_stdout_stderr_devnull(
+        self, mock_popen, mock_set_volume
+    ):
         """Test that stdout and stderr are redirected to DEVNULL."""
         mock_process = Mock()
         mock_process.pid = 12345
         mock_popen.return_value = mock_process
 
         playsound("/path/to/sound.mp3")
+
+        mock_set_volume.assert_called_once()
 
         # Verify subprocess.DEVNULL is used
         kwargs = mock_popen.call_args[1]
@@ -164,8 +188,9 @@ class TestStopSound(unittest.TestCase):
                 None
             )
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_stop_sound_when_playing(self, mock_popen):
+    def test_stop_sound_when_playing(self, mock_popen, mock_set_volume):
         """Test stopping a sound that is currently playing."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -183,6 +208,8 @@ class TestStopSound(unittest.TestCase):
         mock_process.terminate.assert_called_once()
         mock_process.wait.assert_called_once_with(timeout=1)
 
+        mock_set_volume.assert_called_once()
+
     def test_stop_sound_when_nothing_playing(self):
         """Test stopping when no sound is playing."""
         result = stop_sound()
@@ -190,8 +217,9 @@ class TestStopSound(unittest.TestCase):
         # Should return False
         self.assertFalse(result)
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_stop_sound_timeout_then_kill(self, mock_popen):
+    def test_stop_sound_timeout_then_kill(self, mock_popen, mock_set_volume):
         """Test that stop_sound kills process if terminate times out."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -213,8 +241,13 @@ class TestStopSound(unittest.TestCase):
         mock_process.terminate.assert_called_once()
         mock_process.kill.assert_called_once()
 
+        mock_set_volume.assert_called_once()
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_stop_sound_process_lookup_error(self, mock_popen):
+    def test_stop_sound_process_lookup_error(
+        self, mock_popen, mock_set_volume
+    ):
         """Test stop_sound handles ProcessLookupError gracefully."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -231,8 +264,11 @@ class TestStopSound(unittest.TestCase):
         # Should still return True
         self.assertTrue(result)
 
+        mock_set_volume.assert_called_once()
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_stop_sound_kill_timeout(self, mock_popen):
+    def test_stop_sound_kill_timeout(self, mock_popen, mock_set_volume):
         """Test stop_sound handles timeout on kill operation."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -254,8 +290,13 @@ class TestStopSound(unittest.TestCase):
         self.assertTrue(result)
         mock_process.kill.assert_called_once()
 
+        mock_set_volume.assert_called_once()
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_stop_sound_kill_process_lookup_error(self, mock_popen):
+    def test_stop_sound_kill_process_lookup_error(
+        self, mock_popen, mock_set_volume
+    ):
         """Test stop_sound handles ProcessLookupError on kill."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -276,8 +317,13 @@ class TestStopSound(unittest.TestCase):
         self.assertTrue(result)
         mock_process.kill.assert_called_once()
 
+        mock_set_volume.assert_called_once()
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_cleanup_previous_timeout(self, mock_popen):
+    def test_playsound_cleanup_previous_timeout(
+        self, mock_popen, mock_set_volume
+    ):
         """Test playsound handles timeout when cleaning up previous sound."""
         # First sound
         mock_process1 = Mock()
@@ -301,8 +347,13 @@ class TestStopSound(unittest.TestCase):
         self.assertEqual(mock_popen.call_count, 2)
         mock_process1.terminate.assert_called_once()
 
+        self.assertEqual(mock_set_volume.call_count, 2)
+
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_playsound_cleanup_previous_process_lookup_error(self, mock_popen):
+    def test_playsound_cleanup_previous_process_lookup_error(
+        self, mock_popen, mock_set_volume
+    ):
         """
         Test playsound handles ProcessLookupError when cleaning up
         previous sound.
@@ -330,6 +381,8 @@ class TestStopSound(unittest.TestCase):
         self.assertEqual(mock_popen.call_count, 2)
         mock_process1.terminate.assert_called_once()
 
+        self.assertEqual(mock_set_volume.call_count, 2)
+
 
 class TestIsPlaying(unittest.TestCase):
     """
@@ -346,8 +399,9 @@ class TestIsPlaying(unittest.TestCase):
                 None
             )
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_is_playing_when_sound_playing(self, mock_popen):
+    def test_is_playing_when_sound_playing(self, mock_popen, mock_set_volume):
         """Test is_playing returns True when sound is playing."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -362,6 +416,7 @@ class TestIsPlaying(unittest.TestCase):
 
         self.assertTrue(result)
         mock_process.poll.assert_called_once()
+        mock_set_volume.assert_called_once()
 
     def test_is_playing_when_nothing_playing(self):
         """Test is_playing returns False when no sound is playing."""
@@ -369,8 +424,11 @@ class TestIsPlaying(unittest.TestCase):
 
         self.assertFalse(result)
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_is_playing_cleans_up_finished_process(self, mock_popen):
+    def test_is_playing_cleans_up_finished_process(
+        self, mock_popen, mock_set_volume
+    ):
         """Test is_playing cleans up when process has finished."""
         mock_process = Mock()
         mock_process.pid = 12345
@@ -393,6 +451,8 @@ class TestIsPlaying(unittest.TestCase):
                 pumaguard.sound._current_process  # pylint: disable=protected-access
             )
 
+        mock_set_volume.assert_called_once()
+
 
 class TestThreadSafety(unittest.TestCase):
     """
@@ -409,8 +469,9 @@ class TestThreadSafety(unittest.TestCase):
                 None
             )
 
+    @patch("pumaguard.sound.set_volume")
     @patch("pumaguard.sound.subprocess.Popen")
-    def test_concurrent_playsound_calls(self, mock_popen):
+    def test_concurrent_playsound_calls(self, mock_popen, mock_set_volume):
         """Test that concurrent playsound calls are thread-safe."""
         mock_processes = []
         for i in range(5):
@@ -437,6 +498,7 @@ class TestThreadSafety(unittest.TestCase):
 
         # Verify all calls were made
         self.assertEqual(mock_popen.call_count, 5)
+        self.assertEqual(mock_set_volume.call_count, 5)
 
         # Verify only one process is active at the end
         import pumaguard.sound  # pylint: disable=import-outside-toplevel
@@ -447,37 +509,237 @@ class TestThreadSafety(unittest.TestCase):
             )
 
 
-class TestVolumeConversion(unittest.TestCase):
+class TestSetVolume(unittest.TestCase):
     """
-    Test volume percentage to mpg123 scale conversion.
+    Test the set_volume function which calls amixer to set ALSA volume.
     """
 
-    @patch("pumaguard.sound.subprocess.Popen")
-    def test_volume_conversion_formula(self, mock_popen):
-        """Test the volume conversion formula is correct."""
-        mock_process = Mock()
-        mock_process.pid = 12345
-        mock_popen.return_value = mock_process
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_calls_amixer(self, mock_run):
+        """Test that set_volume calls amixer with the correct arguments."""
+        mock_run.return_value = MagicMock(returncode=0)
 
-        test_cases = [
-            (0, 0),  # 0% -> 0
-            (25, 8192),  # 25% -> 8192
-            (50, 16384),  # 50% -> 16384
-            (75, 24576),  # 75% -> 24576
-            (100, 32768),  # 100% -> 32768
-        ]
+        set_volume(75)
 
-        for volume_percent, expected_scale in test_cases:
-            mock_popen.reset_mock()
-            playsound("/path/to/sound.mp3", volume=volume_percent)
+        mock_run.assert_called_once()
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args, ["amixer", "set", "PCM", "75%"])
 
-            args = mock_popen.call_args[0][0]
-            actual_scale = int(args[4])
-            self.assertEqual(
-                actual_scale,
-                expected_scale,
-                f"Volume {volume_percent}% should convert to {expected_scale}",
-            )
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_default_control_is_pcm(self, mock_run):
+        """Test that the default ALSA control is PCM."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        set_volume(50)
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[2], "PCM")
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_custom_control(self, mock_run):
+        """Test set_volume with a custom ALSA control name."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        set_volume(60, control="Master")
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args, ["amixer", "set", "Master", "60%"])
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_boundary_zero(self, mock_run):
+        """Test set_volume at 0%."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        set_volume(0)
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[3], "0%")
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_boundary_hundred(self, mock_run):
+        """Test set_volume at 100%."""
+        mock_run.return_value = MagicMock(returncode=0)
+
+        set_volume(100)
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args[3], "100%")
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_amixer_failure_does_not_raise(self, mock_run):
+        """Test that a non-zero amixer return code does not raise."""
+        mock_run.return_value = MagicMock(
+            returncode=1, stderr=b"No such control"
+        )
+
+        # Should not raise
+        set_volume(80)
+
+    def test_set_volume_amixer_not_found_does_not_raise(self):
+        """Test that a missing amixer binary does not raise."""
+        with patch(
+            "pumaguard.sound.subprocess.run",
+            side_effect=FileNotFoundError("amixer not found"),
+        ):
+            # Should not raise
+            set_volume(80)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_subprocess_error_does_not_raise(self, mock_run):
+        """Test that a SubprocessError does not raise."""
+        mock_run.side_effect = subprocess.SubprocessError("failed")
+
+        # Should not raise
+        set_volume(80)
+
+
+class TestGetVolume(unittest.TestCase):
+    """
+    Test the get_volume function which reads the ALSA volume via amixer.
+    """
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_parses_mono_output(self, mock_run):
+        """Test parsing of mono amixer output (e.g. Raspberry Pi PCM)."""
+        amixer_output = (
+            "Simple mixer control 'PCM',0\n"
+            "  Capabilities: pvolume pvolume-joined pswitch pswitch-joined\n"
+            "  Playback channels: Mono\n"
+            "  Limits: Playback 0 - 255\n"
+            "  Mono: Playback 192 [75%] [on]\n"
+        )
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=amixer_output.encode()
+        )
+
+        result = get_volume()
+
+        self.assertEqual(result, 75)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_parses_stereo_output(self, mock_run):
+        """Test parsing of stereo amixer output (left/right channels)."""
+        amixer_output = (
+            "Simple mixer control 'Master',0\n"
+            "  Capabilities: pvolume pswitch\n"
+            "  Playback channels: Front Left - Front Right\n"
+            "  Limits: Playback 0 - 65536\n"
+            "  Mono:\n"
+            "  Front Left: Playback 49152 [75%] [on]\n"
+            "  Front Right: Playback 49152 [75%] [on]\n"
+        )
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=amixer_output.encode()
+        )
+
+        result = get_volume(control="Master")
+
+        self.assertEqual(result, 75)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_default_control_is_pcm(self, mock_run):
+        """Test that get_volume queries the PCM control by default."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=b"Mono: Playback 128 [50%] [on]\n"
+        )
+
+        get_volume()
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args, ["amixer", "get", "PCM"])
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_custom_control(self, mock_run):
+        """Test that get_volume queries the specified control."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=b"Mono: Playback 128 [50%] [on]\n"
+        )
+
+        get_volume(control="Headphone")
+
+        args = mock_run.call_args[0][0]
+        self.assertEqual(args, ["amixer", "get", "Headphone"])
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_returns_none_on_amixer_failure(self, mock_run):
+        """Test that get_volume returns None when amixer exits with error."""
+        mock_run.return_value = MagicMock(
+            returncode=1, stdout=b"", stderr=b"No such control"
+        )
+
+        result = get_volume()
+
+        self.assertIsNone(result)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_returns_none_when_no_percentage_in_output(
+        self, mock_run
+    ):
+        """Test that get_volume returns None when output has no percentage."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=b"Simple mixer control 'PCM',0\n"
+        )
+
+        result = get_volume()
+
+        self.assertIsNone(result)
+
+    def test_get_volume_returns_none_when_amixer_not_found(self):
+        """Test that get_volume returns None when amixer is not installed."""
+        with patch(
+            "pumaguard.sound.subprocess.run",
+            side_effect=FileNotFoundError("amixer not found"),
+        ):
+            result = get_volume()
+
+        self.assertIsNone(result)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_returns_none_on_subprocess_error(self, mock_run):
+        """Test that get_volume returns None on a SubprocessError."""
+        mock_run.side_effect = subprocess.SubprocessError("failed")
+
+        result = get_volume()
+
+        self.assertIsNone(result)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_boundary_zero(self, mock_run):
+        """Test parsing of 0% volume."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=b"Mono: Playback 0 [0%] [off]\n"
+        )
+
+        result = get_volume()
+
+        self.assertEqual(result, 0)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_boundary_hundred(self, mock_run):
+        """Test parsing of 100% volume."""
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=b"Mono: Playback 255 [100%] [on]\n"
+        )
+
+        result = get_volume()
+
+        self.assertEqual(result, 100)
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_get_volume_returns_first_percentage_for_stereo(self, mock_run):
+        """Test that get_volume returns the first channel's percentage."""
+        amixer_output = (
+            "  Front Left: Playback 32768 [50%] [on]\n"
+            "  Front Right: Playback 49152 [75%] [on]\n"
+        )
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=amixer_output.encode()
+        )
+
+        result = get_volume()
+
+        # Should return the first percentage found (50, not 75)
+        self.assertEqual(result, 50)
 
 
 class TestMain(unittest.TestCase):
@@ -628,7 +890,3 @@ class TestMain(unittest.TestCase):
         main()
 
         mock_playsound.assert_called_once_with("/path/to/sound.mp3", 100)
-
-
-if __name__ == "__main__":
-    unittest.main()

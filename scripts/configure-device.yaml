@@ -608,6 +608,7 @@
         mode: "0755"
       tags:
         - networking
+        - hostapd
 
     - name: Configure hostapd for wlan0 access point
       ansible.builtin.template:
@@ -621,6 +622,7 @@
       notify: Restart hostapd
       tags:
         - networking
+        - hostapd
 
     - name: Configure hostapd daemon options
       ansible.builtin.lineinfile:
@@ -632,6 +634,7 @@
       notify: Restart hostapd
       tags:
         - networking
+        - hostapd
 
     - name: Unmask hostapd service
       ansible.builtin.systemd:
@@ -639,6 +642,7 @@
         masked: false
       tags:
         - networking
+        - hostapd
 
     - name: Enable hostapd service
       ansible.builtin.systemd:
@@ -647,6 +651,7 @@
         daemon_reload: true
       tags:
         - networking
+        - hostapd
 
     - name: Start hostapd service
       ansible.builtin.systemd:
@@ -654,6 +659,7 @@
         state: started
       tags:
         - networking
+        - hostapd
 
     - name: Configure wired network
       ansible.builtin.template:

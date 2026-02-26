@@ -66,7 +66,7 @@ extra-dev = [
 docs = [
     "cloud-sptheme",
     "matplotlib ~= 3.10",
-    "pandas ~= 2.3",
+    "pandas~=3.0",
     "pillow ~= 12.1",
     "playsound3",
     "sphinx-book-theme",

@@ -61,7 +61,7 @@ dev = [
     "types-tensorflow",
 ]
 extra-dev = [
-    "ipykernel ~= 6.29",
+    "ipykernel~=7.2",
     "plotly ~= 6.0",
 ]
 docs = [

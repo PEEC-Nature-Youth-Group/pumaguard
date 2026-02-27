@@ -102,11 +102,12 @@ class TestFolderObserver(unittest.TestCase):
     @patch("pumaguard.server.threading.Thread")
     def test_start(self, MockThread):  # pylint: disable=invalid-name
         """
-        Test starting the observer.
+        Test starting the observer (with monitoring thread).
         """
         self.observer.start()
         MockThread.assert_called_once_with(
-            target=self.observer._observe  # pylint: disable=protected-access
+            target=self.observer._monitor_observer,
+            name=f"Monitor-{self.folder}"
         )
         MockThread.return_value.start.assert_called_once()
 

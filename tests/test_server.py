@@ -106,8 +106,8 @@ class TestFolderObserver(unittest.TestCase):
         """
         self.observer.start()
         MockThread.assert_called_once_with(
-            target=self.observer._monitor_observer,
-            name=f"Monitor-{self.folder}"
+            target=self.observer._monitor_observer,  # pylint: disable=protected-access
+            name=f"Monitor-{self.folder}",
         )
         MockThread.return_value.start.assert_called_once()
 
@@ -744,7 +744,9 @@ class TestFolderManager(unittest.TestCase):
         self.manager = FolderManager(self.presets, self.mock_webui)
 
     @patch("pumaguard.server.FolderObserver")
-    def test_register_folder(self, MockFolderObserver):  # pylint: disable=invalid-name
+    def test_register_folder(
+        self, MockFolderObserver
+    ):  # pylint: disable=invalid-name
         """
         Test register folder.
         """
@@ -767,7 +769,9 @@ class TestFolderManager(unittest.TestCase):
 
     @patch.object(FolderObserver, "start")
     @patch.object(FolderObserver, "stop")
-    def test_stop_all(self, mock_stop, mock_start):  # pylint: disable=unused-argument
+    def test_stop_all(
+        self, mock_stop, mock_start
+    ):  # pylint: disable=unused-argument
         """
         Test the stop_all method.
         """

@@ -106,19 +106,61 @@ class FolderObserver:
         self.presets: Settings = presets
         self.webui: WebUI = webui
         self._stop_event: threading.Event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._monitor_thread: threading.Thread | None = None
 
     def start(self):
         """
-        start watching the folder.
+        Start watching the folder, with monitoring and auto-restart.
         """
         self._stop_event.clear()
-        threading.Thread(target=self._observe).start()
+        if self._monitor_thread and self._monitor_thread.is_alive():
+            logger.warning(
+                "Monitor thread already running for %s", self.folder
+            )
+            return
+        self._monitor_thread = threading.Thread(
+            target=self._monitor_observer, name=f"Monitor-{self.folder}"
+        )
+        self._monitor_thread.daemon = True
+        self._monitor_thread.start()
+
+    def _monitor_observer(self):
+        """
+        Monitor the observer thread, restart if it crashes.
+        """
+        while not self._stop_event.is_set():
+            self._thread = threading.Thread(
+                target=self._observe, name=f"Observer-{self.folder}"
+            )
+            self._thread.daemon = True
+            try:
+                self._thread.start()
+                self._thread.join()
+            except (RuntimeError, threading.ThreadError, TypeError) as exc:
+                logger.warning(
+                    "FolderObserver thread crashed for %s: %s",
+                    self.folder,
+                    exc,
+                )
+            if self._stop_event.is_set():
+                break
+            logger.warning(
+                "FolderObserver thread for %s exited unexpectedly. "
+                + "Restarting...",
+                self.folder,
+            )
+            time.sleep(1)
 
     def stop(self):
         """
-        Stop watching the folder.
+        Stop watching the folder and monitoring thread.
         """
         self._stop_event.set()
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=2)
+        if self._monitor_thread and self._monitor_thread.is_alive():
+            self._monitor_thread.join(timeout=2)
 
     def _get_time(self) -> float:
         """

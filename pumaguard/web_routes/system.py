@@ -7,6 +7,7 @@ from __future__ import (
 import logging
 import os
 import platform
+import shutil
 import subprocess
 from datetime import (
     datetime,
@@ -38,6 +39,101 @@ def register_system_routes(
     webui: "WebUI",  # pylint: disable=unused-argument
 ) -> None:
     """Register system administration endpoints for time sync and status."""
+
+    @app.route("/api/system/logs", methods=["GET"])
+    def get_system_logs():
+        """
+        Retrieve system journal logs via journalctl.
+
+        Query parameters:
+            scope: 'unit' to get logs for pumaguard unit only,
+                   'all' to get all system logs (default: 'unit')
+            lines: number of lines to return, or 'all' (default: 'all')
+
+        Returns:
+            JSON with log lines and metadata
+        """
+        scope = request.args.get("scope", "unit")
+        lines = request.args.get("lines", "all")
+
+        if lines != "all":
+            try:
+                lines_int = int(lines)
+            except ValueError:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "invalid value for lines; "
+                                + "either 'all' or a number"
+                            ),
+                            "logs": [],
+                        }
+                    ),
+                    503,
+                )
+            if lines_int < 1:
+                return (
+                    jsonify(
+                        {
+                            "error": ("lines needs to be a positive integer"),
+                            "logs": [],
+                        }
+                    ),
+                    503,
+                )
+
+        if not shutil.which("journalctl"):
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "journalctl is not available on this system"
+                        ),
+                        "logs": [],
+                    }
+                ),
+                503,
+            )
+
+        try:
+            cmd = ["journalctl", "--no-pager", "--lines", lines]
+
+            if scope == "unit":
+                cmd += ["--unit", "pumaguard"]
+
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+
+            if result.returncode != 0 and result.stderr:
+                logger.warning(
+                    "journalctl returned non-zero exit code %d: %s",
+                    result.returncode,
+                    result.stderr.strip(),
+                )
+
+            log_lines = result.stdout.splitlines()
+
+            return jsonify(
+                {
+                    "scope": scope,
+                    "lines_requested": lines,
+                    "line_count": len(log_lines),
+                    "logs": log_lines,
+                }
+            )
+
+        except subprocess.TimeoutExpired:
+            logger.error("journalctl command timed out")
+            return jsonify({"error": "Log retrieval timed out"}), 504
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Error retrieving system logs")
+            return jsonify({"error": "Failed to retrieve logs"}), 500
 
     @app.route("/api/system/time", methods=["GET"])
     def get_system_time():

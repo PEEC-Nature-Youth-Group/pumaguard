@@ -7,6 +7,7 @@ import '../services/api_service.dart';
 import '../services/camera_events_service.dart';
 import 'dart:developer' as developer;
 import 'wifi_settings_screen.dart';
+import 'log_viewer_screen.dart';
 import 'package:file_picker/file_picker.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -1466,6 +1467,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Logs Section
+            Row(
+              children: [
+                Icon(
+                  Icons.article_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'System Logs',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'View journal logs from the server',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LogViewerScreen(
+                      apiService: context.read<ApiService>(),
+                      scope: LogScope.unit,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.terminal),
+              label: const Text('PumaGuard logs'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                alignment: Alignment.centerLeft,
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => LogViewerScreen(
+                      apiService: context.read<ApiService>(),
+                      scope: LogScope.all,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.terminal),
+              label: const Text('System logs'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                alignment: Alignment.centerLeft,
               ),
             ),
             const SizedBox(height: 24),

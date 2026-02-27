@@ -994,4 +994,37 @@ class ApiService {
       throw Exception('Failed to set server time: $e');
     }
   }
+
+  /// Retrieve system journal logs.
+  ///
+  /// [scope] can be:
+  ///   - `'unit'`: logs for the pumaguard systemd unit only
+  ///     (`journalctl --unit pumaguard --lines all`)
+  ///   - `'all'`: all system journal logs
+  ///     (`journalctl --lines all`)
+  Future<Map<String, dynamic>> getLogs({String scope = 'unit'}) async {
+    try {
+      final url = getApiUrl('/api/system/logs');
+      final uri = Uri.parse(
+        url,
+      ).replace(queryParameters: {'scope': scope, 'lines': 'all'});
+
+      final response = await http.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body) as Map<String, dynamic>;
+      } else {
+        final errorBody = json.decode(response.body) as Map<String, dynamic>;
+        throw Exception(
+          errorBody['error'] ??
+              'Failed to retrieve logs: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to retrieve logs: $e');
+    }
+  }
 }

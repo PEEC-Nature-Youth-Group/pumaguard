@@ -9,6 +9,7 @@
 #   make configure-device ANSIBLE_SKIP_TAGS=pumaguard  # Skip pumaguard tag
 #   make configure-device ANSIBLE_TAGS=network         # Run only network tag
 #   make configure-device ANSIBLE_TAGS=users,ssh       # Run users and ssh tags
+TEST_VM ?= pumaguard.lxd
 LAPTOP ?= laptop
 DEVICE ?= pi-5
 DEVICE_USER ?= pumaguard
@@ -187,7 +188,7 @@ configure-device: install-dev build
 	eval $$ANSIBLE_CMD
 
 .PHONY: configure-laptop
-configure-laptop: install-dev
+configure-laptop: install-dev build
 	@ANSIBLE_CMD="uv run ansible-playbook --inventory $(LAPTOP), --diff --ask-become-pass --ask-vault-pass"; \
 	if [ -n "$(ANSIBLE_TAGS)" ]; then \
 		ANSIBLE_CMD="$$ANSIBLE_CMD --tags $(ANSIBLE_TAGS)"; \
@@ -197,6 +198,12 @@ configure-laptop: install-dev
 	fi; \
 	ANSIBLE_CMD="$$ANSIBLE_CMD scripts/configure-laptop.yaml"; \
 	eval $$ANSIBLE_CMD
+
+.PHONY: configure-vm
+configure-vm: install-dev
+	$(MAKE) configure-device \
+	    DEVICE=$(TEST_VM) \
+	    ANSIBLE_SKIP_TAGS=$(or $(ANSIBLE_SKIP_TAGS),hostapd)
 
 .PHONY: verify-poetry
 verify-poetry: install

@@ -203,6 +203,9 @@ class FolderObserver:
                 logger.debug("Image not completely uploaded: %s", e)
                 self._sleep(interval)
                 continue
+            except ModuleNotFoundError as e:
+                logger.debug("Missing module: %s", e)
+                self._sleep(interval)
         logger.warning(
             "File %s is still open after %d seconds", filepath, timeout
         )

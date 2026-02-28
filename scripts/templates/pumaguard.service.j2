@@ -6,6 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+AmbientCapabilities=CAP_SYS_TIME
 User={{ pumaguard_user | default(ansible_user) }}
 Group={{ pumaguard_group | default(ansible_user) }}
 WorkingDirectory={{ pumaguard_watch_dir | default('/home/' + ansible_user + '/pumaguard') }}

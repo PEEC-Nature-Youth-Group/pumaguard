@@ -40,6 +40,7 @@ Retrieve the current server time.
 **Endpoint**: `GET /api/system/time`
 
 **Response**:
+
 ```json
 {
   "timestamp": 1705318200.0,
@@ -50,6 +51,7 @@ Retrieve the current server time.
 ```
 
 **Fields**:
+
 - `timestamp`: Unix timestamp in seconds (UTC)
 - `iso`: ISO 8601 formatted UTC datetime
 - `local_iso`: ISO 8601 formatted local datetime (server's timezone)
@@ -64,6 +66,7 @@ Set the server's system time.
 **Request Body** (choose one format):
 
 Using Unix timestamp:
+
 ```json
 {
   "timestamp": 1705318200.0
@@ -71,6 +74,7 @@ Using Unix timestamp:
 ```
 
 Using ISO 8601 string:
+
 ```json
 {
   "iso": "2024-01-15T10:30:00Z"
@@ -78,6 +82,7 @@ Using ISO 8601 string:
 ```
 
 **Success Response** (200):
+
 ```json
 {
   "success": true,
@@ -87,6 +92,7 @@ Using ISO 8601 string:
 ```
 
 **Error Response** (400/500):
+
 ```json
 {
   "error": "Permission denied. Server needs appropriate permissions..."
@@ -103,22 +109,27 @@ The server needs one of the following:
 
 1. **Run with sudo**: `sudo pumaguard-webui`
 2. **Grant CAP_SYS_TIME capability**:
+
    ```bash
    sudo setcap CAP_SYS_TIME+ep /path/to/python
    ```
+
 3. **Configure systemd service** with appropriate capabilities:
+
    ```ini
    [Service]
    AmbientCapabilities=CAP_SYS_TIME
    ```
 
 **Commands Used**:
+
 - Primary: `timedatectl set-time "YYYY-MM-DD HH:MM:SS"` (systemd-based systems)
 - Fallback: `date -u -s @<timestamp>` (non-systemd systems)
 
 ### macOS
 
 Run the server with sudo:
+
 ```bash
 sudo pumaguard-webui
 ```
@@ -130,6 +141,7 @@ sudo pumaguard-webui
 Run the server as Administrator (right-click → "Run as Administrator").
 
 **Commands Used**:
+
 - `time HH:MM:SS`
 - `date MM-DD-YYYY`
 
@@ -138,10 +150,12 @@ Run the server as Administrator (right-click → "Run as Administrator").
 ### Backend (Python)
 
 **Files Modified**:
+
 - `pumaguard/web_routes/system.py` - New routes module for system administration
 - `pumaguard/web_ui.py` - Imports and registers system routes
 
 **Key Functions**:
+
 - `register_system_routes()` - Registers Flask routes for time management
 - `_set_system_time()` - Platform-specific time setting logic
 - `_command_exists()` - Checks for available system commands
@@ -149,10 +163,12 @@ Run the server as Administrator (right-click → "Run as Administrator").
 ### Frontend (Flutter)
 
 **Files Modified**:
+
 - `pumaguard-ui/lib/services/api_service.dart` - API methods for time sync
 - `pumaguard-ui/lib/screens/settings_screen.dart` - UI controls and state management
 
 **Key Methods**:
+
 - `getServerTime()` - Fetches current server time
 - `syncServerTime()` - Syncs using device's current time
 - `setServerTime()` - Sets server time with specific timestamp/ISO string
@@ -183,6 +199,7 @@ The implementation handles various error scenarios:
 ## Testing
 
 Run the test suite:
+
 ```bash
 # All tests
 uv run pytest tests/
@@ -192,6 +209,7 @@ uv run pytest tests/test_system_routes.py -v
 ```
 
 **Test Coverage**:
+
 - API endpoint responses (GET/PUT)
 - Time format parsing (Unix timestamp, ISO 8601)
 - Platform-specific command execution
@@ -211,11 +229,13 @@ uv run pytest tests/test_system_routes.py -v
 **Symptom**: Success message shown but `date` command shows old time.
 
 **Possible Causes**:
+
 1. NTP service is overriding the manual time setting
 2. System has a read-only filesystem
 3. Hardware clock (RTC) is not updated
 
 **Solutions**:
+
 - Disable NTP: `sudo timedatectl set-ntp false` (Linux)
 - Update hardware clock: `sudo hwclock --systohc` (Linux)
 - Check system logs: `journalctl -xe` (Linux)
@@ -224,7 +244,8 @@ uv run pytest tests/test_system_routes.py -v
 
 **Symptom**: UI never loads the server time.
 
-**Solution**: 
+**Solution**:
+
 - Check network connectivity between device and server
 - Verify the server is running
 - Check browser console for CORS or network errors
@@ -258,6 +279,7 @@ When contributing to this feature:
 5. Test on multiple platforms if possible (Linux, macOS, Windows)
 
 For Flutter changes:
+
 ```bash
 cd pumaguard-ui
 make pre-commit  # REQUIRED before committing UI changes

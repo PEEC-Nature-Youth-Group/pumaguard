@@ -4,6 +4,7 @@
 .python-version
 .vscode
 __pycache__
+build/*
 dist/*
 docs/build/*
 prime/*

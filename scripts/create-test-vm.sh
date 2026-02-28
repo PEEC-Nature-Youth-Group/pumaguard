@@ -42,7 +42,7 @@ cat <<EOF | lxc profile set pumaguard user.user-data -
 users:
     - name: pumaguard
       shell: /bin/bash
-      groups: [sudo]
+      groups: [sudo, adm]
       passwd: ${HASHED}
       lock_passwd: false
 runcmd:

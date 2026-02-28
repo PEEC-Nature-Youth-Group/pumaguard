@@ -77,7 +77,7 @@ test-ui:
 
 .PHONY: build
 build: install build-ui
-	uv build
+	UV_DEBUG=1 uv build --wheel
 
 .PHONY: lint
 lint: black pylint isort mypy bashate

@@ -883,18 +883,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           _buildSoundSection(),
           const SizedBox(height: 16),
-          _buildSystemSection(),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _isSaving ? null : _saveSettings,
-            icon: _isSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.save),
-            label: const Text('Save Settings'),
             style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
           ),
         ],

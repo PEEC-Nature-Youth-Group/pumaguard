@@ -883,8 +883,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           _buildSoundSection(),
           const SizedBox(height: 16),
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
-          ),
+          _buildSystemSection(),
         ],
       ),
     );

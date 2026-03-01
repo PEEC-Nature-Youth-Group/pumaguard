@@ -369,7 +369,6 @@
           - avahi-utils
           - dnsmasq
           - git
-          - hostapd
           - htop
           - inotify-tools
           - isc-dhcp-client
@@ -598,6 +597,14 @@
       # Real DNS queries are forwarded to eth0 for internet connectivity.
       # Combined with port 80->5000 redirect, this triggers captive portal detection
       # on phones/devices while preserving internet access through the wired interface.
+
+    - name: Install packages
+      ansible.builtin.apt:
+        name:
+          - hostapd
+        update_cache: true
+      tags:
+        - hostapd
 
     - name: Ensure hostapd control interface directory exists
       ansible.builtin.file:

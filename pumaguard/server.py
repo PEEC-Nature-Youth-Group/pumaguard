@@ -196,9 +196,9 @@ class FolderObserver:
                     img.verify()
                 logger.debug("Image is loadable")
                 return True
-            except FileNotFoundError:
-                logger.error("Could not find file %s", filepath)
-                raise
+            except FileNotFoundError as e:
+                logger.error("Could not find file %s: %s", filepath, e)
+                return False
             except OSError as e:
                 logger.debug("Image not completely uploaded: %s", e)
                 self._sleep(interval)

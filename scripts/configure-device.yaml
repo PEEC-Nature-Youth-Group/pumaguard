@@ -522,6 +522,16 @@
       tags:
         - networking
 
+    - name: Configure wired network
+      ansible.builtin.template:
+        lstrip_blocks: true
+        trim_blocks: true
+        src: templates/netplan-wired.j2
+        dest: /etc/netplan/90-pumaguard-wired.yaml
+        mode: "0600"
+      tags:
+        - networking
+
     - name: Get wlan0 MAC address
       ansible.builtin.set_fact:
         wlan0_mac: "{{ ansible_wlan0.macaddress }}"
@@ -593,10 +603,6 @@
       notify: Restart dnsmasq
       tags:
         - networking
-      # This configures selective DNS hijacking for captive portal detection domains only.
-      # Real DNS queries are forwarded to eth0 for internet connectivity.
-      # Combined with port 80->5000 redirect, this triggers captive portal detection
-      # on phones/devices while preserving internet access through the wired interface.
 
     - name: Install packages
       ansible.builtin.apt:
@@ -667,16 +673,6 @@
       tags:
         - networking
         - hostapd
-
-    - name: Configure wired network
-      ansible.builtin.template:
-        lstrip_blocks: true
-        trim_blocks: true
-        src: templates/netplan-wired.j2
-        dest: /etc/netplan/90-pumaguard-wired.yaml
-        mode: "0600"
-      tags:
-        - networking
 
     - name: Configure USB wireless adapter (wlx*)
       ansible.builtin.template:

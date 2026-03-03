@@ -871,43 +871,13 @@
       tags:
         - pumaguard
 
-    - name: Install PumaGuard dependencies from wheelhouse (local wheel)
+    - name: Install PumaGuard
       ansible.builtin.pip:
         name: "file:///tmp/{{ local_wheel_filename }}"
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
         state: present
-        # Install the wheel together with all its declared dependencies,
-        # sourcing everything from the local wheelhouse so no network access
-        # is needed.  On upgrades pip's resolver finds every dep already
-        # satisfied at the required version and skips them instantly - only
-        # newly added or version-bumped deps cause any real work here.
-        # --no-index   : never contact PyPI; use only the local wheelhouse
-        # --find-links : directory containing pre-downloaded dependency wheels
-        # extra_args: "--no-index --find-links={{ wheelhouse_remote }}"
-        extra_args: "--find-links={{ wheelhouse_remote }}"
-      when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
-      tags:
-        - pumaguard
-
-    - name: Upgrade PumaGuard package from local wheel (no-deps fast path)
-      ansible.builtin.pip:
-        name: "file:///tmp/{{ local_wheel_filename }}"
-        virtualenv_site_packages: false
-        executable: /opt/pumaguard/bin/pip
-        state: present
-        # Re-install only the pumaguard package itself, skipping all deps.
-        # The previous task already ensured deps are present and up to date.
-        # This is the fast path for routine pumaguard upgrades: TensorFlow,
-        # PyTorch, and other heavy deps are left completely untouched so the
-        # task completes in seconds rather than minutes.
-        # --upgrade    : replace pumaguard even if the same version is installed
-        # --no-deps    : skip dependency resolution entirely
-        # --no-index   : never contact PyPI; use only the local wheelhouse
-        # --find-links : fallback wheel directory (satisfies pip's requirement
-        #                that --no-index has a source to search)
-        # extra_args: "--upgrade --no-deps --no-index --find-links={{ wheelhouse_remote }}"
-        extra_args: "--upgrade --no-deps --find-links={{ wheelhouse_remote }}"
+        extra_args: "--upgrade --find-links={{ wheelhouse_remote }}"
       notify: Reload systemd and restart pumaguard
       when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
       tags:

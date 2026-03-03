@@ -11,5 +11,5 @@ prime/*
 pumaguard.egg-info
 pumaguard/pumaguard-ui
 scripts/.wheelhouse
-venv/*
+.venv/*
 wheelhouse/*

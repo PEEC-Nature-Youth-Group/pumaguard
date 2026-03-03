@@ -185,6 +185,7 @@ configure-device: install-dev build
 		ANSIBLE_CMD="$$ANSIBLE_CMD --skip-tags $(ANSIBLE_SKIP_TAGS)"; \
 	fi; \
 	ANSIBLE_CMD="$$ANSIBLE_CMD scripts/configure-device.yaml"; \
+	echo $$ANSIBLE_CMD; \
 	eval $$ANSIBLE_CMD
 
 .PHONY: configure-laptop
@@ -236,7 +237,7 @@ add-model:
 build-ui: install
 	make -C pumaguard-ui version
 	cd pumaguard-ui; flutter pub get
-	cd pumaguard-ui; flutter build web --release --no-web-resources-cdn --pwa-strategy=none --wasm
+	cd pumaguard-ui; flutter build web --release --no-web-resources-cdn --wasm
 	mkdir --parents pumaguard/pumaguard-ui
 	rsync -av --delete pumaguard-ui/build/web/ pumaguard/pumaguard-ui/
 

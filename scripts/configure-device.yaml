@@ -744,21 +744,19 @@
       tags:
         - pumaguard
 
-    - name: Pre-download wheels for pumaguard and deps
-      delegate_to: localhost
-      ansible.builtin.command:
-        argv:
-          - python3
-          - -m
-          - pip
-          - download
-          - --dest
-          - "{{ wheelhouse_local }}"
-          - pumaguard
-      changed_when: false
-      become: false
-      tags:
-        - pumaguard
+    # - name: Pre-download wheels for pumaguard and deps
+    #   delegate_to: localhost
+    #   ansible.builtin.command:
+    #     argv:
+    #       - "{{ playbook_dir }}/../.venv/bin/pip"
+    #       - download
+    #       - --dest
+    #       - "{{ wheelhouse_local }}"
+    #       - pumaguard
+    #   changed_when: false
+    #   become: false
+    #   tags:
+    #     - pumaguard
 
     - name: Ensure remote wheelhouse dir exists
       ansible.builtin.file:
@@ -770,19 +768,19 @@
       tags:
         - pumaguard
 
-    - name: Sync wheelhouse from local to device
-      delegate_to: localhost
-      become: false
-      ansible.posix.synchronize:
-        src: "{{ wheelhouse_local }}/"
-        dest: "{{ inventory_hostname }}:{{ wheelhouse_remote }}/"
-        archive: true
-        compress: false
-        delete: false
-        checksum: true
-        rsync_path: "sudo rsync"
-      tags:
-        - pumaguard
+    # - name: Sync wheelhouse from local to device
+    #   delegate_to: localhost
+    #   become: false
+    #   ansible.posix.synchronize:
+    #     src: "{{ wheelhouse_local }}/"
+    #     dest: "{{ inventory_hostname }}:{{ wheelhouse_remote }}/"
+    #     archive: true
+    #     compress: false
+    #     delete: false
+    #     checksum: true
+    #     rsync_path: "sudo rsync"
+    #   tags:
+    #     - pumaguard
 
     - name: Ensure pumaguard directory exists
       ansible.builtin.file:
@@ -886,7 +884,8 @@
         # newly added or version-bumped deps cause any real work here.
         # --no-index   : never contact PyPI; use only the local wheelhouse
         # --find-links : directory containing pre-downloaded dependency wheels
-        extra_args: "--no-index --find-links={{ wheelhouse_remote }}"
+        # extra_args: "--no-index --find-links={{ wheelhouse_remote }}"
+        extra_args: "--find-links={{ wheelhouse_remote }}"
       when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
       tags:
         - pumaguard
@@ -907,7 +906,8 @@
         # --no-index   : never contact PyPI; use only the local wheelhouse
         # --find-links : fallback wheel directory (satisfies pip's requirement
         #                that --no-index has a source to search)
-        extra_args: "--upgrade --no-deps --no-index --find-links={{ wheelhouse_remote }}"
+        # extra_args: "--upgrade --no-deps --no-index --find-links={{ wheelhouse_remote }}"
+        extra_args: "--upgrade --no-deps --find-links={{ wheelhouse_remote }}"
       notify: Reload systemd and restart pumaguard
       when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
       tags:

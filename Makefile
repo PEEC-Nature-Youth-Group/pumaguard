@@ -26,7 +26,7 @@ TEST_NAME ?= pumaguard-test
 
 .PHONY: clean
 clean:
-	rm -rf dist build
+	rm -rf dist build pumaguard/pumaguard-ui
 
 .PHONY: apidoc
 apidoc: .venv

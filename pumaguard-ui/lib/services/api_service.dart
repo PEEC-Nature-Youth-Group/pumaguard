@@ -366,7 +366,13 @@ class ApiService {
     int? maxWidth,
     int? maxHeight,
   }) {
-    final encodedPath = Uri.encodeComponent(filepath);
+    // Encode each path segment individually so that '/' separators are
+    // preserved as literal slashes in the URL.  Using Uri.encodeComponent on
+    // the full path would turn every '/' into '%2F', which Flask's
+    // <path:filepath> route rule does not match, resulting in a 404 that
+    // causes the skwasm renderer to abort when Image.network receives a JSON
+    // error body instead of image bytes.
+    final encodedPath = filepath.split('/').map(Uri.encodeComponent).join('/');
     var url = getApiUrl('/api/photos/$encodedPath');
 
     // Add query parameters for thumbnail if requested
@@ -389,7 +395,11 @@ class ApiService {
   /// Delete a photo/image file
   Future<bool> deletePhoto(String filepath) async {
     try {
-      final encodedPath = Uri.encodeComponent(filepath);
+      // Same segment-by-segment encoding as getPhotoUrl – see comment there.
+      final encodedPath = filepath
+          .split('/')
+          .map(Uri.encodeComponent)
+          .join('/');
       final response = await http.delete(
         Uri.parse(getApiUrl('/api/photos/$encodedPath')),
         headers: {'Content-Type': 'application/json'},

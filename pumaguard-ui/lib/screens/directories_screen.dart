@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart';
@@ -15,16 +17,28 @@ class _DirectoriesScreenState extends State<DirectoriesScreen> {
   String? _error;
   final TextEditingController _directoryController = TextEditingController();
 
+  /// Polls the server every 30 seconds to keep the directory list current
+  /// even when another client adds or removes a directory.
+  Timer? _refreshTimer;
+
   @override
   void initState() {
     super.initState();
     _loadDirectories();
+    _startAutoRefresh();
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
     _directoryController.dispose();
     super.dispose();
+  }
+
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadDirectories();
+    });
   }
 
   Future<void> _loadDirectories() async {

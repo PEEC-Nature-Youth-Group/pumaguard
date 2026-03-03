@@ -44,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Timer? _eventDebounceTimer;
   Timer? _shellyRefreshTimer;
   bool _isLoadingSettings = false;
+  bool _isLoadingDevices = false;
   bool _isLoadingShellyStatus = false;
   CameraEventsService? _cameraEventsService;
   StreamSubscription<CameraEvent>? _eventsSubscription;
@@ -99,16 +100,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // Subscribe to camera events
       _eventsSubscription = _cameraEventsService!.events.listen(
         (event) {
-          // Reload settings when camera status changes, debounced to coalesce
-          // rapid bursts of events into a single reload.
+          // Refresh only the device list when a camera/plug event fires.
+          // This avoids overwriting any unsaved text-field changes the user
+          // may have made while the settings page is open.
           if (event.type != CameraEventType.connected &&
               event.type != CameraEventType.unknown) {
             debugPrint(
-              '[SettingsScreen] Camera event: ${event.type}, scheduling settings reload',
+              '[SettingsScreen] Camera event: ${event.type}, scheduling device list refresh',
             );
             _eventDebounceTimer?.cancel();
             _eventDebounceTimer = Timer(const Duration(milliseconds: 300), () {
-              if (mounted) _loadSettings();
+              if (mounted) _refreshDeviceList();
             });
           }
         },
@@ -122,6 +124,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
       debugPrint('[SettingsScreen] Camera events service initialized');
     } catch (e) {
       debugPrint('[SettingsScreen] Error initializing camera events: $e');
+    }
+  }
+
+  /// Refresh only the cameras and plugs lists in [_settings] without touching
+  /// any of the text-field controllers or other settings values.  This is the
+  /// preferred reaction to SSE device events so that unsaved user edits are
+  /// never overwritten.
+  Future<void> _refreshDeviceList() async {
+    if (_isLoadingDevices) {
+      debugPrint(
+        '[SettingsScreen] Device list refresh already in progress, skipping',
+      );
+      return;
+    }
+    if (_settings == null) {
+      // Settings haven't loaded yet – fall back to a full load.
+      _loadSettings();
+      return;
+    }
+
+    _isLoadingDevices = true;
+
+    try {
+      final apiService = context.read<ApiService>();
+      final cameras = await apiService.getCameras();
+      final plugs = await apiService.getPlugs();
+
+      if (mounted) {
+        setState(() {
+          _settings = _settings!.copyWith(cameras: cameras, plugs: plugs);
+        });
+
+        // Refresh Shelly status for the updated plug list.
+        await _loadShellyStatus();
+      }
+    } catch (e) {
+      debugPrint('[SettingsScreen] Error refreshing device list: $e');
+    } finally {
+      _isLoadingDevices = false;
     }
   }
 

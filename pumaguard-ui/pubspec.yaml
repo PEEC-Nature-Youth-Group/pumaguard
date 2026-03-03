@@ -38,6 +38,11 @@ dependencies:
   # HTTP requests
   http: ^1.1.0
 
+  # Streaming-capable HTTP client for web (SSE support via Fetch API).
+  # The default BrowserClient uses XHR which buffers the entire response,
+  # breaking SSE on all browsers. FetchClient streams chunks as they arrive.
+  fetch_client: ^1.1.0
+
   # State management
   provider: ^6.1.0
 

@@ -24,6 +24,10 @@ TEST_NAME ?= pumaguard-test
 	uv venv
 	uv pip install --native-tls --upgrade pip
 
+.PHONY: clean
+clean:
+	rm -rf dist build
+
 .PHONY: apidoc
 apidoc: .venv
 	uv sync --extra docs --frozen

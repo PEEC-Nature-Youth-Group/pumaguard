@@ -273,7 +273,7 @@ def _set_system_time(  # pylint: disable=too-many-return-statements
                     # Format: YYYY-MM-DD HH:MM:SS
                     time_str = target_time.strftime("%Y-%m-%d %H:%M:%S")
                     result = subprocess.run(
-                        ["timedatectl", "set-time", time_str],
+                        ["sudo", "timedatectl", "set-time", time_str],
                         capture_output=True,
                         text=True,
                         check=False,

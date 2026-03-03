@@ -944,6 +944,18 @@
       tags:
         - pumaguard
 
+    - name: Allow passwordless sudo for pumaguard to set the time (timedatectl)
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-timedatectl
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/timedatectl
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
     - name: Install pumaguard systemd service
       ansible.builtin.template:
         lstrip_blocks: true

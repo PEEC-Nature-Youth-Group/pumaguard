@@ -27,12 +27,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
   // Full image list returned by the server.
   List<Map<String, dynamic>> _allImages = [];
-  // Currently visible slice (_allImages[0 .. _currentPage * _pageSize]).
-  List<Map<String, dynamic>> _images = [];
-
-  static const int _pageSize = 24;
-  int _currentPage = 1;
-  bool _isLoadingMore = false;
 
   Set<String> _selectedImages = {};
   bool _isLoading = false;
@@ -56,7 +50,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     super.initState();
     _loadGroupingPreference();
     _loadFolders();
-    _gridScrollController.addListener(_onGridScroll);
   }
 
   @override
@@ -114,7 +107,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     _folderReloadDebounceTimer?.cancel();
     _imageEventsSubscription?.cancel();
     _imageEventsService?.dispose();
-    _gridScrollController.removeListener(_onGridScroll);
     _gridScrollController.dispose();
     super.dispose();
   }
@@ -249,8 +241,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
       _error = null;
       _selectedFolder = folderPath;
       _allImages = [];
-      _images = [];
-      _currentPage = 1;
       _selectedImages.clear();
       _selectAll = false;
     });
@@ -272,7 +262,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
       setState(() {
         _allImages = allImagesWithPaths;
-        _images = _allImages.take(_pageSize).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -283,30 +272,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     }
   }
 
-  /// Load the next page of images into [_images].
-  void _loadNextPage() {
-    if (_isLoadingMore) return;
-    if (_currentPage * _pageSize >= _allImages.length) return;
-
-    setState(() {
-      _isLoadingMore = true;
-      _currentPage++;
-      _images = _allImages.take(_currentPage * _pageSize).toList();
-      _isLoadingMore = false;
-    });
-  }
-
-  /// Auto-load the next page when the user scrolls within 400 px of the end.
-  void _onGridScroll() {
-    if (!_gridScrollController.hasClients) return;
-    final pos = _gridScrollController.position;
-    if (pos.pixels >= pos.maxScrollExtent - 400) {
-      _loadNextPage();
-    }
-  }
-
-  bool get _hasMoreImages => _images.length < _allImages.length;
-
   void _toggleImageSelection(String imagePath, String fullPath) {
     setState(() {
       if (_selectedImages.contains(fullPath)) {
@@ -314,7 +279,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         _selectAll = false;
       } else {
         _selectedImages.add(fullPath);
-        if (_selectedImages.length == _images.length) {
+        if (_selectedImages.length == _allImages.length) {
           _selectAll = true;
         }
       }
@@ -325,7 +290,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     setState(() {
       _selectAll = !_selectAll;
       if (_selectAll) {
-        _selectedImages = _images
+        _selectedImages = _allImages
             .map((img) => img['full_path'] as String)
             .toSet();
       } else {
@@ -344,7 +309,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         }
       }
       // Update select all checkbox state
-      if (_selectedImages.length == _images.length) {
+      if (_selectedImages.length == _allImages.length) {
         _selectAll = true;
       }
     });
@@ -538,7 +503,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
           // Remove from local state
           setState(() {
-            _images.removeWhere((img) => img['full_path'] == imagePath);
+            _allImages.removeWhere((img) => img['full_path'] == imagePath);
             _selectedImages.remove(imagePath);
           });
         } catch (e) {
@@ -761,9 +726,9 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
-    // Grouping operates on the current page slice only; headers are
-    // re-computed each build so they always reflect what is visible.
-    final displayImages = _groupImages(_images);
+    // Grouping is applied to the full image list; headers are re-computed
+    // each build so they always reflect the complete set of images.
+    final displayImages = _groupImages(_allImages);
     final isNarrowScreen = MediaQuery.of(context).size.width < 800;
 
     return Scaffold(
@@ -1001,7 +966,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                             },
                           ),
                           const SizedBox(width: 16),
-                          Text('${_images.length} images'),
+                          Text('${_allImages.length} images'),
                         ],
                       ),
                     ),
@@ -1009,7 +974,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                     Expanded(
                       child: _isLoading
                           ? const Center(child: CircularProgressIndicator())
-                          : _images.isEmpty
+                          : _allImages.isEmpty
                           ? const Center(
                               child: Text('No images in this folder'),
                             )
@@ -1375,7 +1340,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       },
                     ),
                     const SizedBox(width: 16),
-                    Text('${_images.length} images'),
+                    Text('${_allImages.length} images'),
                   ],
                 ),
               ),
@@ -1383,7 +1348,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
               Expanded(
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : _images.isEmpty
+                    : _allImages.isEmpty
                     ? const Center(child: Text('No images in this folder'))
                     : CustomScrollView(
                         controller: _gridScrollController,
@@ -1532,26 +1497,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                     }, childCount: displayImages.length),
                                   ),
                           ),
-                          if (_hasMoreImages)
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 24,
-                                  horizontal: 16,
-                                ),
-                                child: Center(
-                                  child: _isLoadingMore
-                                      ? const CircularProgressIndicator()
-                                      : OutlinedButton.icon(
-                                          onPressed: _loadNextPage,
-                                          icon: const Icon(Icons.expand_more),
-                                          label: Text(
-                                            'Load more (${_allImages.length - _images.length} remaining)',
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
                         ],
                       ),
               ),

@@ -48,15 +48,27 @@ def register_system_routes(
         Query parameters:
             scope: 'unit' to get logs for pumaguard unit only,
                    'all' to get all system logs (default: 'unit')
-            lines: number of lines to return, or 'all' (default: 'all')
+            since: journalctl --since value, e.g. '1 hour ago', '2024-01-01',
+                   or 'boot'. When provided, --lines is omitted so the full
+                   time window is returned. (default: '1 hour ago')
+            lines: number of lines to return, or 'all'. Only used when
+                   'since' is explicitly set to the empty string to request
+                   all lines with no time bound. (default: ignored when
+                   since is set)
 
         Returns:
             JSON with log lines and metadata
         """
         scope = request.args.get("scope", "unit")
+        # A missing 'since' defaults to the last hour.  Passing since='' (or
+        # since=all) explicitly opts out of the time window and falls back to
+        # the 'lines' parameter instead.
+        since_raw = request.args.get("since", "1 hour ago")
+        use_since = since_raw not in ("", "all")
+
         lines = request.args.get("lines", "all")
 
-        if lines != "all":
+        if not use_since and lines != "all":
             try:
                 lines_int = int(lines)
             except ValueError:
@@ -97,7 +109,12 @@ def register_system_routes(
             )
 
         try:
-            cmd = ["journalctl", "--no-pager", "--lines", lines]
+            cmd = ["journalctl", "--no-pager"]
+
+            if use_since:
+                cmd += ["--since", since_raw]
+            else:
+                cmd += ["--lines", lines]
 
             if scope == "unit":
                 cmd += ["--unit", "pumaguard"]
@@ -122,7 +139,8 @@ def register_system_routes(
             return jsonify(
                 {
                     "scope": scope,
-                    "lines_requested": lines,
+                    "since": since_raw if use_since else None,
+                    "lines_requested": None if use_since else lines,
                     "line_count": len(log_lines),
                     "logs": log_lines,
                 }

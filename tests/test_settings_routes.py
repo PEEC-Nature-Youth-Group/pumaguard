@@ -1,6 +1,6 @@
 """Tests for settings routes."""
 
-# pylint: disable=redefined-outer-name,unused-variable
+# pylint: disable=redefined-outer-name,unused-variable,too-many-lines
 # Pytest fixtures intentionally redefine names, and some variables
 # are unpacked from fixtures but not used in all tests
 
@@ -360,7 +360,12 @@ def test_save_settings_default_filepath(test_app):
 
 
 def test_save_settings_custom_filepath(test_app):
-    """Test POST /api/settings/save with custom filepath."""
+    """Test POST /api/settings/save ignores caller-supplied filepath.
+
+    Accepting an arbitrary path from the request body would be a path
+    traversal vulnerability.  The endpoint must always write to the
+    configured settings file, regardless of what the caller sends.
+    """
     app, webui = test_app
     client = app.test_client()
 
@@ -378,7 +383,10 @@ def test_save_settings_custom_filepath(test_app):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data["success"] is True
-    assert data["filepath"] == custom_path
+    # The caller-supplied path must be ignored; only the configured
+    # path is used.
+    assert data["filepath"] == webui.presets.settings_file
+    assert data["filepath"] != custom_path
 
 
 def test_load_settings_success(test_app):
@@ -402,7 +410,12 @@ def test_load_settings_success(test_app):
 
 
 def test_load_settings_no_filepath(test_app):
-    """Test POST /api/settings/load without filepath."""
+    """Test POST /api/settings/load always uses the configured filepath.
+
+    The endpoint no longer accepts a caller-supplied filepath (path traversal
+    fix), so an empty request body is valid and succeeds by loading from the
+    configured settings file.
+    """
     app, webui = test_app
     client = app.test_client()
 
@@ -412,10 +425,11 @@ def test_load_settings_no_filepath(test_app):
         content_type="application/json",
     )
 
-    assert response.status_code == 400
+    assert response.status_code == 200
     data = json.loads(response.data)
-    assert "error" in data
-    assert data["error"] == "No filepath provided"
+    assert data["success"] is True
+    assert data["message"] == "Settings loaded"
+    webui.presets.load.assert_called_once_with(webui.presets.settings_file)
 
 
 def test_test_sound_success(test_app):

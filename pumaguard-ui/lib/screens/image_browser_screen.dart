@@ -24,7 +24,16 @@ class ImageBrowserScreen extends StatefulWidget {
 class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   List<Map<String, dynamic>> _folders = [];
   String? _selectedFolder;
+
+  // Full image list returned by the server.
+  List<Map<String, dynamic>> _allImages = [];
+  // Currently visible slice (_allImages[0 .. _currentPage * _pageSize]).
   List<Map<String, dynamic>> _images = [];
+
+  static const int _pageSize = 24;
+  int _currentPage = 1;
+  bool _isLoadingMore = false;
+
   Set<String> _selectedImages = {};
   bool _isLoading = false;
   bool _isDownloading = false;
@@ -38,11 +47,16 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   StreamSubscription<ImageEvent>? _imageEventsSubscription;
   Timer? _folderReloadDebounceTimer;
 
+  // ScrollController used to detect when the user nears the bottom so the
+  // next page is loaded automatically.
+  final ScrollController _gridScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _loadGroupingPreference();
     _loadFolders();
+    _gridScrollController.addListener(_onGridScroll);
   }
 
   @override
@@ -100,6 +114,8 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     _folderReloadDebounceTimer?.cancel();
     _imageEventsSubscription?.cancel();
     _imageEventsService?.dispose();
+    _gridScrollController.removeListener(_onGridScroll);
+    _gridScrollController.dispose();
     super.dispose();
   }
 
@@ -232,7 +248,9 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
       _isLoading = true;
       _error = null;
       _selectedFolder = folderPath;
+      _allImages = [];
       _images = [];
+      _currentPage = 1;
       _selectedImages.clear();
       _selectAll = false;
     });
@@ -242,20 +260,19 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
       final result = await apiService.getFolderImages(folderPath);
       final images = result['images'] as List<dynamic>;
 
-      // The backend returns 'path' as relative to the base directory
-      // This is exactly what the /api/photos endpoint expects
-      final imagesWithFullPaths = images.map((img) {
-        final imageMap = img as Map<String, dynamic>;
-        final relativePath = imageMap['path'] as String;
-        return {
-          ...imageMap,
-          'full_path':
-              relativePath, // Use the relative path as-is for API calls
-        };
-      }).toList();
+      // The backend returns 'path' as relative to the base directory.
+      final allImagesWithPaths = images
+          .map((img) {
+            final imageMap = img as Map<String, dynamic>;
+            final relativePath = imageMap['path'] as String;
+            return {...imageMap, 'full_path': relativePath};
+          })
+          .toList()
+          .cast<Map<String, dynamic>>();
 
       setState(() {
-        _images = imagesWithFullPaths.cast<Map<String, dynamic>>();
+        _allImages = allImagesWithPaths;
+        _images = _allImages.take(_pageSize).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -265,6 +282,30 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
       });
     }
   }
+
+  /// Load the next page of images into [_images].
+  void _loadNextPage() {
+    if (_isLoadingMore) return;
+    if (_currentPage * _pageSize >= _allImages.length) return;
+
+    setState(() {
+      _isLoadingMore = true;
+      _currentPage++;
+      _images = _allImages.take(_currentPage * _pageSize).toList();
+      _isLoadingMore = false;
+    });
+  }
+
+  /// Auto-load the next page when the user scrolls within 400 px of the end.
+  void _onGridScroll() {
+    if (!_gridScrollController.hasClients) return;
+    final pos = _gridScrollController.position;
+    if (pos.pixels >= pos.maxScrollExtent - 400) {
+      _loadNextPage();
+    }
+  }
+
+  bool get _hasMoreImages => _images.length < _allImages.length;
 
   void _toggleImageSelection(String imagePath, String fullPath) {
     setState(() {
@@ -552,6 +593,24 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     }
   }
 
+  /// Truncate [filename] to at most [maxLen] characters, preserving the
+  /// extension, so the skwasm paragraph layout engine never receives an
+  /// extremely long unbreakable string.  Strings that are already short
+  /// enough are returned unchanged.
+  String _truncateFilename(String filename, {int maxLen = 60}) {
+    if (filename.length <= maxLen) return filename;
+    final dot = filename.lastIndexOf('.');
+    if (dot > 0 && filename.length - dot <= 10) {
+      // Keep the extension and truncate the stem.
+      final ext = filename.substring(dot);
+      final stemLen = maxLen - ext.length - 1; // -1 for the ellipsis char
+      if (stemLen > 0) {
+        return '${filename.substring(0, stemLen)}…$ext';
+      }
+    }
+    return '${filename.substring(0, maxLen - 1)}…';
+  }
+
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -601,16 +660,11 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         break;
     }
 
-    // Debug: log constructed photo URL
     final photoUrl = apiService.getPhotoUrl(
       fullPath,
       thumbnail: useThumbnail,
       maxWidth: maxWidth,
       maxHeight: maxHeight,
-    );
-    developer.log(
-      'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
-      name: 'ImageBrowser',
     );
 
     return GestureDetector(
@@ -673,7 +727,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          image['filename'] as String,
+                          _truncateFilename(image['filename'] as String),
                           style: Theme.of(context).textTheme.bodySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -684,23 +738,14 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          image['filename'] as String,
+                          _truncateFilename(image['filename'] as String),
                           style: Theme.of(context).textTheme.bodySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        // Debug: show relative path used for API
                         const SizedBox(height: 4),
                         Text(
-                          'rel: $fullPath',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _formatFileSize(image['size'] as int),
+                          _formatFileSize((image['size'] as num).toInt()),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: Colors.grey[600]),
                         ),
@@ -716,6 +761,8 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
+    // Grouping operates on the current page slice only; headers are
+    // re-computed each build so they always reflect what is visible.
     final displayImages = _groupImages(_images);
     final isNarrowScreen = MediaQuery.of(context).size.width < 800;
 
@@ -1339,6 +1386,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                     : _images.isEmpty
                     ? const Center(child: Text('No images in this folder'))
                     : CustomScrollView(
+                        controller: _gridScrollController,
                         slivers: [
                           SliverPadding(
                             padding: const EdgeInsets.all(16),
@@ -1484,6 +1532,26 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                                     }, childCount: displayImages.length),
                                   ),
                           ),
+                          if (_hasMoreImages)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 24,
+                                  horizontal: 16,
+                                ),
+                                child: Center(
+                                  child: _isLoadingMore
+                                      ? const CircularProgressIndicator()
+                                      : OutlinedButton.icon(
+                                          onPressed: _loadNextPage,
+                                          icon: const Icon(Icons.expand_more),
+                                          label: Text(
+                                            'Load more (${_allImages.length - _images.length} remaining)',
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
               ),
@@ -1508,67 +1576,30 @@ class _RetryableImageState extends State<_RetryableImage> {
   static const int _maxRetries = 3;
   static const List<int> _retryDelays = [500, 1000, 2000]; // milliseconds
   bool _hasScheduledRetry = false;
-  int _cacheBuster = DateTime.now().millisecondsSinceEpoch;
 
-  @override
-  void initState() {
-    super.initState();
-    developer.log(
-      'Image widget created: ${widget.photoUrl}',
-      name: 'RetryableImage.initState',
-    );
-  }
-
-  @override
-  void dispose() {
-    developer.log(
-      'Image widget disposed (retries: $_retryCount): ${widget.photoUrl}',
-      name: 'RetryableImage.dispose',
-    );
-    super.dispose();
-  }
+  // Only set when a retry is actually needed – keeps the URL stable (and
+  // therefore Flutter's ImageCache effective) on normal builds.
+  int? _cacheBuster;
 
   void _scheduleRetry() {
     if (_retryCount < _maxRetries && !_hasScheduledRetry) {
       _hasScheduledRetry = true;
       final delay = _retryDelays[_retryCount];
-
-      developer.log(
-        'Scheduling retry #${_retryCount + 1} in ${delay}ms: ${widget.photoUrl}',
-        name: 'RetryableImage.scheduleRetry',
-      );
-
       Future.delayed(Duration(milliseconds: delay), () {
         if (mounted) {
-          developer.log(
-            'Executing retry #${_retryCount + 1}: ${widget.photoUrl}',
-            name: 'RetryableImage.scheduleRetry',
-          );
           setState(() {
             _retryCount++;
             _hasScheduledRetry = false;
+            // Bust the cache only on an actual retry so the request is
+            // re-issued rather than served from a cached error response.
             _cacheBuster = DateTime.now().millisecondsSinceEpoch;
           });
-        } else {
-          developer.log(
-            'Widget unmounted, skipping retry: ${widget.photoUrl}',
-            name: 'RetryableImage.scheduleRetry',
-          );
         }
       });
-    } else {
-      developer.log(
-        'Retry not scheduled (count: $_retryCount, hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
-        name: 'RetryableImage.scheduleRetry',
-      );
     }
   }
 
   void _manualRetry() {
-    developer.log(
-      'Manual retry triggered: ${widget.photoUrl}',
-      name: 'RetryableImage.manualRetry',
-    );
     setState(() {
       _retryCount = 0;
       _hasScheduledRetry = false;
@@ -1578,30 +1609,21 @@ class _RetryableImageState extends State<_RetryableImage> {
 
   @override
   Widget build(BuildContext context) {
-    // Use cache buster as query parameter to force reload
-    final separator = widget.photoUrl.contains('?') ? '&' : '?';
-    final imageUrl = '${widget.photoUrl}${separator}_cb=$_cacheBuster';
-
-    developer.log(
-      'Building image (retry: $_retryCount, cb: $_cacheBuster): $imageUrl',
-      name: 'RetryableImage.build',
-    );
+    // Append the cache-buster only when retrying so that the stable URL is
+    // reused across widget rebuilds and Flutter's ImageCache can do its job.
+    final String imageUrl;
+    if (_cacheBuster != null) {
+      final separator = widget.photoUrl.contains('?') ? '&' : '?';
+      imageUrl = '${widget.photoUrl}${separator}_cb=$_cacheBuster';
+    } else {
+      imageUrl = widget.photoUrl;
+    }
 
     return Image.network(
       imageUrl,
       fit: widget.fit,
       loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          developer.log(
-            'Image loaded successfully (after $_retryCount retries): ${widget.photoUrl}',
-            name: 'RetryableImage.loadingBuilder',
-          );
-          return child;
-        }
-        developer.log(
-          'Image loading (${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? '?'}): ${widget.photoUrl}',
-          name: 'RetryableImage.loadingBuilder',
-        );
+        if (loadingProgress == null) return child;
         return Center(
           child: CircularProgressIndicator(
             value: loadingProgress.expectedTotalBytes != null
@@ -1612,28 +1634,10 @@ class _RetryableImageState extends State<_RetryableImage> {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        // Log the error for debugging
-        developer.log(
-          'Image load FAILED (attempt ${_retryCount + 1}/$_maxRetries): ${widget.photoUrl}',
-          name: 'RetryableImage.errorBuilder',
-          error: error,
-          stackTrace: stackTrace,
-        );
-
-        // Schedule automatic retry only if we haven't exhausted retries
         if (_retryCount < _maxRetries) {
-          developer.log(
-            'Will schedule retry (hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
-            name: 'RetryableImage.errorBuilder',
-          );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scheduleRetry();
           });
-        } else {
-          developer.log(
-            'Max retries reached, showing manual retry button: ${widget.photoUrl}',
-            name: 'RetryableImage.errorBuilder',
-          );
         }
 
         return Center(

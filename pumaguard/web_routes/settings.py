@@ -190,10 +190,10 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/settings/save", methods=["POST"])
     def save_settings():
-        data = request.json
-        filepath = data.get("filepath") if data else None
-        if not filepath:
-            filepath = webui.presets.settings_file
+        # Always write to the configured settings file path.  Accepting an
+        # arbitrary caller-supplied filepath would allow an attacker to
+        # overwrite any file writable by the server process (path traversal).
+        filepath = webui.presets.settings_file
         settings_dict = dict(webui.presets)
         with open(filepath, "w", encoding="utf-8") as f:
             yaml.dump(settings_dict, f, default_flow_style=False)
@@ -202,10 +202,10 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/settings/load", methods=["POST"])
     def load_settings():
-        data = request.json
-        filepath = data.get("filepath") if data else None
-        if not filepath:
-            return jsonify({"error": "No filepath provided"}), 400
+        # Always load from the configured settings file path.  Accepting an
+        # arbitrary caller-supplied filepath would allow an attacker to read
+        # any file readable by the server process (path traversal).
+        filepath = webui.presets.settings_file
         webui.presets.load(filepath)
         logger.info("Settings loaded from %s", filepath)
         return jsonify({"success": True, "message": "Settings loaded"})

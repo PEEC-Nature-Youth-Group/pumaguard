@@ -49,27 +49,22 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
         client_files = data["files"]
         files_to_download = []
         for filepath, client_checksum in client_files.items():
-            # Try to resolve filepath - could be absolute or relative
+            # Resolve filepath against each allowed directory only.
+            # Accepting absolute paths from the caller is intentionally
+            # excluded: it would allow an attacker to compute checksums for
+            # any file readable by the server process (path traversal).
             abs_filepath = None
 
-            # First try as absolute path
-            candidate = os.path.realpath(os.path.normpath(filepath))
-            if os.path.isabs(filepath) and os.path.isfile(candidate):
-                abs_filepath = candidate
-            else:
-                # Try as relative path against each allowed directory
-                for directory in (
-                    webui.image_directories + webui.classification_directories
-                ):
-                    abs_directory = os.path.realpath(
-                        os.path.normpath(directory)
-                    )
-                    candidate = os.path.realpath(
-                        os.path.normpath(os.path.join(abs_directory, filepath))
-                    )
-                    if os.path.isfile(candidate):
-                        abs_filepath = candidate
-                        break
+            for directory in (
+                webui.image_directories + webui.classification_directories
+            ):
+                abs_directory = os.path.realpath(os.path.normpath(directory))
+                candidate = os.path.realpath(
+                    os.path.normpath(os.path.join(abs_directory, filepath))
+                )
+                if os.path.isfile(candidate):
+                    abs_filepath = candidate
+                    break
 
             if abs_filepath is None:
                 continue
@@ -117,27 +112,22 @@ def register_sync_routes(app: "Flask", webui: "WebUI") -> None:
         file_paths = data["files"]
         validated_files = []
         for filepath in file_paths:
-            # Try to resolve filepath - could be absolute or relative
+            # Resolve filepath against each allowed directory only.
+            # Accepting absolute paths from the caller is intentionally
+            # excluded: it would allow an attacker to download any file
+            # readable by the server process (path traversal).
             abs_filepath = None
 
-            # First try as absolute path
-            candidate = os.path.realpath(os.path.normpath(filepath))
-            if os.path.isabs(filepath) and os.path.isfile(candidate):
-                abs_filepath = candidate
-            else:
-                # Try as relative path against each allowed directory
-                for directory in (
-                    webui.image_directories + webui.classification_directories
-                ):
-                    abs_directory = os.path.realpath(
-                        os.path.normpath(directory)
-                    )
-                    candidate = os.path.realpath(
-                        os.path.normpath(os.path.join(abs_directory, filepath))
-                    )
-                    if os.path.isfile(candidate):
-                        abs_filepath = candidate
-                        break
+            for directory in (
+                webui.image_directories + webui.classification_directories
+            ):
+                abs_directory = os.path.realpath(os.path.normpath(directory))
+                candidate = os.path.realpath(
+                    os.path.normpath(os.path.join(abs_directory, filepath))
+                )
+                if os.path.isfile(candidate):
+                    abs_filepath = candidate
+                    break
 
             if abs_filepath is None:
                 continue

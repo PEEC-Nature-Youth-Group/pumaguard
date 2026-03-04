@@ -458,7 +458,7 @@
 
     - name: Allow ansible user to run rsync without password
       ansible.builtin.copy:
-        dest: /etc/sudoers.d/ansible-rsync
+        dest: /etc/sudoers.d/pumaguard-rsync
         content: |
           {{ ansible_user }} ALL=(ALL) NOPASSWD: /usr/bin/rsync
         owner: root
@@ -767,20 +767,6 @@
         mode: "0755"
       tags:
         - pumaguard
-
-    # - name: Sync wheelhouse from local to device
-    #   delegate_to: localhost
-    #   become: false
-    #   ansible.posix.synchronize:
-    #     src: "{{ wheelhouse_local }}/"
-    #     dest: "{{ inventory_hostname }}:{{ wheelhouse_remote }}/"
-    #     archive: true
-    #     compress: false
-    #     delete: false
-    #     checksum: true
-    #     rsync_path: "sudo rsync"
-    #   tags:
-    #     - pumaguard
 
     - name: Ensure pumaguard directory exists
       ansible.builtin.file:

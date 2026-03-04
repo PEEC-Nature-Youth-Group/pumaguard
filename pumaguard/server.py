@@ -41,6 +41,9 @@ from pumaguard.utils import (
     cache_model_two_stage,
     classify_image_two_stage,
 )
+from pumaguard.web_routes.photos import (
+    generate_thumbnail,
+)
 from pumaguard.web_ui import (
     PlugInfo,
     WebUI,
@@ -363,6 +366,10 @@ class FolderObserver:
             logger.info(
                 "Moved %s to classification folder %s", filepath, dest_path
             )
+            # Pre-generate thumbnails at both sizes used by the image browser
+            # so the first browser request is served instantly from cache.
+            for size in (200, 400):
+                generate_thumbnail(str(dest_path), size, size)
             # Notify SSE clients that a new image is available
             if self.webui.image_notification_callback is not None:
                 self.webui.image_notification_callback(

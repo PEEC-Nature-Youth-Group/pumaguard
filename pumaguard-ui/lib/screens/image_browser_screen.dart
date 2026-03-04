@@ -601,16 +601,11 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
         break;
     }
 
-    // Debug: log constructed photo URL
     final photoUrl = apiService.getPhotoUrl(
       fullPath,
       thumbnail: useThumbnail,
       maxWidth: maxWidth,
       maxHeight: maxHeight,
-    );
-    developer.log(
-      'ImageBrowser: base=$_selectedFolder path=$imagePath full=$fullPath url=$photoUrl',
-      name: 'ImageBrowser',
     );
 
     return GestureDetector(
@@ -686,15 +681,6 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                         Text(
                           image['filename'] as String,
                           style: Theme.of(context).textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        // Debug: show relative path used for API
-                        const SizedBox(height: 4),
-                        Text(
-                          'rel: $fullPath',
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: Colors.grey[600]),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1508,67 +1494,30 @@ class _RetryableImageState extends State<_RetryableImage> {
   static const int _maxRetries = 3;
   static const List<int> _retryDelays = [500, 1000, 2000]; // milliseconds
   bool _hasScheduledRetry = false;
-  int _cacheBuster = DateTime.now().millisecondsSinceEpoch;
 
-  @override
-  void initState() {
-    super.initState();
-    developer.log(
-      'Image widget created: ${widget.photoUrl}',
-      name: 'RetryableImage.initState',
-    );
-  }
-
-  @override
-  void dispose() {
-    developer.log(
-      'Image widget disposed (retries: $_retryCount): ${widget.photoUrl}',
-      name: 'RetryableImage.dispose',
-    );
-    super.dispose();
-  }
+  // Only set when a retry is actually needed – keeps the URL stable (and
+  // therefore Flutter's ImageCache effective) on normal builds.
+  int? _cacheBuster;
 
   void _scheduleRetry() {
     if (_retryCount < _maxRetries && !_hasScheduledRetry) {
       _hasScheduledRetry = true;
       final delay = _retryDelays[_retryCount];
-
-      developer.log(
-        'Scheduling retry #${_retryCount + 1} in ${delay}ms: ${widget.photoUrl}',
-        name: 'RetryableImage.scheduleRetry',
-      );
-
       Future.delayed(Duration(milliseconds: delay), () {
         if (mounted) {
-          developer.log(
-            'Executing retry #${_retryCount + 1}: ${widget.photoUrl}',
-            name: 'RetryableImage.scheduleRetry',
-          );
           setState(() {
             _retryCount++;
             _hasScheduledRetry = false;
+            // Bust the cache only on an actual retry so the request is
+            // re-issued rather than served from a cached error response.
             _cacheBuster = DateTime.now().millisecondsSinceEpoch;
           });
-        } else {
-          developer.log(
-            'Widget unmounted, skipping retry: ${widget.photoUrl}',
-            name: 'RetryableImage.scheduleRetry',
-          );
         }
       });
-    } else {
-      developer.log(
-        'Retry not scheduled (count: $_retryCount, hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
-        name: 'RetryableImage.scheduleRetry',
-      );
     }
   }
 
   void _manualRetry() {
-    developer.log(
-      'Manual retry triggered: ${widget.photoUrl}',
-      name: 'RetryableImage.manualRetry',
-    );
     setState(() {
       _retryCount = 0;
       _hasScheduledRetry = false;
@@ -1578,30 +1527,21 @@ class _RetryableImageState extends State<_RetryableImage> {
 
   @override
   Widget build(BuildContext context) {
-    // Use cache buster as query parameter to force reload
-    final separator = widget.photoUrl.contains('?') ? '&' : '?';
-    final imageUrl = '${widget.photoUrl}${separator}_cb=$_cacheBuster';
-
-    developer.log(
-      'Building image (retry: $_retryCount, cb: $_cacheBuster): $imageUrl',
-      name: 'RetryableImage.build',
-    );
+    // Append the cache-buster only when retrying so that the stable URL is
+    // reused across widget rebuilds and Flutter's ImageCache can do its job.
+    final String imageUrl;
+    if (_cacheBuster != null) {
+      final separator = widget.photoUrl.contains('?') ? '&' : '?';
+      imageUrl = '${widget.photoUrl}${separator}_cb=$_cacheBuster';
+    } else {
+      imageUrl = widget.photoUrl;
+    }
 
     return Image.network(
       imageUrl,
       fit: widget.fit,
       loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          developer.log(
-            'Image loaded successfully (after $_retryCount retries): ${widget.photoUrl}',
-            name: 'RetryableImage.loadingBuilder',
-          );
-          return child;
-        }
-        developer.log(
-          'Image loading (${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? '?'}): ${widget.photoUrl}',
-          name: 'RetryableImage.loadingBuilder',
-        );
+        if (loadingProgress == null) return child;
         return Center(
           child: CircularProgressIndicator(
             value: loadingProgress.expectedTotalBytes != null
@@ -1612,28 +1552,10 @@ class _RetryableImageState extends State<_RetryableImage> {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        // Log the error for debugging
-        developer.log(
-          'Image load FAILED (attempt ${_retryCount + 1}/$_maxRetries): ${widget.photoUrl}',
-          name: 'RetryableImage.errorBuilder',
-          error: error,
-          stackTrace: stackTrace,
-        );
-
-        // Schedule automatic retry only if we haven't exhausted retries
         if (_retryCount < _maxRetries) {
-          developer.log(
-            'Will schedule retry (hasScheduled: $_hasScheduledRetry): ${widget.photoUrl}',
-            name: 'RetryableImage.errorBuilder',
-          );
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _scheduleRetry();
           });
-        } else {
-          developer.log(
-            'Max retries reached, showing manual retry button: ${widget.photoUrl}',
-            name: 'RetryableImage.errorBuilder',
-          );
         }
 
         return Center(

@@ -994,6 +994,30 @@
       tags:
         - pumaguard
 
+    - name: Allow passwordless sudo for pumaguard to restart hostapd.service
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-hostapd
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart hostapd.service
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
+    - name: Allow passwordless sudo for pumaguard to restart dnsmasq.service
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-dnsmasq
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq.service
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
     - name: Install pumaguard systemd service
       ansible.builtin.template:
         lstrip_blocks: true

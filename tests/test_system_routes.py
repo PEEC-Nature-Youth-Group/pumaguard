@@ -1,4 +1,7 @@
-"""Tests for system administration routes (time sync and service management)."""
+"""
+Tests for system administration routes (time sync
+and service management).
+"""
 
 # pylint: disable=redefined-outer-name
 # pylint: disable=import-outside-toplevel
@@ -334,6 +337,7 @@ def test_get_service_status_no_systemctl(mock_cmd):
     """Returns unavailable status when systemctl is not on PATH."""
     result = _get_service_status("hostapd")
 
+    assert mock_cmd.called
     assert result["name"] == "hostapd"
     assert result["active"] is False
     assert result["enabled"] is False
@@ -344,7 +348,9 @@ def test_get_service_status_no_systemctl(mock_cmd):
 @patch("pumaguard.web_routes.system._command_exists", return_value=True)
 @patch("pumaguard.web_routes.system.subprocess.run")
 def test_get_service_status_active_enabled(mock_run, _mock_cmd):
-    """Reports active=True and enabled=True when both systemctl calls succeed."""
+    """
+    Reports active=True and enabled=True when both systemctl calls succeed.
+    """
     active_result = MagicMock()
     active_result.returncode = 0
     active_result.stdout = "active\n"
@@ -367,7 +373,9 @@ def test_get_service_status_active_enabled(mock_run, _mock_cmd):
 @patch("pumaguard.web_routes.system._command_exists", return_value=True)
 @patch("pumaguard.web_routes.system.subprocess.run")
 def test_get_service_status_inactive_disabled(mock_run, _mock_cmd):
-    """Reports active=False and enabled=False for a stopped, disabled service."""
+    """
+    Reports active=False and enabled=False for a stopped, disabled service.
+    """
     active_result = MagicMock()
     active_result.returncode = 3  # systemctl exit code for inactive
     active_result.stdout = "inactive\n"
@@ -471,7 +479,9 @@ def test_get_services_structure(mock_status, test_client):
 
 @patch("pumaguard.web_routes.system._get_service_status")
 def test_get_services_mixed_states(mock_status, test_client):
-    """GET /api/system/services correctly reflects mixed active/inactive states."""
+    """
+    GET /api/system/services correctly reflects mixed active/inactive states.
+    """
 
     def _side_effect(svc):
         if svc == "hostapd":
@@ -539,7 +549,7 @@ def test_restart_service_success(
     # Verify sudo systemctl restart was called with the right service name
     mock_run.assert_called_once()
     cmd = mock_run.call_args[0][0]
-    assert cmd == ["sudo", "systemctl", "restart", "hostapd"]
+    assert cmd == ["sudo", "/usr/bin/systemctl", "restart", "hostapd.service"]
 
 
 @patch("pumaguard.web_routes.system._get_service_status")
@@ -568,7 +578,7 @@ def test_restart_dnsmasq_success(
     data = json.loads(response.data)
     assert data["success"] is True
     cmd = mock_run.call_args[0][0]
-    assert cmd == ["sudo", "systemctl", "restart", "dnsmasq"]
+    assert cmd == ["sudo", "/usr/bin/systemctl", "restart", "dnsmasq.service"]
 
 
 def test_restart_service_unknown_name(test_client):

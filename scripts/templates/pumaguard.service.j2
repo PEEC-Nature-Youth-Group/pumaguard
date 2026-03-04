@@ -29,7 +29,13 @@ StandardOutput=journal
 StandardError=journal
 
 # Security hardening
-NoNewPrivileges=true
+# NoNewPrivileges is intentionally NOT set here.  The web UI allows the
+# operator to restart hostapd and dnsmasq via the API, which is implemented
+# with "sudo systemctl restart <service>".  The sudoers drop-in files
+# /etc/sudoers.d/pumaguard-hostapd and /etc/sudoers.d/pumaguard-dnsmasq
+# grant exactly those two commands without a password.  Setting
+# NoNewPrivileges=true would block sudo from acquiring root regardless of
+# what sudoers permits, making those restarts impossible.
 PrivateTmp=true
 
 [Install]

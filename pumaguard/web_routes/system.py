@@ -196,8 +196,19 @@ def register_system_routes(
 
         logger.info("Restarting service: %s", service_name)
         try:
+            # Use sudo with the full systemctl path and the ".service" suffix
+            # to exactly match the sudoers drop-in grants, e.g.:
+            #   pumaguard ALL=(ALL) NOPASSWD: /usr/bin/systemctl \
+            #     restart hostapd.service
+            # Note: NoNewPrivileges must NOT be set in pumaguard.service or
+            # sudo will be blocked regardless of what sudoers permits.
             result = subprocess.run(
-                ["sudo", "systemctl", "restart", service_name],
+                [
+                    "sudo",
+                    "/usr/bin/systemctl",
+                    "restart",
+                    f"{service_name}.service",
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -205,9 +216,10 @@ def register_system_routes(
             )
         except subprocess.TimeoutExpired:
             logger.error("Timed out while restarting %s", service_name)
-            return jsonify(
-                {"error": f"Timed out restarting {service_name}"}
-            ), 504
+            return (
+                jsonify({"error": f"Timed out restarting {service_name}"}),
+                504,
+            )
         except Exception:  # pylint: disable=broad-except
             logger.exception("Unexpected error restarting %s", service_name)
             return jsonify({"error": f"Failed to restart {service_name}"}), 500

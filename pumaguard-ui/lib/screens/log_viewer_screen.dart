@@ -4,10 +4,10 @@ import '../services/api_service.dart';
 
 /// Identifies which journalctl scope to fetch logs for.
 enum LogScope {
-  /// `journalctl --unit pumaguard --lines all`
+  /// `journalctl --unit pumaguard --since "1 hour ago"`
   unit,
 
-  /// `journalctl --lines all`
+  /// `journalctl --since "1 hour ago"`
   all,
 }
 
@@ -30,15 +30,35 @@ extension LogScopeExtension on LogScope {
     }
   }
 
-  String get command {
+  String command(String since) {
+    final sinceArg = '--since "$since"';
     switch (this) {
       case LogScope.unit:
-        return 'journalctl --unit pumaguard --lines all';
+        return 'journalctl --unit pumaguard $sinceArg';
       case LogScope.all:
-        return 'journalctl --lines all';
+        return 'journalctl $sinceArg';
     }
   }
 }
+
+/// Predefined time-window options presented to the user as chips.
+class _TimeWindow {
+  final String label;
+
+  /// Value passed to journalctl --since and to the API's `since` parameter.
+  final String since;
+
+  const _TimeWindow(this.label, this.since);
+}
+
+const List<_TimeWindow> _kTimeWindows = [
+  _TimeWindow('Last 15 min', '15 minutes ago'),
+  _TimeWindow('Last hour', '1 hour ago'),
+  _TimeWindow('Last 6 h', '6 hours ago'),
+  _TimeWindow('Last 24 h', '24 hours ago'),
+  _TimeWindow('Last 7 days', '7 days ago'),
+  _TimeWindow('All', ''),
+];
 
 class LogViewerScreen extends StatefulWidget {
   final ApiService apiService;
@@ -59,7 +79,11 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
   bool _isLoading = true;
   String? _error;
   final ScrollController _scrollController = ScrollController();
-  final bool _autoScroll = true;
+
+  // Default to "last hour" – index 1 in _kTimeWindows.
+  int _selectedWindowIndex = 1;
+
+  _TimeWindow get _currentWindow => _kTimeWindows[_selectedWindowIndex];
 
   @override
   void initState() {
@@ -82,6 +106,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
     try {
       final result = await widget.apiService.getLogs(
         scope: widget.scope.apiValue,
+        since: _currentWindow.since,
       );
       final rawLines = result['logs'];
       final lines = rawLines is List
@@ -94,11 +119,9 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           _isLoading = false;
         });
 
-        if (_autoScroll) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
-          });
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _jumpToBottom();
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -107,6 +130,14 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// Instantly positions the list at the bottom. Used after a fresh load so
+  /// the user never sees the top of the list flash before scrolling down.
+  void _jumpToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
     }
   }
 
@@ -177,6 +208,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildCommandBanner(),
+          _buildTimeWindowChips(),
           Expanded(child: _buildBody()),
         ],
       ),
@@ -197,7 +229,9 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              widget.scope.command,
+              widget.scope.command(
+                _currentWindow.since.isEmpty ? 'all' : _currentWindow.since,
+              ),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontFamily: 'monospace',
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -212,6 +246,35 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTimeWindowChips() {
+    return Container(
+      color: Theme.of(context).colorScheme.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: List.generate(_kTimeWindows.length, (index) {
+            final window = _kTimeWindows[index];
+            final isSelected = index == _selectedWindowIndex;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                label: Text(window.label),
+                selected: isSelected,
+                onSelected: (_) {
+                  if (!isSelected) {
+                    setState(() => _selectedWindowIndex = index);
+                    _loadLogs();
+                  }
+                },
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
@@ -279,7 +342,7 @@ class _LogViewerScreenState extends State<LogViewerScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'No log entries found',
+              'No log entries found for "${_currentWindow.label}"',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

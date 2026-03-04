@@ -1012,12 +1012,15 @@ class ApiService {
   ///     (`journalctl --unit pumaguard --lines all`)
   ///   - `'all'`: all system journal logs
   ///     (`journalctl --lines all`)
-  Future<Map<String, dynamic>> getLogs({String scope = 'unit'}) async {
+  Future<Map<String, dynamic>> getLogs({
+    String scope = 'unit',
+    String since = '1 hour ago',
+  }) async {
     try {
       final url = getApiUrl('/api/system/logs');
       final uri = Uri.parse(
         url,
-      ).replace(queryParameters: {'scope': scope, 'lines': 'all'});
+      ).replace(queryParameters: {'scope': scope, 'since': since});
 
       final response = await http.get(
         uri,

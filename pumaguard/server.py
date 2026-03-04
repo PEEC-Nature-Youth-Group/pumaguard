@@ -309,13 +309,16 @@ class FolderObserver:
         me = threading.current_thread()
         logger.debug("Acquiring classification lock (%s)", me.name)
         lock = acquire_lock()
-        logger.debug("Acquired lock after %d seconds", lock.time_waited())
-        if lock.time_waited() > 1 * 60:
+        time_waited = lock.time_waited()
+        logger.debug("Acquired lock after %d seconds", time_waited)
+        late = time_waited > 1 * 60
+        if late:
             logger.info(
-                "Could not acquire lock in time, skipping classification"
+                "Lock acquired after %.0f seconds – classifying %s but"
+                + "suppressing sound/plugs since the puma may be gone",
+                time_waited,
+                filepath,
             )
-            lock.release()
-            return
         logger.debug("Classifying: %s", filepath)
         prediction = classify_image_two_stage(
             presets=self.presets,
@@ -326,7 +329,14 @@ class FolderObserver:
         is_puma = prediction > self.presets.puma_threshold
         if is_puma:
             logger.info("Puma detected in %s", filepath)
-            if self.presets.play_sound:
+            if late:
+                logger.info(
+                    "Skipping sound and plug activation for %s "
+                    + "(classification was delayed – puma likely "
+                    + "no longer present)",
+                    filepath,
+                )
+            elif self.presets.play_sound:
                 # Turn on automatic plugs before playing sound
                 self._turn_on_automatic_plugs()
 

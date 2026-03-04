@@ -91,11 +91,17 @@ def register_artifacts_routes(app: "Flask", webui: "WebUI") -> None:
 
     @app.route("/api/artifacts/<path:filepath>", methods=["GET"])
     def get_artifact(filepath: str):
-        # Resolve to absolute path and validate within intermediate
+        # Resolve base directory to an absolute, canonical path.
         base_dir = os.path.realpath(
             os.path.normpath(webui.presets.intermediate_dir)
         )
-        abs_filepath = os.path.realpath(os.path.normpath(filepath))
+        # Always join the user-supplied name against base_dir so that an
+        # absolute path supplied by the caller (e.g. "/etc/passwd") is treated
+        # as a relative name inside the allowed directory rather than as a
+        # literal filesystem path.
+        abs_filepath = os.path.realpath(
+            os.path.join(base_dir, os.path.basename(filepath))
+        )
         try:
             common = os.path.commonpath([abs_filepath, base_dir])
             if common != base_dir:

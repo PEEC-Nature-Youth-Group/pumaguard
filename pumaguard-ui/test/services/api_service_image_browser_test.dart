@@ -193,8 +193,18 @@ void main() {
             '/home/user/.local/share/pumaguard/classified/puma/image.jpg';
         final url = apiService.getPhotoUrl(photoPath);
 
+        // Slashes must be preserved as literal '/' so that Flask's
+        // <path:filepath> route rule matches the URL correctly.
+        // Uri.encodeComponent on the full path would encode '/' as '%2F',
+        // causing a 404 and a skwasm renderer crash.
         expect(url, contains('/api/photos/'));
-        expect(url, contains(Uri.encodeComponent(photoPath)));
+        expect(
+          url,
+          contains(
+            'home/user/.local/share/pumaguard/classified/puma/image.jpg',
+          ),
+        );
+        expect(url, isNot(contains('%2F')));
       });
 
       test('getPhotoUrl handles thumbnail parameter', () {
@@ -239,8 +249,10 @@ void main() {
         final photoPath = '/home/user/My Photos/image #1.jpg';
         final url = apiService.getPhotoUrl(photoPath);
 
-        // Verify the path is encoded
-        expect(url, contains('%2F')); // Encoded slash
+        // Slashes are preserved as literal '/' (not encoded as '%2F') so that
+        // Flask's <path:filepath> route rule matches correctly.
+        // Special characters within each segment are still percent-encoded.
+        expect(url, isNot(contains('%2F'))); // Slashes must NOT be encoded
         expect(url, contains('%20')); // Encoded space
         expect(url, contains('%23')); // Encoded hash
       });

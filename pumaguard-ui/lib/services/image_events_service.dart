@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import '../utils/http_client_factory.dart';
 
 /// Event types for image change notifications
 enum ImageEventType { connected, imageAdded, imageDeleted, unknown }
@@ -73,7 +74,7 @@ class ImageEventsService {
     }
 
     _isListening = true;
-    _client = http.Client();
+    _client = createStreamingHttpClient();
 
     try {
       final url = Uri.parse('$baseUrl/api/images/events');

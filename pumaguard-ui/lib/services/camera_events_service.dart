@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../models/camera.dart';
+import '../utils/http_client_factory.dart';
 
 /// Event types for camera and plug status changes
 enum CameraEventType {
@@ -119,7 +120,7 @@ class CameraEventsService {
     }
 
     _isListening = true;
-    _client = http.Client();
+    _client = createStreamingHttpClient();
 
     try {
       final url = Uri.parse('$baseUrl/api/dhcp/cameras/events');

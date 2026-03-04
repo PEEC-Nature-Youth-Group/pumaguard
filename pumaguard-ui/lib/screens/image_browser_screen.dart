@@ -552,6 +552,24 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
     }
   }
 
+  /// Truncate [filename] to at most [maxLen] characters, preserving the
+  /// extension, so the skwasm paragraph layout engine never receives an
+  /// extremely long unbreakable string.  Strings that are already short
+  /// enough are returned unchanged.
+  String _truncateFilename(String filename, {int maxLen = 60}) {
+    if (filename.length <= maxLen) return filename;
+    final dot = filename.lastIndexOf('.');
+    if (dot > 0 && filename.length - dot <= 10) {
+      // Keep the extension and truncate the stem.
+      final ext = filename.substring(dot);
+      final stemLen = maxLen - ext.length - 1; // -1 for the ellipsis char
+      if (stemLen > 0) {
+        return '${filename.substring(0, stemLen)}…$ext';
+      }
+    }
+    return '${filename.substring(0, maxLen - 1)}…';
+  }
+
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -668,7 +686,7 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          image['filename'] as String,
+                          _truncateFilename(image['filename'] as String),
                           style: Theme.of(context).textTheme.bodySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -679,14 +697,14 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          image['filename'] as String,
+                          _truncateFilename(image['filename'] as String),
                           style: Theme.of(context).textTheme.bodySmall,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _formatFileSize(image['size'] as int),
+                          _formatFileSize((image['size'] as num).toInt()),
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(color: Colors.grey[600]),
                         ),

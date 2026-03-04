@@ -312,99 +312,116 @@ class FolderObserver:
         me = threading.current_thread()
         logger.debug("Acquiring classification lock (%s)", me.name)
         lock = acquire_lock()
-        time_waited = lock.time_waited()
-        logger.debug("Acquired lock after %d seconds", time_waited)
-        late = time_waited > 1 * 60
-        if late:
-            logger.info(
-                "Lock acquired after %.0f seconds – classifying %s but"
-                + "suppressing sound/plugs since the puma may be gone",
-                time_waited,
-                filepath,
-            )
-        logger.debug("Classifying: %s", filepath)
-        prediction = classify_image_two_stage(
-            presets=self.presets,
-            image_path=filepath,
-            intermediate_dir=self.presets.intermediate_dir,
-        )
-        logger.info("Chance of puma in %s: %.2f%%", filepath, prediction * 100)
-        is_puma = prediction > self.presets.puma_threshold
-        if is_puma:
-            logger.info("Puma detected in %s", filepath)
+        try:
+            time_waited = lock.time_waited()
+            logger.debug("Acquired lock after %d seconds", time_waited)
+            late = time_waited > 1 * 60
             if late:
                 logger.info(
-                    "Skipping sound and plug activation for %s "
-                    + "(classification was delayed – puma likely "
-                    + "no longer present)",
+                    "Lock acquired after %.0f seconds – classifying %s but"
+                    + "suppressing sound/plugs since the puma may be gone",
+                    time_waited,
                     filepath,
                 )
-            elif self.presets.play_sound:
-                # Turn on automatic plugs before playing sound
-                self._turn_on_automatic_plugs()
-
-                # Randomly select one sound from the list
-                sound_file = random.choice(self.presets.deterrent_sound_files)
-                sound_file_path = os.path.join(
-                    self.presets.sound_path, sound_file
-                )
-                logger.info("Playing sound: %s", sound_file)
-                playsound(sound_file_path, self.presets.volume)
-
-                # Turn off automatic plugs after sound finishes
-                self._turn_off_automatic_plugs()
-        # Move original file into classification folder
-        try:
-            dest_root = (
-                self.presets.classified_puma_dir
-                if is_puma
-                else self.presets.classified_other_dir
+            logger.debug("Classifying: %s", filepath)
+            prediction = classify_image_two_stage(
+                presets=self.presets,
+                image_path=filepath,
+                intermediate_dir=self.presets.intermediate_dir,
             )
-            Path(dest_root).mkdir(parents=True, exist_ok=True)
-            dest_path = Path(dest_root) / Path(filepath).name
-            shutil.move(filepath, dest_path)
             logger.info(
-                "Moved %s to classification folder %s", filepath, dest_path
+                "Chance of puma in %s: %.2f%%", filepath, prediction * 100
             )
-            # Pre-generate thumbnails at both sizes used by the image browser
-            # so the first browser request is served instantly from cache.
-            for size in (200, 400):
-                generate_thumbnail(str(dest_path), size, size)
-            # Notify SSE clients that a new image is available
-            if self.webui.image_notification_callback is not None:
-                self.webui.image_notification_callback(
-                    "image_added",
-                    {
-                        "path": str(dest_path),
-                        "folder": dest_root,
-                    },
+            is_puma = prediction > self.presets.puma_threshold
+            if is_puma:
+                logger.info("Puma detected in %s", filepath)
+                if late:
+                    logger.info(
+                        "Skipping sound and plug activation for %s "
+                        + "(classification was delayed – puma likely "
+                        + "no longer present)",
+                        filepath,
+                    )
+                elif self.presets.play_sound:
+                    # Turn on automatic plugs before playing sound
+                    self._turn_on_automatic_plugs()
+
+                    # Randomly select one sound from the list
+                    sound_file = random.choice(
+                        self.presets.deterrent_sound_files
+                    )
+                    sound_file_path = os.path.join(
+                        self.presets.sound_path, sound_file
+                    )
+                    logger.info("Playing sound: %s", sound_file)
+                    playsound(sound_file_path, self.presets.volume)
+
+                    # Turn off automatic plugs after sound finishes
+                    self._turn_off_automatic_plugs()
+            # Move original file into classification folder
+            try:
+                dest_root = (
+                    self.presets.classified_puma_dir
+                    if is_puma
+                    else self.presets.classified_other_dir
+                )
+                Path(dest_root).mkdir(parents=True, exist_ok=True)
+                dest_path = Path(dest_root) / Path(filepath).name
+                shutil.move(filepath, dest_path)
+                logger.info(
+                    "Moved %s to classification folder %s", filepath, dest_path
+                )
+                # Pre-generate thumbnails at both sizes used by the image
+                # browser so the first browser request is served from cache.
+                for size in (200, 400):
+                    generate_thumbnail(str(dest_path), size, size)
+                # Notify SSE clients that a new image is available
+                if self.webui.image_notification_callback is not None:
+                    self.webui.image_notification_callback(
+                        "image_added",
+                        {
+                            "path": str(dest_path),
+                            "folder": dest_root,
+                        },
+                    )
+            except Exception as exc:  # pylint: disable=broad-except
+                logger.error(
+                    "Failed to move %s into classification folder: %s",
+                    filepath,
+                    exc,
+                )
+            # Move viz bounding-box image into the appropriate split folder
+            viz_filename = Path(filepath).stem + "_viz.jpg"
+            viz_src = Path(self.presets.intermediate_dir) / viz_filename
+            if viz_src.exists():
+                viz_dest_root = (
+                    self.presets.intermediate_puma_dir
+                    if is_puma
+                    else self.presets.intermediate_other_dir
+                )
+                try:
+                    Path(viz_dest_root).mkdir(parents=True, exist_ok=True)
+                    viz_dest = Path(viz_dest_root) / viz_filename
+                    shutil.move(str(viz_src), viz_dest)
+                    logger.info("Moved viz image %s to %s", viz_src, viz_dest)
+                except Exception as exc:  # pylint: disable=broad-except
+                    logger.error(
+                        "Failed to move viz image %s: %s", viz_src, exc
+                    )
+            else:
+                logger.debug(
+                    "No viz image found at %s, skipping move", viz_src
                 )
         except Exception as exc:  # pylint: disable=broad-except
             logger.error(
-                "Failed to move %s into classification folder: %s",
+                "Unexpected error while handling %s: %s",
                 filepath,
                 exc,
+                exc_info=True,
             )
-        # Move viz bounding-box image into the appropriate split folder
-        viz_filename = Path(filepath).stem + "_viz.jpg"
-        viz_src = Path(self.presets.intermediate_dir) / viz_filename
-        if viz_src.exists():
-            viz_dest_root = (
-                self.presets.intermediate_puma_dir
-                if is_puma
-                else self.presets.intermediate_other_dir
-            )
-            try:
-                Path(viz_dest_root).mkdir(parents=True, exist_ok=True)
-                viz_dest = Path(viz_dest_root) / viz_filename
-                shutil.move(str(viz_src), viz_dest)
-                logger.info("Moved viz image %s to %s", viz_src, viz_dest)
-            except Exception as exc:  # pylint: disable=broad-except
-                logger.error("Failed to move viz image %s: %s", viz_src, exc)
-        else:
-            logger.debug("No viz image found at %s, skipping move", viz_src)
-        lock.release()
-        logger.debug("Exiting (%s)", me.name)
+        finally:
+            lock.release()
+            logger.debug("Exiting (%s)", me.name)
 
     def _turn_on_automatic_plugs(self):
         """

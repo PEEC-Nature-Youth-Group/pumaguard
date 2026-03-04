@@ -33,12 +33,215 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Managed services that can be queried and restarted through the API.
+# Only these two names are accepted by the restart endpoint.
+_MANAGED_SERVICES = frozenset({"hostapd", "dnsmasq"})
+
+
+def _get_service_status(service: str) -> dict:
+    """
+    Return a status dict for a single systemd service.
+
+    Uses ``systemctl is-active`` (exit 0 = active) and
+    ``systemctl is-enabled`` (exit 0 = enabled) so that we never need
+    ``sudo`` and the calls are fast.
+
+    Returns a dict with keys:
+        name      – service name
+        active    – bool: True when systemctl is-active reports "active"
+        enabled   – bool: True when systemctl is-enabled reports "enabled"
+        state     – str: raw output of ``systemctl is-active`` (e.g.
+                    "active", "inactive", "failed", "activating", …)
+        available – bool: False when systemctl itself is not on PATH
+    """
+    if not _command_exists("systemctl"):
+        return {
+            "name": service,
+            "active": False,
+            "enabled": False,
+            "state": "unavailable",
+            "available": False,
+        }
+
+    try:
+        active_result = subprocess.run(
+            ["systemctl", "is-active", service],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        state = active_result.stdout.strip() or "unknown"
+        active = active_result.returncode == 0
+
+        enabled_result = subprocess.run(
+            ["systemctl", "is-enabled", service],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        enabled = enabled_result.returncode == 0
+
+    except subprocess.TimeoutExpired:
+        logger.warning("systemctl timed out querying service %s", service)
+        return {
+            "name": service,
+            "active": False,
+            "enabled": False,
+            "state": "timeout",
+            "available": True,
+        }
+    except Exception:  # pylint: disable=broad-except
+        logger.exception("Unexpected error querying service %s", service)
+        return {
+            "name": service,
+            "active": False,
+            "enabled": False,
+            "state": "error",
+            "available": True,
+        }
+
+    return {
+        "name": service,
+        "active": active,
+        "enabled": enabled,
+        "state": state,
+        "available": True,
+    }
+
 
 def register_system_routes(
     app: "Flask",
     webui: "WebUI",  # pylint: disable=unused-argument
 ) -> None:
     """Register system administration endpoints for time sync and status."""
+
+    @app.route("/api/system/services", methods=["GET"])
+    def get_services():
+        """
+        Return the current status of the managed infrastructure services
+        (``hostapd`` and ``dnsmasq``).
+
+        Response body::
+
+            {
+              "services": [
+                {
+                  "name": "hostapd",
+                  "active": true,
+                  "enabled": true,
+                  "state": "active",
+                  "available": true
+                },
+                {
+                  "name": "dnsmasq",
+                  "active": false,
+                  "enabled": true,
+                  "state": "failed",
+                  "available": true
+                }
+              ]
+            }
+        """
+        services = [
+            _get_service_status(svc) for svc in sorted(_MANAGED_SERVICES)
+        ]
+        return jsonify({"services": services})
+
+    @app.route(
+        "/api/system/services/<string:service_name>/restart", methods=["POST"]
+    )
+    def restart_service(service_name: str):
+        """
+        Restart a managed infrastructure service.
+
+        Only ``hostapd`` and ``dnsmasq`` are accepted; any other name returns
+        ``400``.  The restart is performed with
+        ``sudo systemctl restart <service>``, which requires a matching
+        ``sudoers`` entry for the user running PumaGuard – for example::
+
+            pumaguard ALL=(ALL) NOPASSWD: /bin/systemctl restart hostapd
+            pumaguard ALL=(ALL) NOPASSWD: /bin/systemctl restart dnsmasq
+
+        Response on success (HTTP 200)::
+
+            {"success": true, "message": "hostapd restarted successfully",
+             "service": { ... current status ... }}
+
+        Response on failure (HTTP 500)::
+
+            {"error": "Failed to restart hostapd: ..."}
+        """
+        if service_name not in _MANAGED_SERVICES:
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"Unknown service '{service_name}'. "
+                            f"Allowed services: {sorted(_MANAGED_SERVICES)}"
+                        )
+                    }
+                ),
+                400,
+            )
+
+        if not _command_exists("systemctl"):
+            return (
+                jsonify(
+                    {"error": "systemctl is not available on this system"}
+                ),
+                503,
+            )
+
+        logger.info("Restarting service: %s", service_name)
+        try:
+            result = subprocess.run(
+                ["sudo", "systemctl", "restart", service_name],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("Timed out while restarting %s", service_name)
+            return jsonify(
+                {"error": f"Timed out restarting {service_name}"}
+            ), 504
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Unexpected error restarting %s", service_name)
+            return jsonify({"error": f"Failed to restart {service_name}"}), 500
+
+        if result.returncode != 0:
+            error_detail = result.stderr.strip() or result.stdout.strip()
+            logger.error(
+                "systemctl restart %s failed (rc=%d): %s",
+                service_name,
+                result.returncode,
+                error_detail,
+            )
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"Failed to restart {service_name}: {error_detail}"
+                        )
+                    }
+                ),
+                500,
+            )
+
+        logger.info("Service %s restarted successfully", service_name)
+        # Return the fresh status so the UI can update immediately without a
+        # separate round-trip.
+        current_status = _get_service_status(service_name)
+        return jsonify(
+            {
+                "success": True,
+                "message": f"{service_name} restarted successfully",
+                "service": current_status,
+            }
+        )
 
     @app.route("/api/system/logs", methods=["GET"])
     def get_system_logs():

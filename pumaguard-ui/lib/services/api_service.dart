@@ -7,6 +7,7 @@ import '../models/status.dart';
 import '../models/settings.dart';
 import '../models/camera.dart';
 import '../models/plug.dart';
+import '../models/service_status.dart';
 
 class ApiService {
   String? _baseUrl;
@@ -1002,6 +1003,74 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to set server time: $e');
+    }
+  }
+
+  /// Get the status of the managed infrastructure services (hostapd, dnsmasq).
+  ///
+  /// Returns a list of [ServiceStatus] objects, one per managed service.
+  Future<List<ServiceStatus>> getServices() async {
+    try {
+      final url = getApiUrl('/api/system/services');
+      debugPrint('[ApiService.getServices] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getServices] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = body['services'] as List<dynamic>;
+        return list
+            .map((e) => ServiceStatus.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Failed to get services: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getServices] Exception: $e');
+      throw Exception('Failed to get service status: $e');
+    }
+  }
+
+  /// Restart a managed infrastructure service by [name] (hostapd or dnsmasq).
+  ///
+  /// Returns the refreshed [ServiceStatus] for that service on success.
+  /// Throws an [Exception] on failure (including HTTP 4xx / 5xx).
+  Future<ServiceStatus> restartService(String name) async {
+    try {
+      final url = getApiUrl('/api/system/services/$name/restart');
+      debugPrint('[ApiService.restartService] Requesting URL: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.restartService] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        return ServiceStatus.fromJson(body['service'] as Map<String, dynamic>);
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Failed to restart $name: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.restartService] Exception: $e');
+      throw Exception('Failed to restart $name: $e');
     }
   }
 

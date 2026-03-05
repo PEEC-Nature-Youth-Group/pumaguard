@@ -1,4 +1,8 @@
-"""System routes for server administration and time synchronization."""
+"""
+System routes for server administration and time synchronization
+"""
+
+# pylint: disable=too-many-lines
 
 from __future__ import (
     annotations,
@@ -632,11 +636,24 @@ def register_system_routes(
             )
 
         # Locate the generated tarball in /tmp.  sos writes files named like:
-        #   sosreport-<hostname>-<date>-<hash>.tar.xz
+        #   sosreport-<hostname>-<date>-<hash>.tar.xz        (tarball)
+        #   sosreport-<hostname>-<date>-<hash>.tar.xz.sha256 (checksum)
         # or (newer sos versions):
         #   sos-<hostname>-<date>-<hash>.tar.xz
+        #   sos-<hostname>-<date>-<hash>.tar.xz.sha256
+        # We deliberately exclude the .sha256 files here so that mtime
+        # sorting always yields the tarball first.
         matches = sorted(
-            glob.glob("/tmp/sos*.tar*") + glob.glob("/tmp/sosreport*.tar*"),
+            [
+                p
+                for p in (
+                    glob.glob("/tmp/sos*.tar.xz")
+                    + glob.glob("/tmp/sos*.tar.gz")
+                    + glob.glob("/tmp/sosreport*.tar.xz")
+                    + glob.glob("/tmp/sosreport*.tar.gz")
+                )
+                if not p.endswith(".sha256")
+            ],
             key=os.path.getmtime,
             reverse=True,
         )
@@ -661,6 +678,11 @@ def register_system_routes(
 
         tarball_path = matches[0]
         tarball_name = os.path.basename(tarball_path)
+
+        # The checksum file is the tarball path with ".sha256" appended.
+        checksum_path = tarball_path + ".sha256"
+        checksum_name = tarball_name + ".sha256"
+
         logger.info("SOS report generated: %s", tarball_path)
         return jsonify(
             {
@@ -668,6 +690,12 @@ def register_system_routes(
                 "message": "SOS report generated",
                 "filename": tarball_name,
                 "path": tarball_path,
+                "checksum_filename": (
+                    checksum_name if os.path.isfile(checksum_path) else None
+                ),
+                "checksum_path": (
+                    checksum_path if os.path.isfile(checksum_path) else None
+                ),
             }
         )
 
@@ -705,21 +733,23 @@ def register_system_routes(
             tarball_path = real
             if not os.path.isfile(tarball_path):
                 return (
-                    jsonify(
-                        {
-                            "error": (
-                                f"File not found: {
+                    jsonify({"error": (f"File not found: {
                                     os.path.basename(tarball_path)
-                                }"
-                            )
-                        }
-                    ),
+                                }")}),
                     404,
                 )
         else:
             matches = sorted(
-                glob.glob("/tmp/sos*.tar*")
-                + glob.glob("/tmp/sosreport*.tar*"),
+                [
+                    p
+                    for p in (
+                        glob.glob("/tmp/sos*.tar.xz")
+                        + glob.glob("/tmp/sos*.tar.gz")
+                        + glob.glob("/tmp/sosreport*.tar.xz")
+                        + glob.glob("/tmp/sosreport*.tar.gz")
+                    )
+                    if not p.endswith(".sha256")
+                ],
                 key=os.path.getmtime,
                 reverse=True,
             )
@@ -734,6 +764,78 @@ def register_system_routes(
             as_attachment=True,
             download_name=tarball_name,
             mimetype="application/x-xz",
+        )
+
+    @app.route("/api/system/sos-report/checksum", methods=["GET"])
+    def download_sos_report_checksum():
+        """
+        Stream the SHA-256 checksum file that accompanies the most-recently
+        generated SOS report tarball.
+
+        An optional ``path`` query parameter can pin a specific ``.sha256``
+        file (or the path of the tarball — ``.sha256`` is appended
+        automatically if not already present)::
+
+            GET /api/system/sos-report/checksum?path=/tmp/sosreport-….tar.xz
+
+        Response on success (HTTP 200):
+            Text file stream with ``Content-Disposition: attachment``.
+
+        Response when no checksum file exists (HTTP 404)::
+
+            {"error": "No SOS report checksum found in /tmp"}
+
+        Response when the requested file is outside /tmp (HTTP 400)::
+
+            {"error": "Invalid file path"}
+        """
+        requested_path = request.args.get("path", "").strip()
+
+        if requested_path:
+            real = os.path.realpath(requested_path)
+            if not real.startswith("/tmp/"):
+                return jsonify({"error": "Invalid file path"}), 400
+            # Accept either the tarball path or the .sha256 path directly.
+            checksum_path = (
+                real if real.endswith(".sha256") else real + ".sha256"
+            )
+            if not os.path.isfile(checksum_path):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Checksum file not found: "
+                                f"{os.path.basename(checksum_path)}"
+                            )
+                        }
+                    ),
+                    404,
+                )
+        else:
+            matches = sorted(
+                list(
+                    glob.glob("/tmp/sos*.tar.xz.sha256")
+                    + glob.glob("/tmp/sos*.tar.gz.sha256")
+                    + glob.glob("/tmp/sosreport*.tar.xz.sha256")
+                    + glob.glob("/tmp/sosreport*.tar.gz.sha256")
+                ),
+                key=os.path.getmtime,
+                reverse=True,
+            )
+            if not matches:
+                return (
+                    jsonify({"error": "No SOS report checksum found in /tmp"}),
+                    404,
+                )
+            checksum_path = matches[0]
+
+        checksum_name = os.path.basename(checksum_path)
+        logger.info("Sending SOS report checksum: %s", checksum_path)
+        return send_file(
+            checksum_path,
+            as_attachment=True,
+            download_name=checksum_name,
+            mimetype="text/plain",
         )
 
 

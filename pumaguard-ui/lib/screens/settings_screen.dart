@@ -155,11 +155,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (!mounted) return;
 
+      final checksumPath = result['checksum_path'] as String?;
+      final checksumFilename =
+          result['checksum_filename'] as String? ?? '$filename.sha256';
+
       if (kIsWeb) {
         // Fetch the tarball bytes and hand them to the web download helper so
         // the filename is preserved correctly across all browsers.
-        final response = await apiService.downloadSosReport(path: path);
-        downloadFilesWeb(response, filename);
+        final tarballBytes = await apiService.downloadSosReport(path: path);
+        downloadFilesWeb(tarballBytes, filename);
+
+        // Also download the accompanying .sha256 checksum file if available.
+        if (checksumPath != null) {
+          final checksumBytes = await apiService.downloadSosReportChecksum(
+            path: checksumPath,
+          );
+          downloadFilesWeb(checksumBytes, checksumFilename);
+        }
       } else {
         // On non-web platforms show a snackbar – native save-file support can
         // be added later via file_picker if needed.

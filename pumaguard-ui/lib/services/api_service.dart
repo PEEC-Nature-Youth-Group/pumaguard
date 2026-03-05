@@ -1143,9 +1143,23 @@ class ApiService {
   /// tarball from the server as a file download.
   ///
   /// If [path] is provided the server will serve that specific file; otherwise
-  /// it picks the newest ``sos*.tar*`` file in ``/tmp``.
+  /// it picks the newest ``sos*.tar.xz`` file in ``/tmp``.
   String getSosReportDownloadUrl({String? path}) {
     final base = getApiUrl('/api/system/sos-report/download');
+    if (path != null && path.isNotEmpty) {
+      return '$base?path=${Uri.encodeComponent(path)}';
+    }
+    return base;
+  }
+
+  /// Build the URL that streams the SHA-256 checksum file accompanying the
+  /// most-recently generated SOS report tarball.
+  ///
+  /// If [path] is provided it may be either the tarball path or the
+  /// ``.sha256`` path — the server appends ``.sha256`` automatically when
+  /// needed.
+  String getSosReportChecksumUrl({String? path}) {
+    final base = getApiUrl('/api/system/sos-report/checksum');
     if (path != null && path.isNotEmpty) {
       return '$base?path=${Uri.encodeComponent(path)}';
     }
@@ -1182,6 +1196,40 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService.downloadSosReport] Exception: $e');
       throw Exception('Failed to download SOS report: $e');
+    }
+  }
+
+  /// Fetch the SHA-256 checksum file that accompanies the SOS report tarball.
+  ///
+  /// If [path] is provided it may be the tarball path or the ``.sha256``
+  /// path directly — the server normalises it either way.  If omitted the
+  /// server picks the newest checksum file in ``/tmp``.
+  ///
+  /// Throws an [Exception] if the download fails or no checksum file exists.
+  Future<Uint8List> downloadSosReportChecksum({String? path}) async {
+    try {
+      final url = getSosReportChecksumUrl(path: path);
+      debugPrint('[ApiService.downloadSosReportChecksum] Requesting URL: $url');
+
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(minutes: 6));
+
+      debugPrint(
+        '[ApiService.downloadSosReportChecksum] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Checksum download failed: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.downloadSosReportChecksum] Exception: $e');
+      throw Exception('Failed to download SOS report checksum: $e');
     }
   }
 

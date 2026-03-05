@@ -162,7 +162,7 @@ class Settings:
         self.camera_heartbeat_icmp_timeout = 2  # ICMP timeout in seconds
 
         # Device auto-removal settings (applies to both cameras and plugs)
-        self.device_auto_remove_enabled = False  # Disabled by default
+        self.device_auto_remove_enabled = True  # Enabled by default
         self.device_auto_remove_hours = 24  # Remove after 24 hours
 
         # Plug heartbeat monitoring settings
@@ -366,7 +366,7 @@ class Settings:
         # Check new generic names first, fall back to old camera-specific names
         self.device_auto_remove_enabled = settings.get(
             "device-auto-remove-enabled",
-            settings.get("camera-auto-remove-enabled", False),
+            settings.get("camera-auto-remove-enabled", True),
         )
         self.device_auto_remove_hours = settings.get(
             "device-auto-remove-hours",

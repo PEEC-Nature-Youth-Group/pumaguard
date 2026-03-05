@@ -4,6 +4,7 @@ from __future__ import (
     annotations,
 )
 
+import glob
 import logging
 import os
 import platform
@@ -20,6 +21,7 @@ from typing import (
 from flask import (
     jsonify,
     request,
+    send_file,
 )
 
 if TYPE_CHECKING:
@@ -546,6 +548,193 @@ def register_system_routes(
 
         logger.info("System poweroff initiated successfully")
         return jsonify({"success": True, "message": "System is powering off"})
+
+    @app.route("/api/system/sos-report", methods=["POST"])
+    def generate_sos_report():
+        """
+        Generate an SOS report by running::
+
+            sos report --alloptions --all-logs --batch
+
+        This can take a minute or more to complete.  On success the response
+        contains the path to the generated tarball so the client can
+        immediately trigger a download via
+
+        ``GET /api/system/sos-report/download``.
+
+        Requires ``sos`` to be installed and the ``pumaguard`` user to have a
+        matching ``sudoers`` entry, for example::
+
+            pumaguard ALL=(ALL) NOPASSWD: /usr/bin/sos
+
+        Response on success (HTTP 200)::
+
+            {
+              "success": true,
+              "message": "SOS report generated",
+              "filename": "sosreport-hostname-2024…tar.xz",
+              "path": "/tmp/sosreport-hostname-2024….tar.xz"
+            }
+
+        Response when ``sos`` is unavailable (HTTP 503)::
+
+            {"error": "sos is not available on this system"}
+
+        Response on failure (HTTP 500)::
+
+            {"error": "Failed to generate SOS report: …"}
+        """
+        if not _command_exists("sos"):
+            return (
+                jsonify({"error": "sos is not available on this system"}),
+                503,
+            )
+
+        logger.info("Generating SOS report (this may take a while)")
+        try:
+            result = subprocess.run(
+                [
+                    "sudo",
+                    "sos",
+                    "report",
+                    "--alloptions",
+                    "--all-logs",
+                    "--batch",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=300,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("SOS report generation timed out")
+            return jsonify({"error": "SOS report generation timed out"}), 504
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Unexpected error generating SOS report")
+            return jsonify({"error": "Failed to generate SOS report"}), 500
+
+        if result.returncode != 0:
+            error_detail = result.stderr.strip() or result.stdout.strip()
+            logger.error(
+                "sos report failed (rc=%d): %s",
+                result.returncode,
+                error_detail,
+            )
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"Failed to generate SOS report: {error_detail}"
+                        )
+                    }
+                ),
+                500,
+            )
+
+        # Locate the generated tarball in /tmp.  sos writes files named like:
+        #   sosreport-<hostname>-<date>-<hash>.tar.xz
+        # or (newer sos versions):
+        #   sos-<hostname>-<date>-<hash>.tar.xz
+        matches = sorted(
+            glob.glob("/tmp/sos*.tar*") + glob.glob("/tmp/sosreport*.tar*"),
+            key=os.path.getmtime,
+            reverse=True,
+        )
+
+        if not matches:
+            logger.error(
+                "sos report succeeded but no tarball found in /tmp. "
+                "stdout: %s",
+                result.stdout.strip(),
+            )
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "SOS report finished but the output file could "
+                            "not be located in /tmp"
+                        )
+                    }
+                ),
+                500,
+            )
+
+        tarball_path = matches[0]
+        tarball_name = os.path.basename(tarball_path)
+        logger.info("SOS report generated: %s", tarball_path)
+        return jsonify(
+            {
+                "success": True,
+                "message": "SOS report generated",
+                "filename": tarball_name,
+                "path": tarball_path,
+            }
+        )
+
+    @app.route("/api/system/sos-report/download", methods=["GET"])
+    def download_sos_report():
+        """
+        Stream the most-recently generated SOS report tarball from ``/tmp``
+        as a file-download response.
+
+        An optional ``path`` query parameter can pin a specific file::
+
+            GET /api/system/sos-report/download?path=/tmp/sosreport-….tar.xz
+
+        If no ``path`` is supplied the most recently modified ``sos*.tar*``
+        file in ``/tmp`` is used.
+
+        Response on success (HTTP 200):
+            Binary file stream with ``Content-Disposition: attachment``.
+
+        Response when no report exists (HTTP 404)::
+
+            {"error": "No SOS report found in /tmp"}
+
+        Response when the requested file is outside /tmp (HTTP 400)::
+
+            {"error": "Invalid file path"}
+        """
+        requested_path = request.args.get("path", "").strip()
+
+        if requested_path:
+            # Basic safety check: only allow files that live under /tmp.
+            real = os.path.realpath(requested_path)
+            if not real.startswith("/tmp/"):
+                return jsonify({"error": "Invalid file path"}), 400
+            tarball_path = real
+            if not os.path.isfile(tarball_path):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"File not found: {
+                                    os.path.basename(tarball_path)
+                                }"
+                            )
+                        }
+                    ),
+                    404,
+                )
+        else:
+            matches = sorted(
+                glob.glob("/tmp/sos*.tar*")
+                + glob.glob("/tmp/sosreport*.tar*"),
+                key=os.path.getmtime,
+                reverse=True,
+            )
+            if not matches:
+                return jsonify({"error": "No SOS report found in /tmp"}), 404
+            tarball_path = matches[0]
+
+        tarball_name = os.path.basename(tarball_path)
+        logger.info("Sending SOS report: %s", tarball_path)
+        return send_file(
+            tarball_path,
+            as_attachment=True,
+            download_name=tarball_name,
+            mimetype="application/x-xz",
+        )
 
 
 def _set_system_time(  # pylint: disable=too-many-return-statements

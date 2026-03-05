@@ -1018,6 +1018,18 @@
       tags:
         - pumaguard
 
+    - name: Allow passwordless sudo for pumaguard to get a sos report
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-sosreport
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/sos report --alloptions --all-logs --batch
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
     - name: Install pumaguard systemd service
       ansible.builtin.template:
         lstrip_blocks: true

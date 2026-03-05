@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/settings.dart';
 
 import '../services/api_service.dart';
+import '../utils/download_helper.dart';
 
 import 'dart:developer' as developer;
 import 'wifi_settings_screen.dart';
@@ -42,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _availableSounds = [];
   Timer? _debounceTimer;
   bool _isLoadingSettings = false;
+  bool _isSosRunning = false;
 
   // Server time synchronization
   String? _serverTime;
@@ -66,6 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    // _isSosRunning is not a resource that needs disposal
     _yoloMinSizeController.dispose();
     _yoloConfThreshController.dispose();
     _yoloMaxDetsController.dispose();
@@ -138,6 +142,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(content: Text('Failed to get server time: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _generateSosReport() async {
+    setState(() => _isSosRunning = true);
+    try {
+      final apiService = context.read<ApiService>();
+      final result = await apiService.generateSosReport();
+      final path = result['path'] as String?;
+      final filename = result['filename'] as String? ?? 'sosreport.tar.xz';
+
+      if (!mounted) return;
+
+      if (kIsWeb) {
+        // Fetch the tarball bytes and hand them to the web download helper so
+        // the filename is preserved correctly across all browsers.
+        final response = await apiService.downloadSosReport(path: path);
+        downloadFilesWeb(response, filename);
+      } else {
+        // On non-web platforms show a snackbar – native save-file support can
+        // be added later via file_picker if needed.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('SOS report saved on device: $filename'),
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate SOS report: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSosRunning = false);
     }
   }
 
@@ -1409,6 +1453,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               icon: const Icon(Icons.terminal),
               label: const Text('System logs'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+                alignment: Alignment.centerLeft,
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _isSosRunning ? null : _generateSosReport,
+              icon: _isSosRunning
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.summarize_outlined),
+              label: Text(
+                _isSosRunning
+                    ? 'Generating SOS report…'
+                    : 'Generate SOS report',
+              ),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
                 alignment: Alignment.centerLeft,

@@ -1104,6 +1104,87 @@ class ApiService {
     }
   }
 
+  /// Generate an SOS report on the server by calling
+  /// ``POST /api/system/sos-report``.
+  ///
+  /// This can take a minute or more.  On success the returned map contains:
+  ///   - `filename` – bare filename of the generated tarball
+  ///   - `path`     – absolute path on the server (used for the download URL)
+  ///
+  /// Throws an [Exception] if the request fails or sos is unavailable.
+  Future<Map<String, dynamic>> generateSosReport() async {
+    try {
+      final url = getApiUrl('/api/system/sos-report');
+      debugPrint('[ApiService.generateSosReport] Requesting URL: $url');
+
+      final response = await http
+          .post(Uri.parse(url), headers: {'Content-Type': 'application/json'})
+          .timeout(const Duration(minutes: 6));
+
+      debugPrint(
+        '[ApiService.generateSosReport] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'SOS report failed: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.generateSosReport] Exception: $e');
+      throw Exception('Failed to generate SOS report: $e');
+    }
+  }
+
+  /// Build the URL that streams the most-recently generated SOS report
+  /// tarball from the server as a file download.
+  ///
+  /// If [path] is provided the server will serve that specific file; otherwise
+  /// it picks the newest ``sos*.tar*`` file in ``/tmp``.
+  String getSosReportDownloadUrl({String? path}) {
+    final base = getApiUrl('/api/system/sos-report/download');
+    if (path != null && path.isNotEmpty) {
+      return '$base?path=${Uri.encodeComponent(path)}';
+    }
+    return base;
+  }
+
+  /// Fetch the SOS report tarball bytes from the server.
+  ///
+  /// If [path] is provided the server will serve that specific file; otherwise
+  /// it picks the newest ``sos*.tar*`` file in ``/tmp``.
+  ///
+  /// Throws an [Exception] if the download fails.
+  Future<Uint8List> downloadSosReport({String? path}) async {
+    try {
+      final url = getSosReportDownloadUrl(path: path);
+      debugPrint('[ApiService.downloadSosReport] Requesting URL: $url');
+
+      final response = await http
+          .get(Uri.parse(url))
+          .timeout(const Duration(minutes: 6));
+
+      debugPrint(
+        '[ApiService.downloadSosReport] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Download failed: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.downloadSosReport] Exception: $e');
+      throw Exception('Failed to download SOS report: $e');
+    }
+  }
+
   /// Retrieve system journal logs.
   ///
   /// [scope] can be:

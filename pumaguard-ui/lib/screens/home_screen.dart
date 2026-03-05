@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingServices = false;
   // Tracks which service names currently have a restart in progress.
   final Set<String> _restartingServices = {};
+  bool _isPoweringOff = false;
 
   @override
   void initState() {
@@ -447,6 +448,65 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _poweroff() async {
+    setState(() => _isPoweringOff = true);
+    try {
+      final apiService = context.read<ApiService>();
+      await apiService.poweroff();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('System is powering off…'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isPoweringOff = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to power off: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmPoweroff() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Power Off Device?'),
+        content: const Text(
+          'This will shut down the device completely. '
+          'You will need physical access to turn it back on.\n\n'
+          'Are you sure you want to power off?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            child: const Text('Power Off'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _poweroff();
+    }
+  }
+
   // -------------------------------------------------------------------------
 
   Widget _buildQuickActionsCard() {
@@ -516,6 +576,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ).then((_) => _refresh());
               },
             ),
+            const Divider(),
+            _buildActionButton(
+              icon: Icons.power_settings_new,
+              label: 'Power Off',
+              description: 'Shut down the device',
+              onTap: _isPoweringOff ? null : _confirmPoweroff,
+              isDestructive: true,
+              isLoading: _isPoweringOff,
+            ),
           ],
         ),
       ),
@@ -526,8 +595,17 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String label,
     required String description,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
+    bool isDestructive = false,
+    bool isLoading = false,
   }) {
+    final Color iconBgColor = isDestructive
+        ? Theme.of(context).colorScheme.errorContainer
+        : Theme.of(context).colorScheme.primaryContainer;
+    final Color iconColor = isDestructive
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.primary;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -538,10 +616,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
+                color: iconBgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary),
+              child: Icon(icon, color: iconColor),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -559,10 +637,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            if (isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
           ],
         ),
       ),

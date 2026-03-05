@@ -1074,6 +1074,36 @@ class ApiService {
     }
   }
 
+  /// Power off the device by calling ``POST /api/system/poweroff``.
+  ///
+  /// Throws an [Exception] if the request fails or the server returns a
+  /// non-200 status code.
+  Future<void> poweroff() async {
+    try {
+      final url = getApiUrl('/api/system/poweroff');
+      debugPrint('[ApiService.poweroff] Requesting URL: $url');
+
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.poweroff] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode != 200) {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Poweroff failed: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[ApiService.poweroff] Exception: $e');
+      throw Exception('Failed to power off: $e');
+    }
+  }
+
   /// Retrieve system journal logs.
   ///
   /// [scope] can be:

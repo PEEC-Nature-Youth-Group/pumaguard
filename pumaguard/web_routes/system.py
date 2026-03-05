@@ -484,6 +484,69 @@ def register_system_routes(
             logger.exception("Error setting system time")
             return jsonify({"error": "Internal error"}), 500
 
+    @app.route("/api/system/poweroff", methods=["POST"])
+    def poweroff():
+        """
+        Power off the device by running ``sudo systemctl poweroff``.
+
+        The user running PumaGuard must have a matching ``sudoers`` entry,
+        for example::
+
+            pumaguard ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff
+
+        Response on success (HTTP 200)::
+
+            {"success": true, "message": "System is powering off"}
+
+        Response when ``systemctl`` is unavailable (HTTP 503)::
+
+            {"error": "systemctl is not available on this system"}
+
+        Response on failure (HTTP 500)::
+
+            {"error": "Failed to initiate poweroff: ..."}
+        """
+        if not _command_exists("systemctl"):
+            return (
+                jsonify(
+                    {"error": "systemctl is not available on this system"}
+                ),
+                503,
+            )
+
+        logger.info("Initiating system poweroff")
+        try:
+            result = subprocess.run(
+                ["sudo", "/usr/bin/systemctl", "poweroff"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("Timed out while initiating poweroff")
+            return jsonify({"error": "Timed out initiating poweroff"}), 504
+        except Exception:  # pylint: disable=broad-except
+            logger.exception("Unexpected error initiating poweroff")
+            return jsonify({"error": "Failed to initiate poweroff"}), 500
+
+        if result.returncode != 0:
+            error_detail = result.stderr.strip() or result.stdout.strip()
+            logger.error(
+                "systemctl poweroff failed (rc=%d): %s",
+                result.returncode,
+                error_detail,
+            )
+            return (
+                jsonify(
+                    {"error": f"Failed to initiate poweroff: {error_detail}"}
+                ),
+                500,
+            )
+
+        logger.info("System poweroff initiated successfully")
+        return jsonify({"success": True, "message": "System is powering off"})
+
 
 def _set_system_time(  # pylint: disable=too-many-return-statements
     target_time: datetime, system: str

@@ -289,12 +289,12 @@ if "${DO_CLOUD_INIT}"; then
     # udisksctl mounts it under /media/$USER/system-boot (or /run/media/...).
     SYSTEM_BOOT_MOUNT="$(
         lsblk --json "${SDCARD}" 2>/dev/null \
-            | jq --raw-output '
-                .. | objects
-                   | select(.label? == "system-boot")
-                   | .mountpoints[]?
-                   | select(. != null)
-              ' \
+            | jq --raw-output '..
+                | objects
+                | select(.label? == "system-boot")
+                | .mountpoints[]?
+                | select(. != null)
+            ' \
             | head -1
     )"
 

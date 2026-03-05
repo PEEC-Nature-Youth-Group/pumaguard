@@ -9,11 +9,13 @@ from __future__ import (
 )
 
 import glob
+import io
 import logging
 import os
 import platform
 import shutil
 import subprocess
+import zipfile
 from datetime import (
     datetime,
     timezone,
@@ -554,7 +556,7 @@ def register_system_routes(
         return jsonify({"success": True, "message": "System is powering off"})
 
     @app.route("/api/system/sos-report", methods=["POST"])
-    def generate_sos_report():
+    def generate_sos_report():  # pylint: disable=too-many-return-statements
         """
         Generate an SOS report by running::
 
@@ -599,7 +601,7 @@ def register_system_routes(
             result = subprocess.run(
                 [
                     "sudo",
-                    "sos",
+                    "/usr/bin/sos",
                     "report",
                     "--alloptions",
                     "--all-logs",
@@ -745,18 +747,21 @@ def register_system_routes(
     @app.route("/api/system/sos-report/download", methods=["GET"])
     def download_sos_report():
         """
-        Stream the most-recently generated SOS report tarball from ``/tmp``
-        as a file-download response.
+        Package the SOS report tarball and its ``.sha256`` checksum file into
+        a ZIP archive and return it as a single download.
 
-        An optional ``path`` query parameter can pin a specific file::
+        Using ZIP_STORED (no recompression) keeps CPU overhead minimal — the
+        ``.tar.xz`` is already compressed.
+
+        An optional ``path`` query parameter pins a specific tarball::
 
             GET /api/system/sos-report/download?path=/tmp/sosreport-….tar.xz
 
-        If no ``path`` is supplied the most recently modified ``sos*.tar*``
+        If omitted the most recently modified ``sos*.tar.xz`` / ``sos*.tar.gz``
         file in ``/tmp`` is used.
 
         Response on success (HTTP 200):
-            Binary file stream with ``Content-Disposition: attachment``.
+            ``application/zip`` stream named ``<tarball-stem>.zip``.
 
         Response when no report exists (HTTP 404)::
 
@@ -779,9 +784,8 @@ def register_system_routes(
                     jsonify(
                         {
                             "error": (
-                                f"File not found: {
-                                    os.path.basename(tarball_path)
-                                }"
+                                f"File not found: "
+                                f"{os.path.basename(tarball_path)}"
                             )
                         }
                     ),
@@ -807,84 +811,30 @@ def register_system_routes(
             tarball_path = matches[0]
 
         tarball_name = os.path.basename(tarball_path)
-        logger.info("Sending SOS report: %s", tarball_path)
-        return send_file(
-            tarball_path,
-            as_attachment=True,
-            download_name=tarball_name,
-            mimetype="application/x-xz",
+        checksum_path = tarball_path + ".sha256"
+
+        # Build the zip in memory.  ZIP_STORED avoids wasting CPU trying to
+        # recompress an already-compressed .tar.xz.
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zf:
+            logger.info("Adding to zip: %s", tarball_path)
+            zf.write(tarball_path, tarball_name)
+            if os.path.isfile(checksum_path):
+                logger.info("Adding to zip: %s", checksum_path)
+                zf.write(checksum_path, tarball_name + ".sha256")
+        zip_buffer.seek(0)
+
+        # Name the zip after the tarball stem, e.g.
+        # sosreport-raspberrypi-2026-03-05-moudxyc.zip
+        zip_name = (
+            tarball_name.replace(".tar.xz", "").replace(".tar.gz", "") + ".zip"
         )
-
-    @app.route("/api/system/sos-report/checksum", methods=["GET"])
-    def download_sos_report_checksum():
-        """
-        Stream the SHA-256 checksum file that accompanies the most-recently
-        generated SOS report tarball.
-
-        An optional ``path`` query parameter can pin a specific ``.sha256``
-        file (or the path of the tarball — ``.sha256`` is appended
-        automatically if not already present)::
-
-            GET /api/system/sos-report/checksum?path=/tmp/sosreport-….tar.xz
-
-        Response on success (HTTP 200):
-            Text file stream with ``Content-Disposition: attachment``.
-
-        Response when no checksum file exists (HTTP 404)::
-
-            {"error": "No SOS report checksum found in /tmp"}
-
-        Response when the requested file is outside /tmp (HTTP 400)::
-
-            {"error": "Invalid file path"}
-        """
-        requested_path = request.args.get("path", "").strip()
-
-        if requested_path:
-            real = os.path.realpath(requested_path)
-            if not real.startswith("/tmp/"):
-                return jsonify({"error": "Invalid file path"}), 400
-            # Accept either the tarball path or the .sha256 path directly.
-            checksum_path = (
-                real if real.endswith(".sha256") else real + ".sha256"
-            )
-            if not os.path.isfile(checksum_path):
-                return (
-                    jsonify(
-                        {
-                            "error": (
-                                f"Checksum file not found: "
-                                f"{os.path.basename(checksum_path)}"
-                            )
-                        }
-                    ),
-                    404,
-                )
-        else:
-            matches = sorted(
-                list(
-                    glob.glob("/tmp/sos*.tar.xz.sha256")
-                    + glob.glob("/tmp/sos*.tar.gz.sha256")
-                    + glob.glob("/tmp/sosreport*.tar.xz.sha256")
-                    + glob.glob("/tmp/sosreport*.tar.gz.sha256")
-                ),
-                key=os.path.getmtime,
-                reverse=True,
-            )
-            if not matches:
-                return (
-                    jsonify({"error": "No SOS report checksum found in /tmp"}),
-                    404,
-                )
-            checksum_path = matches[0]
-
-        checksum_name = os.path.basename(checksum_path)
-        logger.info("Sending SOS report checksum: %s", checksum_path)
+        logger.info("Sending SOS report zip: %s", zip_name)
         return send_file(
-            checksum_path,
+            zip_buffer,
+            mimetype="application/zip",
             as_attachment=True,
-            download_name=checksum_name,
-            mimetype="text/plain",
+            download_name=zip_name,
         )
 
 

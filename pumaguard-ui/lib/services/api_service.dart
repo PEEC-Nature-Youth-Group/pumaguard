@@ -1139,11 +1139,11 @@ class ApiService {
     }
   }
 
-  /// Build the URL that streams the most-recently generated SOS report
-  /// tarball from the server as a file download.
+  /// Build the URL that downloads the SOS report as a ZIP archive containing
+  /// the tarball and its ``.sha256`` checksum file.
   ///
-  /// If [path] is provided the server will serve that specific file; otherwise
-  /// it picks the newest ``sos*.tar.xz`` file in ``/tmp``.
+  /// If [path] is provided the server will serve that specific tarball;
+  /// otherwise it picks the newest ``sos*.tar.xz`` file in ``/tmp``.
   String getSosReportDownloadUrl({String? path}) {
     final base = getApiUrl('/api/system/sos-report/download');
     if (path != null && path.isNotEmpty) {
@@ -1152,24 +1152,11 @@ class ApiService {
     return base;
   }
 
-  /// Build the URL that streams the SHA-256 checksum file accompanying the
-  /// most-recently generated SOS report tarball.
+  /// Fetch the SOS report as a ZIP archive (tarball + ``.sha256``) from the
+  /// server.
   ///
-  /// If [path] is provided it may be either the tarball path or the
-  /// ``.sha256`` path — the server appends ``.sha256`` automatically when
-  /// needed.
-  String getSosReportChecksumUrl({String? path}) {
-    final base = getApiUrl('/api/system/sos-report/checksum');
-    if (path != null && path.isNotEmpty) {
-      return '$base?path=${Uri.encodeComponent(path)}';
-    }
-    return base;
-  }
-
-  /// Fetch the SOS report tarball bytes from the server.
-  ///
-  /// If [path] is provided the server will serve that specific file; otherwise
-  /// it picks the newest ``sos*.tar*`` file in ``/tmp``.
+  /// If [path] is provided the server will serve that specific tarball;
+  /// otherwise it picks the newest ``sos*.tar.xz`` file in ``/tmp``.
   ///
   /// Throws an [Exception] if the download fails.
   Future<Uint8List> downloadSosReport({String? path}) async {
@@ -1196,40 +1183,6 @@ class ApiService {
     } catch (e) {
       debugPrint('[ApiService.downloadSosReport] Exception: $e');
       throw Exception('Failed to download SOS report: $e');
-    }
-  }
-
-  /// Fetch the SHA-256 checksum file that accompanies the SOS report tarball.
-  ///
-  /// If [path] is provided it may be the tarball path or the ``.sha256``
-  /// path directly — the server normalises it either way.  If omitted the
-  /// server picks the newest checksum file in ``/tmp``.
-  ///
-  /// Throws an [Exception] if the download fails or no checksum file exists.
-  Future<Uint8List> downloadSosReportChecksum({String? path}) async {
-    try {
-      final url = getSosReportChecksumUrl(path: path);
-      debugPrint('[ApiService.downloadSosReportChecksum] Requesting URL: $url');
-
-      final response = await http
-          .get(Uri.parse(url))
-          .timeout(const Duration(minutes: 6));
-
-      debugPrint(
-        '[ApiService.downloadSosReportChecksum] Response status: ${response.statusCode}',
-      );
-
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception(
-          error['error'] ?? 'Checksum download failed: ${response.statusCode}',
-        );
-      }
-    } catch (e) {
-      debugPrint('[ApiService.downloadSosReportChecksum] Exception: $e');
-      throw Exception('Failed to download SOS report checksum: $e');
     }
   }
 

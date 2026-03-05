@@ -155,29 +155,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       if (!mounted) return;
 
-      final checksumPath = result['checksum_path'] as String?;
-      final checksumFilename =
-          result['checksum_filename'] as String? ?? '$filename.sha256';
+      // The download endpoint returns a ZIP containing both the tarball and
+      // its .sha256 checksum file.
+      final zipFilename =
+          filename.replaceAll('.tar.xz', '').replaceAll('.tar.gz', '') + '.zip';
 
       if (kIsWeb) {
-        // Fetch the tarball bytes and hand them to the web download helper so
-        // the filename is preserved correctly across all browsers.
-        final tarballBytes = await apiService.downloadSosReport(path: path);
-        downloadFilesWeb(tarballBytes, filename);
-
-        // Also download the accompanying .sha256 checksum file if available.
-        if (checksumPath != null) {
-          final checksumBytes = await apiService.downloadSosReportChecksum(
-            path: checksumPath,
-          );
-          downloadFilesWeb(checksumBytes, checksumFilename);
-        }
+        // Fetch the zip bytes and trigger a single browser download.
+        final zipBytes = await apiService.downloadSosReport(path: path);
+        downloadFilesWeb(zipBytes, zipFilename);
       } else {
         // On non-web platforms show a snackbar – native save-file support can
         // be added later via file_picker if needed.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('SOS report saved on device: $filename'),
+            content: Text('SOS report saved on device: $zipFilename'),
             duration: const Duration(seconds: 6),
           ),
         );

@@ -52,8 +52,9 @@ EOF
 lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:questing pumaguard
 
 set +x
+echo -n "Starting VM: "
 while true; do
-    if lxc exec pumaguard -- cloud-init status --wait; then
+    if lxc exec pumaguard -- cloud-init status --wait 2> /dev/null; then
         break
     fi
     sleep 1

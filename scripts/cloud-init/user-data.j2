@@ -1,0 +1,78 @@
+#cloud-config
+# cloud-init user-data for PumaGuard Raspberry Pi devices.
+#
+# This file is a Jinja2 template rendered by image-sd-card-for-pi.sh
+# before being written to the system-boot partition of the SD card.
+#
+# Required variables (passed via --var KEY=VALUE or a vars file):
+#   pumaguard_passwd_hash  - SHA-512 shadow password hash for the pumaguard user
+#                            Generate with: openssl passwd -6
+#
+# Optional variables:
+#   hostname               - Device hostname         (default: raspberrypi)
+#   timezone               - System timezone         (default: America/Denver)
+#   ssh_authorized_key     - SSH public key string   (default: not set)
+
+hostname: {{ hostname | default('raspberrypi') }}
+manage_etc_hosts: true
+
+# Disable the default 'ubuntu' user entirely; we manage our own.
+users:
+  - name: pumaguard
+    gecos: PumaGuard Service Account
+    groups:
+      - users
+      - adm
+      - dialout
+      - audio
+      - netdev
+      - video
+      - plugdev
+      - cdrom
+      - games
+      - input
+      - gpio
+      - spi
+      - i2c
+      - render
+      - sudo
+    shell: /bin/bash
+    lock_passwd: false
+    passwd: "{{ pumaguard_passwd_hash }}"
+{% if ssh_authorized_key is defined and ssh_authorized_key %}
+    ssh_authorized_keys:
+      - "{{ ssh_authorized_key }}"
+{% endif %}
+
+# Allow password-based SSH login so the device is accessible before an SSH
+# key has been deployed (e.g. on first boot before the Ansible playbook runs).
+ssh_pwauth: true
+
+# Ensure avahi-daemon is installed for mDNS / .local name resolution, which
+# lets Ansible reach the device as raspberrypi.local without a static IP.
+packages:
+  - avahi-daemon
+
+# Work around potential clock-skew issues on a freshly imaged card where the
+# hardware clock may not yet be set: tell apt not to reject packages whose
+# timestamps are in the future relative to the (wrong) system clock.
+apt:
+  conf: |
+    Acquire {
+      Check-Date "false";
+    };
+
+timezone: {{ timezone | default('America/Denver') }}
+
+runcmd:
+  # Set keyboard layout so the console is usable if physical access is needed.
+  - localectl set-x11-keymap "us" pc105
+  - setupcon -k --force || true
+  # Disable cloud-init on subsequent boots so it does not interfere with the
+  # Ansible-managed network configuration applied during provisioning.
+  - touch /etc/cloud/cloud-init.disabled
+
+# Write a marker file so it is easy to confirm cloud-init ran to completion.
+final_message: |
+  PumaGuard cloud-init finished after $UPTIME seconds.
+  Version $VERSION.  datasource: $DATASOURCE.

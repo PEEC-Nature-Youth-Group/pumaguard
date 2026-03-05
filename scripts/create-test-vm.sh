@@ -49,8 +49,9 @@ runcmd:
     - sudo -u pumaguard ssh-import-id lp:nicolasbock
 EOF
 
-lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:noble pumaguard
+lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:questing pumaguard
 
+set +x
 while true; do
     if lxc exec pumaguard -- cloud-init status --wait; then
         break

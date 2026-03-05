@@ -488,10 +488,69 @@ class _DevicesScreenState extends State<DevicesScreen> {
           ),
         ],
       ),
-      trailing: IconButton(
-        icon: const Icon(Icons.open_in_new),
-        onPressed: () => _openCamera(camera),
-        tooltip: 'Open Camera UI',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.open_in_new),
+            onPressed: () => _openCamera(camera),
+            tooltip: 'Open Camera UI',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            color: Theme.of(context).colorScheme.error,
+            tooltip: 'Remove camera',
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Remove Camera'),
+                  content: Text(
+                    'Are you sure you want to remove "${camera.displayName}"?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
+                      ),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true && mounted) {
+                try {
+                  await context.read<ApiService>().deleteCamera(
+                    camera.macAddress,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Camera "${camera.displayName}" removed'),
+                      ),
+                    );
+                    _loadDevices();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to remove camera: $e'),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+          ),
+        ],
       ),
       onTap: () => _openCamera(camera),
     );
@@ -575,7 +634,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row with icon, name, and status
+            // Header row with icon, name, status, and delete button
             Row(
               children: [
                 CircleAvatar(
@@ -621,6 +680,70 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  color: Theme.of(context).colorScheme.error,
+                  tooltip: 'Remove plug',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Remove Plug'),
+                        content: Text(
+                          'Are you sure you want to remove "${plug.displayName}"?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.of(ctx).pop(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
+                              foregroundColor: Theme.of(
+                                context,
+                              ).colorScheme.onError,
+                            ),
+                            child: const Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed == true && mounted) {
+                      try {
+                        await context.read<ApiService>().deletePlug(
+                          plug.macAddress,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Plug "${plug.displayName}" removed',
+                              ),
+                            ),
+                          );
+                          _loadDevices();
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to remove plug: $e'),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.error,
+                            ),
+                          );
+                        }
+                      }
+                    }
+                  },
                 ),
               ],
             ),

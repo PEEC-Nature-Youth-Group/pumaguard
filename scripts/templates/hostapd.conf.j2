@@ -27,3 +27,19 @@ wpa_passphrase={{ hostapd_passphrase }}
 
 # WPA key management
 wpa_key_mgmt=WPA-PSK
+
+# Pairwise ciphers for WPA (TKIP) and WPA2/RSN (CCMP/AES)
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+
+# Open system authentication (required for WPA/WPA2)
+auth_algs=1
+
+# Wi-Fi Multimedia (WMM) for QoS support
+wmm_enabled=1
+
+# Enable 802.11n (HT) support
+ieee80211n=1
+
+# HT capabilities: 20 MHz channel width
+ht_capab=[HT20]

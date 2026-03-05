@@ -1071,6 +1071,8 @@
         dest: /etc/sudoers.d/pumaguard-sosreport
         content: |
           {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/sos report --alloptions --all-logs --batch
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/chmod o+r /tmp/sos*
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/chmod o+r /tmp/sosreport*
         owner: root
         group: root
         mode: "0440"

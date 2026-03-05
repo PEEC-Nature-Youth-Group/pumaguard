@@ -683,6 +683,49 @@ def register_system_routes(
         checksum_path = tarball_path + ".sha256"
         checksum_name = tarball_name + ".sha256"
 
+        # sos runs as root via sudo, so the generated files are owned by root
+        # and not readable by the pumaguard service user.  chmod them
+        # world-readable so Flask can open and stream them.
+        files_to_chmod = [tarball_path]
+        if os.path.isfile(checksum_path):
+            files_to_chmod.append(checksum_path)
+
+        try:
+            subprocess.run(
+                ["sudo", "chmod", "o+r"] + files_to_chmod,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=10,
+            )
+        except subprocess.CalledProcessError as exc:
+            error_detail = exc.stderr.strip() or exc.stdout.strip()
+            logger.error("Failed to chmod SOS report files: %s", error_detail)
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "SOS report generated but could not be made "
+                            f"readable: {error_detail}"
+                        )
+                    }
+                ),
+                500,
+            )
+        except subprocess.TimeoutExpired:
+            logger.error("Timed out while chmodding SOS report files")
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            "SOS report generated but timed out making "
+                            "it readable"
+                        )
+                    }
+                ),
+                500,
+            )
+
         logger.info("SOS report generated: %s", tarball_path)
         return jsonify(
             {
@@ -733,9 +776,15 @@ def register_system_routes(
             tarball_path = real
             if not os.path.isfile(tarball_path):
                 return (
-                    jsonify({"error": (f"File not found: {
+                    jsonify(
+                        {
+                            "error": (
+                                f"File not found: {
                                     os.path.basename(tarball_path)
-                                }")}),
+                                }"
+                            )
+                        }
+                    ),
                     404,
                 )
         else:

@@ -1066,6 +1066,18 @@
       tags:
         - pumaguard
 
+    - name: Allow passwordless sudo for pumaguard to power off device
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-poweroff
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl poweroff
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
     - name: Allow passwordless sudo for pumaguard to get a sos report
       ansible.builtin.copy:
         dest: /etc/sudoers.d/pumaguard-sosreport

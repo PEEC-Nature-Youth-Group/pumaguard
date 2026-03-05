@@ -604,6 +604,29 @@
       tags:
         - networking
 
+    - name: Ensure dnsmasq.service.d drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/dnsmasq.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - networking
+
+    - name: Install dnsmasq drop-in to order after hostapd and restart on failure
+      ansible.builtin.copy:
+        src: files/drop-ins/dnsmasq-after-hostapd.conf
+        dest: /etc/systemd/system/dnsmasq.service.d/after-hostapd.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd daemon
+        - Restart dnsmasq
+      tags:
+        - networking
+
     - name: Install package hostapd
       ansible.builtin.apt:
         name:
@@ -670,6 +693,31 @@
       ansible.builtin.systemd:
         name: hostapd
         state: started
+      tags:
+        - networking
+        - hostapd
+
+    - name: Ensure hostapd.service.d drop-in directory exists
+      ansible.builtin.file:
+        path: /etc/systemd/system/hostapd.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      tags:
+        - networking
+        - hostapd
+
+    - name: Install hostapd drop-in to wait for wlan0 operstate before declaring started
+      ansible.builtin.copy:
+        src: files/drop-ins/hostapd-wait-wlan0.conf
+        dest: /etc/systemd/system/hostapd.service.d/wait-wlan0.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd daemon
+        - Restart hostapd
       tags:
         - networking
         - hostapd
@@ -1090,6 +1138,10 @@
       ansible.builtin.systemd:
         name: ufw
         state: restarted
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
 
     - name: Restart dnsmasq
       ansible.builtin.systemd:

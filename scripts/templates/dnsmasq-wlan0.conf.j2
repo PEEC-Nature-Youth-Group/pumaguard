@@ -61,5 +61,10 @@ server={{ dnsmasq_wired_gateway }}
 log-queries
 log-dhcp
 
-# Call script when DHCP lease events occur
+# Call script when DHCP lease events occur.
+# script-on-renewal ensures the script is also called for routine DHCP
+# renewals (DHCPREQUEST/DHCPACK mid-session), not just on dnsmasq startup
+# or hostname/MAC changes. Without this, plug and camera re-appearances
+# after lease expiry would go undetected.
+script-on-renewal
 dhcp-script=/usr/local/bin/pumaguard-dhcp-notify.sh

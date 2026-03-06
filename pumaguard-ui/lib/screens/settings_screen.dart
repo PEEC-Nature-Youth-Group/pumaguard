@@ -158,7 +158,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       // The download endpoint returns a ZIP containing both the tarball and
       // its .sha256 checksum file.
       final zipFilename =
-          filename.replaceAll('.tar.xz', '').replaceAll('.tar.gz', '') + '.zip';
+          '${filename.replaceAll('.tar.xz', '').replaceAll('.tar.gz', '')}.zip';
 
       if (kIsWeb) {
         // Fetch the zip bytes and trigger a single browser download.

@@ -2144,8 +2144,6 @@ dependencies = [
     { name = "pillow" },
     { name = "pyyaml" },
     { name = "requests" },
-    { name = "tensorflow", marker = "platform_machine == 'aarch64' or platform_machine == 'arm64'" },
-    { name = "tensorflow-cpu", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64'" },
     { name = "tf-keras" },
     { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
     { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform != 'darwin'" },
@@ -2175,7 +2173,6 @@ dev = [
     { name = "types-pyyaml" },
     { name = "types-requests" },
     { name = "types-setuptools" },
-    { name = "types-tensorflow" },
 ]
 docs = [
     { name = "cloud-sptheme" },
@@ -2229,9 +2226,7 @@ requires-dist = [
     { name = "sphinx-copybutton", marker = "extra == 'docs'" },
     { name = "sphinx-new-tab-link", marker = "extra == 'docs'" },
     { name = "sphinxcontrib-mermaid", marker = "extra == 'docs'" },
-    { name = "tensorflow", marker = "platform_machine == 'aarch64' or platform_machine == 'arm64'", specifier = ">=2.18,<2.21" },
     { name = "tensorflow", marker = "extra == 'docs'", specifier = ">=2.18,<2.21" },
-    { name = "tensorflow-cpu", marker = "platform_machine != 'aarch64' and platform_machine != 'arm64'", specifier = ">=2.18,<2.21" },
     { name = "tf-keras", specifier = ">=2.18,<2.21" },
     { name = "torch", specifier = ">=2.10", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", specifier = ">=0.25", index = "https://download.pytorch.org/whl/cpu" },
@@ -2240,7 +2235,6 @@ requires-dist = [
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "types-requests", marker = "extra == 'dev'" },
     { name = "types-setuptools", marker = "extra == 'dev'" },
-    { name = "types-tensorflow", marker = "extra == 'dev'" },
     { name = "ultralytics", specifier = "~=8.3" },
     { name = "ultralytics", marker = "extra == 'docs'", specifier = "~=8.3" },
     { name = "zeroconf", specifier = "~=0.136" },
@@ -3035,40 +3029,6 @@ wheels = [
 ]
 
 [[package]]
-name = "tensorflow-cpu"
-version = "2.20.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "absl-py" },
-    { name = "astunparse" },
-    { name = "flatbuffers" },
-    { name = "gast" },
-    { name = "google-pasta" },
-    { name = "grpcio" },
-    { name = "h5py" },
-    { name = "keras" },
-    { name = "libclang" },
-    { name = "ml-dtypes" },
-    { name = "numpy" },
-    { name = "opt-einsum" },
-    { name = "packaging" },
-    { name = "protobuf" },
-    { name = "requests" },
-    { name = "setuptools" },
-    { name = "six" },
-    { name = "tensorboard" },
-    { name = "termcolor" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/62/acf40b822414f1e2b6cae8495d6ba0aeed66ac9ffcc2e43a9b82d7688da9/tensorflow_cpu-2.20.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c7a9224185818094ed95c4e114d3efe77241db35fbf0b75251fb2bf6222dd6a7", size = 258989246, upload-time = "2025-08-13T16:55:50.088Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/ec/d9f9ca497897aa5b4cbd8b0007d65d0130e079078a4bb0dfe82ca226f8d4/tensorflow_cpu-2.20.0-cp312-cp312-win_amd64.whl", hash = "sha256:1c91c84e604598151a9e4cd9d0683fe081408577d05f7f4e1c33d2316f0f2468", size = 331887086, upload-time = "2025-08-13T16:55:59.904Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/9e/594164db23e3e262da1a0e8983258811eff56e5af6b7b6da5eccccb8d4c7/tensorflow_cpu-2.20.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:da6e7791e5e10ec84e6225c45e04fee05f33d7b828c9b61cc905f4146f7c64b5", size = 259121810, upload-time = "2025-08-13T16:56:10.861Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/35/d0f37f218ffd63e41af52b31e0508ef488499be60956c7ac90d0caee0fc5/tensorflow_cpu-2.20.0-cp313-cp313-win_amd64.whl", hash = "sha256:510bb97f6f15337c7c45c113c20704662a07cd87d21b820748ae270ad07c5eda", size = 332012268, upload-time = "2025-08-13T16:56:21.907Z" },
-]
-
-[[package]]
 name = "termcolor"
 version = "3.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3313,20 +3273,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4b/90/796ac8c774a7f535084aacbaa6b7053d16fff5c630eff87c3ecff7896c37/types_setuptools-82.0.0.20260210.tar.gz", hash = "sha256:d9719fbbeb185254480ade1f25327c4654f8c00efda3fec36823379cebcdee58", size = 44768, upload-time = "2026-02-10T04:22:02.107Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3e/54/3489432b1d9bc713c9d8aa810296b8f5b0088403662959fb63a8acdbd4fc/types_setuptools-82.0.0.20260210-py3-none-any.whl", hash = "sha256:5124a7daf67f195c6054e0f00f1d97c69caad12fdcf9113eba33eff0bce8cd2b", size = 68433, upload-time = "2026-02-10T04:22:00.876Z" },
-]
-
-[[package]]
-name = "types-tensorflow"
-version = "2.18.0.20260224"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "types-protobuf" },
-    { name = "types-requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/af/cb/4914c2fbc1cf8a8d1ef2a7c727bb6f694879be85edeee880a0c88e696af8/types_tensorflow-2.18.0.20260224.tar.gz", hash = "sha256:9b0ccc91c79c88791e43d3f80d6c879748fa0361409c5ff23c7ffe3709be00f2", size = 258786, upload-time = "2026-02-24T04:06:45.613Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/1d/a1c3c60f0eb1a204500dbdc66e3d18aafabc86ad07a8eca71ea05bc8c5a8/types_tensorflow-2.18.0.20260224-py3-none-any.whl", hash = "sha256:6a25f5f41f3e06f28c1f65c6e09f484d4ba0031d6d8df83a39df9d890245eefc", size = 329746, upload-time = "2026-02-24T04:06:44.4Z" },
 ]
 
 [[package]]

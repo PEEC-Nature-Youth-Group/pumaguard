@@ -14,7 +14,6 @@ lxc profile create pumaguard
 lxc profile set pumaguard boot.autostart false
 lxc profile device add pumaguard root disk pool=default path=/
 lxc profile device add pumaguard eth0 nic parent=lxdbr0 name=eth0 nictype=bridged hwaddr=00:16:3e:00:00:01
-lxc profile device add pumaguard eth1 nic parent=lxdbr1 name=eth1 nictype=bridged hwaddr=00:16:3e:00:00:02
 
 PASSWORD=$(uv run ansible-vault view $(realpath $(dirname $0))/secrets.yaml | yq '.password')
 HASHED=$(openssl passwd ${PASSWORD})
@@ -29,12 +28,6 @@ network:
       match:
         macaddress: 00:16:3e:00:00:01
       set-name: eth0
-    enp6s0:
-      dhcp4: true
-      optional: true
-      match:
-        macaddress: 00:16:3e:00:00:02
-      set-name: wlan0
 EOF
 
 cat <<EOF | lxc profile set pumaguard user.user-data -
@@ -47,6 +40,10 @@ users:
       lock_passwd: false
 runcmd:
     - sudo -u pumaguard ssh-import-id lp:nicolasbock
+    - apt-get install -y linux-modules-extra-\$(uname -r)
+    - echo 'options mac80211_hwsim radios=1' > /etc/modprobe.d/mac80211_hwsim.conf
+    - echo 'mac80211_hwsim' > /etc/modules-load.d/mac80211_hwsim.conf
+    - modprobe mac80211_hwsim radios=1
 EOF
 
 lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:questing pumaguard

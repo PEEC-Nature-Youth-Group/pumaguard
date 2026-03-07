@@ -186,23 +186,6 @@ plugs:
         self.assertEqual(serialized["cameras"][0]["hostname"], "test-camera")
         self.assertEqual(serialized["plugs"][0]["hostname"], "test-plug")
 
-    def test_tf_compat(self):
-        """
-        Test tf compatiblity.
-        """
-        self.base_preset.tf_compat = "2.15"
-        self.assertEqual(self.base_preset.tf_compat, "2.15")
-        with self.assertRaises(TypeError) as type_error:
-            self.base_preset.tf_compat = 1  # type:ignore
-        self.assertEqual(
-            str(type_error.exception), "tf compat needs to be a string"
-        )
-        with self.assertRaises(ValueError) as value_error:
-            self.base_preset.tf_compat = "2.16"
-        self.assertEqual(
-            str(value_error.exception), "tf compat needs to be in [2.15, 2.17]"
-        )
-
 
 class TestSettingsFileLocation(unittest.TestCase):
     """

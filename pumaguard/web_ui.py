@@ -76,6 +76,10 @@ from pumaguard.web_routes.sync import (
 from pumaguard.web_routes.system import (
     register_system_routes,
 )
+from pumaguard.web_routes.wifi import (
+    apply_wifi_networks_from_settings,
+    register_wifi_routes,
+)
 
 if TYPE_CHECKING:
     from pumaguard.server import (
@@ -374,6 +378,8 @@ class WebUI:
 
         register_system_routes(self.app, self)
 
+        register_wifi_routes(self.app, self)
+
         # Register image events SSE route and store the notification callback
         self.image_notification_callback = register_images_events_routes(
             self.app, self
@@ -569,6 +575,9 @@ class WebUI:
 
         # Start mDNS service
         self._start_mdns()
+
+        # Re-apply any persisted wifi networks so wifi1 reconnects on restart
+        apply_wifi_networks_from_settings(self)
 
         # Start camera heartbeat monitoring
         self.heartbeat.start()

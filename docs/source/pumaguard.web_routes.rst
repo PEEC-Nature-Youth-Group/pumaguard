@@ -84,6 +84,14 @@ pumaguard.web\_routes.system module
    :show-inheritance:
    :undoc-members:
 
+pumaguard.web\_routes.wifi module
+---------------------------------
+
+.. automodule:: pumaguard.web_routes.wifi
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 

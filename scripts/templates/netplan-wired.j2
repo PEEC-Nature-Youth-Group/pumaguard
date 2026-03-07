@@ -1,6 +1,12 @@
+# Managed by Ansible - do not edit manually.
+
 network:
   version: 2
+  renderer: networkd
   ethernets:
     eth0:
-      renderer: NetworkManager
       dhcp4: true
+      optional: true
+      match:
+        macaddress: "{{ ansible_facts['eth0']['macaddress'] }}"
+      set-name: eth0

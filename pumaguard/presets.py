@@ -161,6 +161,13 @@ class Settings:
         self.device_auto_remove_enabled = True  # Enabled by default
         self.device_auto_remove_hours = 24  # Remove after 24 hours
 
+        # WiFi client networks for the USB wireless adapter (wifi1).
+        # Each entry is a dict with keys: ssid (str), psk (str, may be
+        # empty for open networks), priority (int, higher = preferred).
+        # Credentials are written at runtime by the PumaGuard wifi API
+        # to /etc/wpa_supplicant/wpa_supplicant-wifi1.conf.
+        self.wifi_networks: list[dict[str, str | int]] = []
+
         # Plug heartbeat monitoring settings
         self.plug_heartbeat_enabled = True
         self.plug_heartbeat_interval = 60  # Check interval in seconds
@@ -333,6 +340,7 @@ class Settings:
         self.cameras = settings.get("cameras", [])
         self.plugs = settings.get("plugs", [])
         self.device_history = settings.get("device-history", {})
+        self.wifi_networks = settings.get("wifi-networks", [])
 
         # Load camera heartbeat settings
         self.camera_heartbeat_enabled = settings.get(
@@ -422,6 +430,7 @@ class Settings:
             "cameras": self.cameras,
             "plugs": self.plugs,
             "device-history": self.device_history,
+            "wifi-networks": self.wifi_networks,
             "camera-heartbeat-enabled": self.camera_heartbeat_enabled,
             "camera-heartbeat-interval": self.camera_heartbeat_interval,
             "camera-heartbeat-method": self.camera_heartbeat_method,

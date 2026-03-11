@@ -127,7 +127,6 @@ class Settings:
         )
         self.deterrent_sound_files = ["deterrent_puma.mp3"]
         self.verification_path = "data/stable/stable_test"
-        self.batch_size = 16
         self.notebook_number = 1
         self.color_mode = "rgb"
         self.file_stabilization_extra_wait = 1
@@ -320,7 +319,6 @@ class Settings:
             )
         self.validation_no_lion_directories = validation_no_lions
         self.with_augmentation = settings.get("with-augmentation", False)
-        self.batch_size = settings.get("batch-size", 1)
         self.color_mode = settings.get("color-mode", "rgb")
         self.file_stabilization_extra_wait = settings.get(
             "file-stabilization-extra-wait", 1
@@ -405,7 +403,6 @@ class Settings:
             "deterrent-sound-files": self.deterrent_sound_files,
             "play-sound": self.play_sound,
             "volume": self.volume,
-            "batch-size": self.batch_size,
             "color-mode": self.color_mode,
             "file-stabilization-extra-wait": self.file_stabilization_extra_wait,
             "epochs": self.epochs,
@@ -884,24 +881,6 @@ class Settings:
         Set whether to use augment training data.
         """
         self._with_augmentation = with_augmentation
-
-    @property
-    def batch_size(self) -> int:
-        """
-        Get the batch size.
-        """
-        return self._batch_size
-
-    @batch_size.setter
-    def batch_size(self, batch_size: int):
-        """
-        Set the batch size.
-        """
-        if not isinstance(batch_size, int):
-            raise TypeError("batch_size must be int")
-        if batch_size <= 0:
-            raise ValueError("the batch-size needs to be a positive number")
-        self._batch_size = batch_size
 
     @property
     def play_sound(self) -> bool:

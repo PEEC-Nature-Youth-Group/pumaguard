@@ -885,7 +885,6 @@ class TestClassifyImageLegacy(unittest.TestCase):
         mock_prepare.return_value = np.zeros((1, 224, 224, 3))
 
         presets = MagicMock(spec=Settings)
-        presets.color_mode = "RGB"
         presets.image_dimensions = (224, 224)
         presets.base_output_directory = self.temp_dir
 
@@ -925,7 +924,6 @@ class TestClassifyImageLegacy(unittest.TestCase):
         mock_prepare.side_effect = Exception("Failed to load image")
 
         presets = MagicMock(spec=Settings)
-        presets.color_mode = "RGB"
         presets.image_dimensions = (224, 224)
         presets.base_output_directory = self.temp_dir
 

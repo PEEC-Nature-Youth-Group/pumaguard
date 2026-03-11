@@ -171,7 +171,6 @@ def classify_image(presets: Settings, image_path: str) -> float:
         taken for classification.
     """
     model_file = "model-ringtails.h5"
-    logger.debug('using color_mode "%s"', presets.color_mode)
     logger.debug("classifying image %s using external model", image_path)
     logger.debug("loading model %s", model_file)
 

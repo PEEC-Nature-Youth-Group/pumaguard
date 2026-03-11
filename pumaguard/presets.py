@@ -128,7 +128,6 @@ class Settings:
         self.deterrent_sound_files = ["deterrent_puma.mp3"]
         self.verification_path = "data/stable/stable_test"
         self.notebook_number = 1
-        self.color_mode = "rgb"
         self.file_stabilization_extra_wait = 1
         self.epochs = 300
         self.image_dimensions: tuple[int, int] = (128, 128)
@@ -319,7 +318,6 @@ class Settings:
             )
         self.validation_no_lion_directories = validation_no_lions
         self.with_augmentation = settings.get("with-augmentation", False)
-        self.color_mode = settings.get("color-mode", "rgb")
         self.file_stabilization_extra_wait = settings.get(
             "file-stabilization-extra-wait", 1
         )
@@ -403,7 +401,6 @@ class Settings:
             "deterrent-sound-files": self.deterrent_sound_files,
             "play-sound": self.play_sound,
             "volume": self.volume,
-            "color-mode": self.color_mode,
             "file-stabilization-extra-wait": self.file_stabilization_extra_wait,
             "epochs": self.epochs,
             "image-dimensions": list(self.image_dimensions),
@@ -717,28 +714,6 @@ class Settings:
         self._settings_file = filename
 
     @property
-    def color_mode(self) -> str:
-        """
-        Get the color_mode.
-        """
-        return self._color_mode
-
-    @color_mode.setter
-    def color_mode(self, mode: str):
-        """
-        Set the color_mode.
-        """
-        if not isinstance(mode, str):
-            raise TypeError("mode must be a string")
-        if mode not in ["rgb", "grayscale"]:
-            raise ValueError("color_mode must be either 'rgb' or 'grayscale'")
-        self._color_mode = mode
-        if mode == "grayscale":
-            self._number_color_channels = 1
-        elif mode == "rgb":
-            self._number_color_channels = 3
-
-    @property
     def number_color_channels(self) -> int:
         """
         The number of color channels.
@@ -753,10 +728,6 @@ class Settings:
         if channels not in [1, 3]:
             raise ValueError(f"illegal number of color channels ({channels})")
         self._number_color_channels = channels
-        if channels == 1:
-            self._color_mode = "grayscale"
-        elif channels == 3:
-            self._color_mode = "rgb"
 
     @property
     def image_dimensions(self) -> Tuple[int, int]:

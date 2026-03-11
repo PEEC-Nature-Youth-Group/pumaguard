@@ -15,7 +15,6 @@
   hosts: all
   become: true
   vars_files:
-    - wireless_credentials.yaml
   vars:
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
@@ -1071,6 +1070,21 @@
         dest: /etc/sudoers.d/pumaguard-dnsmasq
         content: |
           {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart dnsmasq.service
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+      tags:
+        - pumaguard
+
+    - name: Allow passwordless sudo for pumaguard to restart wpa_supplicant@wifi1.service
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pumaguard-wpa-supplicant
+        content: |
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart wpa_supplicant@wifi1.service
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl start wpa_supplicant@wifi1.service
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/systemctl stop wpa_supplicant@wifi1.service
+          {{ pumaguard_user }} ALL=(ALL) NOPASSWD: /usr/bin/tee /etc/wpa_supplicant/wpa_supplicant-wifi1.conf
         owner: root
         group: root
         mode: "0440"

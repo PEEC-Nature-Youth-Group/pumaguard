@@ -1,19 +1,20 @@
+# Managed by Ansible - do not edit manually.
+# WiFi credentials and network selection are managed at runtime by PumaGuard
+# via /etc/wpa_supplicant/wpa_supplicant-wifi1.conf and
+# wpa_supplicant@wifi1.service.
+
 network:
   version: 2
-  renderer: NetworkManager
+  renderer: networkd
   wifis:
     wifi1:
       optional: true
       dhcp4: true
       match:
-        name: wlx8c86dd781eed
+        # Match any USB Wi-Fi adapter regardless of brand. USB adapters
+        # get a wlx-prefixed name by default from udev (based on MAC address).
+        name: wlx*
       set-name: wifi1
-      access-points:
-        {% for network in wireless_networks %}
-        "{{ network.ssid }}":
-          {% if network.password %}
-          password: "{{ network.password }}"
-          {% else %}
-          {}
-          {% endif %}
-        {% endfor %}
+      # No access-points block here - credentials are written to
+      # /etc/wpa_supplicant/wpa_supplicant-wifi1.conf at runtime by
+      # the PumaGuard wifi API and applied by wpa_supplicant@wifi1.service.

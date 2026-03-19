@@ -225,6 +225,7 @@ def main():
     logger.info("Logging to: %s", log_file)
 
     if args.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
         logger.setLevel(logging.DEBUG)
 
     logger.debug("command line arguments: %s", args)

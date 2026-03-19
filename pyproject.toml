@@ -71,7 +71,7 @@ docs = [
     "sphinx-copybutton",
     "sphinx-new-tab-link",
     "sphinxcontrib-mermaid",
-    "tensorflow >= 2.18, < 2.21",
+    "tensorflow >= 2.18",
     "ultralytics ~= 8.3",
 ]
 

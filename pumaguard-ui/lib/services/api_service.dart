@@ -939,6 +939,61 @@ class ApiService {
     }
   }
 
+  /// Get current sensor readings from lm-sensors
+  Future<Map<String, dynamic>> getSensorsCurrent() async {
+    try {
+      final url = getApiUrl('/api/sensors/current');
+      debugPrint('[ApiService.getSensorsCurrent] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getSensorsCurrent] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to get sensor readings');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getSensorsCurrent] Exception: $e');
+      throw Exception('Failed to get sensor readings: $e');
+    }
+  }
+
+  /// Get historical sensor readings collected by lm-sensors.timer.
+  /// [hours] controls how far back to look (1–168).
+  Future<Map<String, dynamic>> getSensorsHistory({int hours = 1}) async {
+    try {
+      final url = getApiUrl('/api/sensors/history?hours=$hours');
+      debugPrint('[ApiService.getSensorsHistory] Requesting URL: $url');
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      debugPrint(
+        '[ApiService.getSensorsHistory] Response status: ${response.statusCode}',
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to get sensor history');
+      }
+    } catch (e) {
+      debugPrint('[ApiService.getSensorsHistory] Exception: $e');
+      throw Exception('Failed to get sensor history: $e');
+    }
+  }
+
   /// Get server time
   Future<Map<String, dynamic>> getServerTime() async {
     try {

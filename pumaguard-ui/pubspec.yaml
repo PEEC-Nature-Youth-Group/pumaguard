@@ -70,6 +70,9 @@ dependencies:
   # URL launcher for opening camera URL
   url_launcher: ^6.3.0
 
+  # Charting library for temperature graphs
+  fl_chart: ^0.70.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

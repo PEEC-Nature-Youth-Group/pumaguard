@@ -450,6 +450,12 @@
         name: lm-sensors.timer
         state: started
 
+    - name: Add pumaguard to audio group
+      ansible.builtin.user:
+        name: pumaguard
+        append: true
+        groups: [audio]
+
     - name: Set ALSA mixer volume to 100%
       ansible.builtin.command: amixer set PCM 100%
       register: alsa_volume

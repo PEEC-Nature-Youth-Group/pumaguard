@@ -308,7 +308,8 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
             if transport != "stdout":
                 skipped_transport += 1
                 logger.debug(
-                    "sensors/history: skipping entry with _TRANSPORT=%r, MESSAGE=%r",
+                    "sensors/history: skipping entry with"
+                    " _TRANSPORT=%r, MESSAGE=%r",
                     transport,
                     entry.get("MESSAGE", "")[:80],
                 )
@@ -318,7 +319,8 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
             if not inv_id:
                 skipped_no_inv_id += 1
                 logger.debug(
-                    "sensors/history: stdout entry has no _SYSTEMD_INVOCATION_ID, MESSAGE=%r",
+                    "sensors/history: stdout entry has no"
+                    " _SYSTEMD_INVOCATION_ID, MESSAGE=%r",
                     entry.get("MESSAGE", "")[:80],
                 )
                 continue
@@ -342,8 +344,8 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
             runs[inv_id]["lines"].append(message)
 
         logger.info(
-            "sensors/history: skipped %d JSON-errors, %d non-stdout, %d no-inv-id; "
-            "grouped into %d run(s)",
+            "sensors/history: skipped %d JSON-errors, %d non-stdout,"
+            " %d no-inv-id; grouped into %d run(s)",
             skipped_parse_error,
             skipped_transport,
             skipped_no_inv_id,
@@ -370,7 +372,8 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
                 ts_s = int(ts_us) / 1_000_000
             except (ValueError, TypeError) as exc:
                 logger.debug(
-                    "sensors/history: run %s... bad timestamp %r (%s), skipping",
+                    "sensors/history: run %s... bad timestamp %r (%s),"
+                    " skipping",
                     inv_id[:8],
                     ts_us,
                     exc,
@@ -386,14 +389,16 @@ def register_diagnostics_routes(app: "Flask", webui: "WebUI") -> None:
             )
             sensor_data = _parse_sensors_text(full_text)
             logger.info(
-                "sensors/history: run %s... parsed %d chip(s) with temperature data: %s",
+                "sensors/history: run %s... parsed %d chip(s)"
+                " with temperature data: %s",
                 inv_id[:8],
                 len(sensor_data),
                 list(sensor_data.keys()),
             )
             if not sensor_data:
                 logger.warning(
-                    "sensors/history: run %s... yielded no temperature readings, skipping",
+                    "sensors/history: run %s... yielded no temperature"
+                    " readings, skipping",
                     inv_id[:8],
                 )
                 continue

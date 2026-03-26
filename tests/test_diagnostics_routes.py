@@ -6,6 +6,9 @@
 
 import json
 import time
+from pathlib import (
+    Path,
+)
 from unittest.mock import (
     MagicMock,
     patch,
@@ -18,6 +21,7 @@ from flask import (
 
 import pumaguard
 from pumaguard.web_routes.diagnostics import (
+    _parse_sensors_text,
     register_diagnostics_routes,
 )
 from pumaguard.web_ui import (
@@ -586,12 +590,12 @@ def test_get_sensors_history_with_temp_json_fixture(test_app):
     pwmfan-isa-0000 (fan only) and rpi_volt-isa-0000 (voltage only) must be
     absent from the result because _parse_sensors_text filters them out.
     """
-    from pathlib import Path
-
     app, _ = test_app
     client = app.test_client()
 
-    fixture_path = Path(__file__).parent.parent / "temp.json"
+    fixture_path = (
+        Path(__file__).parent / "fixtures" / "lm_sensors_journal.json"
+    )
     fixture_content = fixture_path.read_text(encoding="utf-8")
 
     mock_result = MagicMock()
@@ -627,30 +631,30 @@ def test_get_sensors_history_with_temp_json_fixture(test_app):
     sensors = reading["sensors"]
 
     # cpu_thermal-virtual-0 must be present with temp1 = 45.8 °C
-    assert "cpu_thermal-virtual-0" in sensors, (
-        f"Expected cpu_thermal-virtual-0 in sensors, got: {list(sensors)}"
-    )
+    assert (
+        "cpu_thermal-virtual-0" in sensors
+    ), f"Expected cpu_thermal-virtual-0 in sensors, got: {list(sensors)}"
     assert sensors["cpu_thermal-virtual-0"]["temp1"]["temp_input"] == 45.8
 
     # rp1_adc-isa-0000 must be present with temp1 = 50.2 °C
-    assert "rp1_adc-isa-0000" in sensors, (
-        f"Expected rp1_adc-isa-0000 in sensors, got: {list(sensors)}"
-    )
+    assert (
+        "rp1_adc-isa-0000" in sensors
+    ), f"Expected rp1_adc-isa-0000 in sensors, got: {list(sensors)}"
     assert sensors["rp1_adc-isa-0000"]["temp1"]["temp_input"] == 50.2
 
     # Fan-only chip must be absent
-    assert "pwmfan-isa-0000" not in sensors, (
-        "pwmfan-isa-0000 should be filtered out (no temperature sensors)"
-    )
+    assert (
+        "pwmfan-isa-0000" not in sensors
+    ), "pwmfan-isa-0000 should be filtered out (no temperature sensors)"
 
     # Voltage-only chip must be absent
-    assert "rpi_volt-isa-0000" not in sensors, (
-        "rpi_volt-isa-0000 should be filtered out (no temperature sensors)"
-    )
+    assert (
+        "rpi_volt-isa-0000" not in sensors
+    ), "rpi_volt-isa-0000 should be filtered out (no temperature sensors)"
 
 
 def test_get_sensors_history_default_hours(test_app):
-    """Test GET /api/sensors/history defaults to 1 hour when ?hours= is absent."""
+    """Test GET /api/sensors/history defaults to 1 hour when ?hours= absent."""
     app, _ = test_app
     client = app.test_client()
 
@@ -718,8 +722,6 @@ def test_get_sensors_history_hours_param(test_app):
 
 def test_parse_sensors_text_empty():
     """_parse_sensors_text returns an empty dict for an empty string."""
-    from pumaguard.web_routes.diagnostics import _parse_sensors_text
-
     result = _parse_sensors_text("")
     assert result == {}
 
@@ -731,8 +733,6 @@ def test_parse_sensors_text_temp_only():
     MESSAGE fields from temp.json, which covers all four Pi chip types.
     Only the two chips with °C readings must appear in the result.
     """
-    from pumaguard.web_routes.diagnostics import _parse_sensors_text
-
     sensors_text = (
         "pwmfan-isa-0000\n"
         "Adapter: ISA adapter\n"
@@ -766,15 +766,13 @@ def test_parse_sensors_text_temp_only():
 
 
 def test_parse_sensors_text_no_blank_separator():
-    """_parse_sensors_text handles Pi-style output with no blank lines between chips.
+    """_parse_sensors_text handles Pi-style output: no blank lines between.
 
-    On the Raspberry Pi, ``sensors`` emits chip sections back-to-back without
-    a blank line separating them.  The parser must correctly associate sensor
-    value lines with the nearest preceding chip header even when there is no
-    blank-line reset between sections.
+    On the Raspberry Pi, ``sensors`` emits chip sections back-to-back
+    without a blank line separating them.  The parser must correctly
+    associate sensor value lines with the nearest preceding chip header
+    even when there is no blank-line reset between sections.
     """
-    from pumaguard.web_routes.diagnostics import _parse_sensors_text
-
     # Two chips, no blank line between them — Pi output style
     sensors_text = (
         "cpu_thermal-virtual-0\n"

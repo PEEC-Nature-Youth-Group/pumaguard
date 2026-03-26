@@ -15,6 +15,7 @@
   hosts: all
   become: true
   vars_files:
+    - wireless_credentials.yaml
   vars:
     swap_size: "{{ 6 * 1024 }}"
     wheelhouse_remote: /opt/pumaguard/wheels
@@ -449,6 +450,12 @@
         name: lm-sensors.timer
         state: started
 
+    - name: Add pumaguard to audio group
+      ansible.builtin.user:
+        name: pumaguard
+        append: true
+        groups: [audio]
+
     - name: Set ALSA mixer volume to 100%
       ansible.builtin.command: amixer set PCM 100%
       register: alsa_volume
@@ -614,6 +621,7 @@
       notify: Restart dnsmasq
       tags:
         - networking
+        - hostapd
 
     - name: Ensure dnsmasq.service.d drop-in directory exists
       ansible.builtin.file:
@@ -733,15 +741,15 @@
         - networking
         - hostapd
 
-    - name: Configure USB wireless adapter (wlx*)
-      ansible.builtin.template:
-        lstrip_blocks: true
-        trim_blocks: true
-        src: templates/netplan-wireless.j2
-        dest: /etc/netplan/91-pumaguard-wireless.yaml
-        mode: "0600"
-      tags:
-        - networking
+    # - name: Configure USB wireless adapter (wlx*)
+    #   ansible.builtin.template:
+    #     lstrip_blocks: true
+    #     trim_blocks: true
+    #     src: templates/netplan-wireless.j2
+    #     dest: /etc/netplan/91-pumaguard-wireless.yaml
+    #     mode: "0600"
+    #   tags:
+    #     - networking
 
     - name: Disable cloud-init network configuration
       ansible.builtin.copy:

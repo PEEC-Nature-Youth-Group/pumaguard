@@ -8,6 +8,7 @@ import '../services/api_service.dart';
 import '../utils/download_helper.dart';
 
 import 'dart:developer' as developer;
+import 'temperature_screen.dart';
 import 'wifi_settings_screen.dart';
 import 'log_viewer_screen.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1496,6 +1497,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
               icon: const Icon(Icons.wifi),
               label: const Text('WiFi Settings'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 48),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Temperature History Button
+            FilledButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TemperatureScreen(
+                      apiService: context.read<ApiService>(),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.thermostat),
+              label: const Text('Temperature History'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 48),
               ),

@@ -46,7 +46,7 @@ runcmd:
     - modprobe mac80211_hwsim radios=1
 EOF
 
-lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:questing pumaguard
+lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:noble pumaguard
 
 set +x
 echo -n "Starting VM: "

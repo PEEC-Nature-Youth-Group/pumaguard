@@ -22,7 +22,7 @@ TEST_NAME ?= pumaguard-test
 
 .venv:
 	uv venv
-	uv pip install --native-tls --upgrade pip
+	uv pip install --system-certs --upgrade pip
 
 .PHONY: clean
 clean:
@@ -36,7 +36,7 @@ apidoc: .venv
 .PHONY: docs
 docs: .venv
 	@echo "building documentation webpage"
-	uv sync --native-tls --extra docs --frozen
+	uv sync --system-certs --extra docs --frozen
 	. .venv/bin/activate && cd docs && sphinx-apidoc --output-dir source --force ../pumaguard
 	git ls-files --exclude-standard --others
 	git ls-files --exclude-standard --others | wc -l | grep "^0" --quiet
@@ -53,18 +53,18 @@ assemble:
 
 .PHONY: install
 install: assemble .venv
-	uv pip install --native-tls --editable .
+	uv pip install --system-certs --editable .
 
 .PHONY: install-dev
 install-dev: .venv
-	uv sync --native-tls --extra dev --frozen
+	uv sync --system-certs --extra dev --frozen
 
 .PHONY: test
 test: test-python test-ui
 
 .PHONY: test-python
 test-python: install-dev
-	timeout 300 uv run --native-tls --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
+	timeout 300 uv run --system-certs --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: lint-ui
 lint-ui:
@@ -89,15 +89,15 @@ lint: black pylint isort mypy bashate
 
 .PHONY: black
 black: install-dev
-	uv run --native-tls --frozen black --check pumaguard
+	uv run --system-certs --frozen black --check pumaguard
 
 .PHONY: pylint
 pylint: install-dev
-	uv run --native-tls --frozen pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
+	uv run --system-certs --frozen pylint --verbose --recursive=true --rcfile=pylintrc pumaguard tests scripts
 
 .PHONY: isort
 isort: install-dev
-	uv run --native-tls --frozen isort pumaguard tests scripts
+	uv run --system-certs --frozen isort pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev
@@ -105,7 +105,7 @@ mypy: install-dev
 
 .PHONY: bashate
 bashate: install-dev
-	uv run --native-tls --frozen bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
+	uv run --system-certs --frozen bashate -v -i E006 scripts/*sh pumaguard/completions/*sh
 
 .PHONY: ansible-lint
 ansible-lint: install-dev
@@ -159,7 +159,7 @@ check-functional:
 
 .PHONY: functional-python
 functional-python: install
-	$(MAKE) EXE="uv run --native-tls pumaguard" run-functional
+	$(MAKE) EXE="uv run --system-certs pumaguard" run-functional
 	$(MAKE) check-functional
 
 .PHONY: functional-snap
@@ -212,7 +212,7 @@ configure-vm: install-dev
 
 .PHONY: verify-poetry
 verify-poetry: install
-	$(MAKE) EXE="uv run --native-tls --frozen pumaguard" verify
+	$(MAKE) EXE="uv run --system-certs --frozen pumaguard" verify
 
 .PHONY: verify-snap
 verify-snap:
@@ -247,12 +247,12 @@ build-ui: install
 
 .PHONY: run-server
 run-server: install build-ui
-	uv run --native-tls --frozen pumaguard server
+	uv run --system-certs --frozen pumaguard server
 
 .PHONY: dev-backend
 dev-backend: build install
 	@echo "Starting PumaGuard backend in debug mode..."
-	uv run --native-tls --frozen pumaguard server --debug
+	uv run --system-certs --frozen pumaguard server --debug
 
 API_BASE_URL ?= http://localhost:5000
 

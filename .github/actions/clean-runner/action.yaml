@@ -4,9 +4,6 @@ description: "Clean runner by removing unneeded packages"
 runs:
   using: "composite"
   steps:
-    # - name: Check container free disk space
-    #   run: df --human-readable /
-    #   shell: bash
     - name: Get largest installed packages
       run: |
         set +o pipefail
@@ -14,18 +11,6 @@ runs:
         sort --human-numeric-sort --key 2 --reverse packages packages > packages-sorted
         head --lines 20 packages-sorted
       shell: bash
-    # - name: Check disk allocation
-    #   run: |
-    #     set +o pipefail
-    #     du --one-file-system --human-readable --max-depth 1 / 2> /dev/null > du-all
-    #     sort --human-numeric-sort --reverse du-all
-    #   shell: bash
-    # - name: Check disk allocation (/usr/local)
-    #   run: |
-    #     set +o pipefail
-    #     du --one-file-system --human-readable --max-depth 1 /usr/local 2> /dev/null > du-usr-local
-    #     sort --human-numeric-sort --reverse du-usr-local
-    #   shell: bash
     - name: Remove unnecessary packages on amd64
       run: |
         sudo apt-get remove --auto-remove --purge \
@@ -59,21 +44,3 @@ runs:
     - name: Get installed snaps
       run: snap list
       shell: bash
-    # - name: Check disk allocation
-    #   run: du --one-file-system --human-readable --max-depth 1 / 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-    #   shell: bash
-    # - name: Check disk allocation (/usr)
-    #   run: du --one-file-system --human-readable --max-depth 1 /usr 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-    #   shell: bash
-    # - name: Check disk allocation (/usr/local)
-    #   run: du --one-file-system --human-readable --max-depth 1 /usr/local 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-    #   shell: bash
-    # - name: Check disk allocation (/usr/local/{lib,share,bin})
-    #   run: du --one-file-system --human-readable --max-depth 1 /usr/local/{lib,share,bin} 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-    #   shell: bash
-    # - name: Check disk allocation (/opt)
-    #   run: du --one-file-system --human-readable --max-depth 1 /opt 2> /dev/null | sort --human-numeric-sort --reverse | head --lines 30
-    #   shell: bash
-    # - name: Check container free disk space
-    #   run: df --one-file-system --human-readable /
-    #   shell: bash

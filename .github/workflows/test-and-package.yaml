@@ -113,6 +113,13 @@ jobs:
 
   test-python:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
     needs:
       - lint-python
       - compress-submodules
@@ -143,7 +150,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends inotify-tools
+          sudo apt-get install --yes --no-install-recommends \
+            inotify-tools \
+            libgl1
       - name: Run tests
         run: make test-python
 

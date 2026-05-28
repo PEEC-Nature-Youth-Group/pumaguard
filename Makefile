@@ -210,8 +210,8 @@ configure-vm: install-dev
 	    DEVICE=$(TEST_VM) \
 	    ANSIBLE_SKIP_TAGS=$(or $(ANSIBLE_SKIP_TAGS),hostapd)
 
-.PHONY: verify-poetry
-verify-poetry: install
+.PHONY: verify-python
+verify-python: install
 	$(MAKE) EXE="uv run --system-certs --frozen pumaguard" verify
 
 .PHONY: verify-snap

@@ -218,8 +218,32 @@ class TestModelCache(unittest.TestCase):
                 self.assertEqual(os.environ["OMP_NUM_THREADS"], "1")
                 self.assertEqual(os.environ["OPENBLAS_NUM_THREADS"], "1")
                 self.assertEqual(os.environ["MKL_NUM_THREADS"], "1")
+                self.assertEqual(os.environ["NUMEXPR_NUM_THREADS"], "1")
+                self.assertEqual(os.environ["VECLIB_MAXIMUM_THREADS"], "1")
+                self.assertEqual(os.environ["TBB_NUM_THREADS"], "1")
                 mock_torch.set_num_threads.assert_called_once_with(1)
                 mock_torch.set_num_interop_threads.assert_called_once_with(1)
+
+        mock_yolo.assert_called_once_with(str(model_path))
+        self.assertEqual(result, mock_model)
+
+    @patch("pumaguard.utils.ultralytics.YOLO")
+    @patch("pumaguard.utils._is_low_memory_raspberry_pi")
+    def test_get_cached_model_detector_low_memory_pi_without_interop(
+        self, mock_is_pi, mock_yolo
+    ):
+        """Test safeguards when torch lacks set_num_interop_threads."""
+        mock_is_pi.return_value = True
+        mock_model = MagicMock()
+        mock_yolo.return_value = mock_model
+        mock_torch = MagicMock(spec=["set_num_threads"])
+        model_path = Path("/fake/path/yolo.pt")
+
+        with patch.dict(sys.modules, {"torch": mock_torch}):
+            with patch.dict(os.environ, {}, clear=True):
+                result = get_cached_model("detector", model_path)
+
+                mock_torch.set_num_threads.assert_called_once_with(1)
 
         mock_yolo.assert_called_once_with(str(model_path))
         self.assertEqual(result, mock_model)

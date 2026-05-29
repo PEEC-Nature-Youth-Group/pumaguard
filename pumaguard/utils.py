@@ -46,11 +46,17 @@ logger = logging.getLogger("PumaGuard")
 _MODEL_CACHE = {}
 _CACHE_LOCK = threading.Lock()
 _DETECTOR_RUNTIME_CONFIGURED = False
+# 4 GiB models often report slightly above 4 GiB total due to reserved regions,
+# so use a small buffer while still targeting the same low-memory class.
+_LOW_MEMORY_PI_MAX_MEM_KIB_THRESHOLD = 4_718_592  # 4.5 GiB in KiB
 
 
 def _is_low_memory_raspberry_pi() -> bool:
     """
-    Check if we are running on a Raspberry Pi with 4 GiB RAM (or less).
+    Return whether this host is a Raspberry Pi with relatively low memory.
+
+    The check validates ARM architecture, Raspberry Pi device model metadata,
+    and compares MemTotal from /proc/meminfo against a 4.5 GiB threshold.
     """
     if platform.machine() not in ("aarch64", "armv7l"):
         return False
@@ -68,7 +74,7 @@ def _is_low_memory_raspberry_pi() -> bool:
             for line in fd:
                 if line.startswith("MemTotal:"):
                     total_kib = int(line.split()[1])
-                    return total_kib <= 4 * 1024 * 1024 + 512 * 1024
+                    return total_kib <= _LOW_MEMORY_PI_MAX_MEM_KIB_THRESHOLD
     except (OSError, ValueError, IndexError):
         return False
 
@@ -78,7 +84,8 @@ def _is_low_memory_raspberry_pi() -> bool:
 def _configure_detector_runtime():
     """
     Configure a conservative detector runtime profile on low-memory Raspberry
-    Pi devices to reduce model-load instability.
+    Pi devices to reduce model-load instability by limiting BLAS and torch
+    worker threads.
     """
     global _DETECTOR_RUNTIME_CONFIGURED
 
@@ -103,7 +110,7 @@ def _configure_detector_runtime():
                 "Detected low-memory Raspberry Pi; "
                 "limiting torch/BLAS threads to reduce YOLO load failures."
             )
-        except Exception as e:  # pylint: disable=broad-exception-caught
+        except (ImportError, RuntimeError) as e:
             logger.warning(
                 "Could not fully configure torch runtime safeguards: %s", e
             )

@@ -6,6 +6,9 @@ priority ordering, capability filtering, error handling, and caching.
 """
 
 import unittest
+from types import (
+    SimpleNamespace,
+)
 from unittest.mock import (
     MagicMock,
     patch,
@@ -13,7 +16,9 @@ from unittest.mock import (
 
 from pumaguard.sound import (
     detect_volume_control,
+    playsound,
     reset_volume_control_cache,
+    set_volume,
 )
 
 
@@ -193,3 +198,88 @@ class TestDetectVolumeControl(unittest.TestCase):
         detect_volume_control()
 
         self.assertEqual(mock_run.call_count, 2)
+
+
+class TestPlaybackVolumeFallback(unittest.TestCase):
+    """Tests for playback behavior when ALSA volume control is unavailable."""
+
+    @staticmethod
+    def _mock_process():
+        return SimpleNamespace(
+            pid=1234,
+            terminate=MagicMock(),
+            wait=MagicMock(),
+        )
+
+    @patch("pumaguard.sound.subprocess.Popen")
+    @patch("pumaguard.sound.set_volume", return_value=False)
+    def test_playsound_uses_software_gain_fallback(
+        self,
+        mock_set_volume,
+        mock_popen,
+    ):
+        """When ALSA volume control fails, mpg123 fallback gain is used."""
+        mock_popen.return_value = self._mock_process()
+
+        playsound("deterrent.mp3", volume=80, blocking=False)
+
+        mock_set_volume.assert_called_once_with(80)
+        cmd = mock_popen.call_args.args[0]
+        self.assertEqual(
+            cmd,
+            [
+                "mpg123",
+                "-o",
+                "alsa,pulse",
+                "-f",
+                "26214",
+                "deterrent.mp3",
+            ],
+        )
+
+    @patch("pumaguard.sound.subprocess.Popen")
+    @patch("pumaguard.sound.set_volume", return_value=True)
+    def test_playsound_skips_software_gain_when_alsa_set_succeeds(
+        self,
+        mock_set_volume,
+        mock_popen,
+    ):
+        """When ALSA volume succeeds, no mpg123 software gain is added."""
+        mock_popen.return_value = self._mock_process()
+
+        playsound("deterrent.mp3", volume=80, blocking=False)
+
+        mock_set_volume.assert_called_once_with(80)
+        cmd = mock_popen.call_args.args[0]
+        self.assertEqual(
+            cmd,
+            ["mpg123", "-o", "alsa,pulse", "deterrent.mp3"],
+        )
+
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_returns_false_when_control_is_missing(self, mock_run):
+        """set_volume returns False when no ALSA playback control exists."""
+        mock_run.return_value = MagicMock(
+            returncode=0,
+            stdout=(
+                "Simple mixer control 'Capture',0\n"
+                "  Capabilities: cvolume cswitch cswitch-joined\n"
+            ).encode(),
+        )
+        reset_volume_control_cache()
+
+        self.assertFalse(set_volume(50))
+
+    @patch("pumaguard.sound.detect_volume_control", return_value=None)
+    @patch("pumaguard.sound.subprocess.run")
+    def test_set_volume_returns_false_when_detection_returns_none(
+        self,
+        mock_run,
+        _mock_detect,
+    ):
+        """
+        set_volume returns False immediately when control detection
+        fails.
+        """
+        self.assertFalse(set_volume(50))
+        mock_run.assert_not_called()

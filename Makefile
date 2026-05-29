@@ -84,7 +84,7 @@ build: install build-ui
 	UV_DEBUG=1 uv build --wheel
 
 .PHONY: lint
-lint: black pylint isort mypy bashate
+lint: black pylint isort --check-only mypy bashate
 	@echo "done linting"
 
 .PHONY: black

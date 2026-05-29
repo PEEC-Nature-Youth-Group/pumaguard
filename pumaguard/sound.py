@@ -24,6 +24,9 @@ _VOLUME_CONTROL_PRIORITY = [
     "Lineout",
 ]
 
+# Maximum software gain value accepted by mpg123's "-f" flag.
+_MPG123_MAX_GAIN = 32768
+
 # Cached result of detect_volume_control() so we only probe amixer once per
 # process lifetime.
 _DETECTED_VOLUME_CONTROL: Union[str, None] = None
@@ -190,14 +193,16 @@ def get_volume(control: Optional[str] = None) -> Optional[int]:
         return None
 
 
-def set_volume(volume: int, control: Optional[str] = None):
-    """
-    Set the ALSA mixer volume using amixer.
+def set_volume(volume: int, control: Optional[str] = None) -> bool:
+    """Set ALSA volume and return success status.
 
     Args:
         volume: Volume level from 0-100
         control: ALSA mixer control name.  When ``None`` (the default) the
         control is auto-detected via :func:`detect_volume_control`.
+
+    Returns:
+        True when volume was successfully applied, False otherwise.
     """
     if control is None:
         control = detect_volume_control()
@@ -205,7 +210,7 @@ def set_volume(volume: int, control: Optional[str] = None):
             logger.warning(
                 "Could not determine ALSA volume control; skipping set_volume"
             )
-            return
+            return False
     logger.info(
         "Setting ALSA volume: control=%s, volume=%d%%", control, volume
     )
@@ -225,12 +230,12 @@ def set_volume(volume: int, control: Optional[str] = None):
                 result.returncode,
                 result.stderr.decode().strip(),
             )
-        else:
-            logger.debug(
-                "ALSA volume set to %d%% on control %s", volume, control
-            )
+            return False
+        logger.debug("ALSA volume set to %d%% on control %s", volume, control)
+        return True
     except (subprocess.SubprocessError, FileNotFoundError) as e:
         logger.warning("Could not set ALSA volume via amixer: %s", e)
+        return False
 
 
 def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
@@ -256,8 +261,9 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
         blocking,
     )
 
-    # Set the ALSA mixer volume before playback
-    set_volume(volume)
+    # Set the ALSA mixer volume before playback. If ALSA controls are not
+    # available, fall back to mpg123 software gain.
+    volume_applied = set_volume(volume)
 
     try:
         with _process_lock:
@@ -270,12 +276,18 @@ def playsound(soundfile: str, volume: int = 80, blocking: bool = True):
                     pass
                 _CURRENT_PROCESS = None
 
-            cmd = [
-                "mpg123",
-                "-o",
-                "alsa,pulse",
-                soundfile,
-            ]
+            cmd = ["mpg123", "-o", "alsa,pulse"]
+            if not volume_applied:
+                clamped_volume = max(0, min(volume, 100))
+                software_gain = round(clamped_volume * _MPG123_MAX_GAIN / 100)
+                logger.info(
+                    "Using mpg123 software volume fallback: "
+                    "volume=%d%% scale=%d",
+                    clamped_volume,
+                    software_gain,
+                )
+                cmd.extend(["-f", str(software_gain)])
+            cmd.append(soundfile)
             logger.info("Executing command: %s", " ".join(cmd))
 
             # pylint: disable=consider-using-with

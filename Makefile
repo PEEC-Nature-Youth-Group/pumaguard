@@ -84,7 +84,7 @@ build: install build-ui
 	UV_DEBUG=1 uv build --wheel
 
 .PHONY: lint
-lint: black pylint isort --check-only mypy bashate
+lint: black pylint isort mypy bashate
 	@echo "done linting"
 
 .PHONY: black
@@ -97,7 +97,7 @@ pylint: install-dev
 
 .PHONY: isort
 isort: install-dev
-	uv run --system-certs --frozen isort pumaguard tests scripts
+	uv run --system-certs --frozen isort --check-only pumaguard tests scripts
 
 .PHONY: mypy
 mypy: install-dev

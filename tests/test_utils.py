@@ -7,6 +7,7 @@ Test utils
 import datetime
 import hashlib
 import os
+import sys
 import tempfile
 import threading
 import unittest
@@ -25,6 +26,7 @@ import PIL.Image
 from pumaguard.presets import (
     Settings,
 )
+import pumaguard.utils as utils
 from pumaguard.utils import (
     cache_model_two_stage,
     classify_image_two_stage,
@@ -166,10 +168,12 @@ class TestModelCache(unittest.TestCase):
     def setUp(self):
         """Clear model cache before each test."""
         clear_model_cache()
+        utils._DETECTOR_RUNTIME_CONFIGURED = False
 
     def tearDown(self):
         """Clear model cache after each test."""
         clear_model_cache()
+        utils._DETECTOR_RUNTIME_CONFIGURED = False
 
     @patch("pumaguard.utils.keras.models.load_model")
     def test_get_cached_model_classifier_first_load(self, mock_load):
@@ -191,6 +195,31 @@ class TestModelCache(unittest.TestCase):
         model_path = Path("/fake/path/yolo.pt")
 
         result = get_cached_model("detector", model_path)
+
+        mock_yolo.assert_called_once_with(str(model_path))
+        self.assertEqual(result, mock_model)
+
+    @patch("pumaguard.utils.ultralytics.YOLO")
+    @patch("pumaguard.utils._is_low_memory_raspberry_pi")
+    def test_get_cached_model_detector_low_memory_pi_safeguards(
+        self, mock_is_pi, mock_yolo
+    ):
+        """Test detector runtime safeguards on low-memory Raspberry Pi."""
+        mock_is_pi.return_value = True
+        mock_model = MagicMock()
+        mock_yolo.return_value = mock_model
+        mock_torch = MagicMock()
+        model_path = Path("/fake/path/yolo.pt")
+
+        with patch.dict(sys.modules, {"torch": mock_torch}):
+            with patch.dict(os.environ, {}, clear=True):
+                result = get_cached_model("detector", model_path)
+
+                self.assertEqual(os.environ["OMP_NUM_THREADS"], "1")
+                self.assertEqual(os.environ["OPENBLAS_NUM_THREADS"], "1")
+                self.assertEqual(os.environ["MKL_NUM_THREADS"], "1")
+                mock_torch.set_num_threads.assert_called_once_with(1)
+                mock_torch.set_num_interop_threads.assert_called_once_with(1)
 
         mock_yolo.assert_called_once_with(str(model_path))
         self.assertEqual(result, mock_model)

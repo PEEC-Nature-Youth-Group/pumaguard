@@ -9,6 +9,7 @@ import gc
 import hashlib
 import logging
 import os
+import platform
 import shutil
 import threading
 from pathlib import (
@@ -25,6 +26,12 @@ import numpy as np
 import PIL
 
 matplotlib.use("Agg")
+
+# Disable torch compile/inductor by default for inference stability across
+# constrained and non-standard ARM environments.
+os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
+os.environ.setdefault("TORCHINDUCTOR_DISABLE", "1")
+
 import ultralytics
 
 from pumaguard.model_downloader import (
@@ -38,6 +45,70 @@ logger = logging.getLogger("PumaGuard")
 
 _MODEL_CACHE = {}
 _CACHE_LOCK = threading.Lock()
+_DETECTOR_RUNTIME_CONFIGURED = False
+
+
+def _is_low_memory_raspberry_pi() -> bool:
+    """
+    Check if we are running on a Raspberry Pi with 4 GiB RAM (or less).
+    """
+    if platform.machine() not in ("aarch64", "armv7l"):
+        return False
+
+    try:
+        with open("/proc/device-tree/model", "rb") as fd:
+            model = fd.read().decode("utf-8", errors="ignore")
+    except OSError:
+        return False
+    if "Raspberry Pi" not in model:
+        return False
+
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as fd:
+            for line in fd:
+                if line.startswith("MemTotal:"):
+                    total_kib = int(line.split()[1])
+                    return total_kib <= 4 * 1024 * 1024 + 512 * 1024
+    except (OSError, ValueError, IndexError):
+        return False
+
+    return False
+
+
+def _configure_detector_runtime():
+    """
+    Configure a conservative detector runtime profile on low-memory Raspberry
+    Pi devices to reduce model-load instability.
+    """
+    global _DETECTOR_RUNTIME_CONFIGURED
+
+    if _DETECTOR_RUNTIME_CONFIGURED:
+        return
+
+    if _is_low_memory_raspberry_pi():
+        os.environ.setdefault("OMP_NUM_THREADS", "1")
+        os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+        os.environ.setdefault("MKL_NUM_THREADS", "1")
+        os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+        os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+        os.environ.setdefault("TBB_NUM_THREADS", "1")
+
+        try:
+            import torch
+
+            torch.set_num_threads(1)
+            if hasattr(torch, "set_num_interop_threads"):
+                torch.set_num_interop_threads(1)
+            logger.info(
+                "Detected low-memory Raspberry Pi; "
+                "limiting torch/BLAS threads to reduce YOLO load failures."
+            )
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            logger.warning(
+                "Could not fully configure torch runtime safeguards: %s", e
+            )
+
+    _DETECTOR_RUNTIME_CONFIGURED = True
 
 
 def get_cached_model(model_type: str, model_path: Path):
@@ -66,6 +137,7 @@ def get_cached_model(model_type: str, model_path: Path):
                     str(model_path)
                 )
             elif model_type == "detector":
+                _configure_detector_runtime()
                 _MODEL_CACHE[cache_key] = ultralytics.YOLO(str(model_path))
             else:
                 raise ValueError(f"Unknown model type: {model_type}")

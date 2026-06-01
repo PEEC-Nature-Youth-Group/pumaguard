@@ -483,7 +483,7 @@ jobs:
         uses: ./.github/actions/setup-python
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-      - name: Install dependencies
+      - name: Run verify target
         run: make verify-python
 
   verify-snap:

@@ -609,6 +609,25 @@ def register_settings_routes(app: "Flask", webui: "WebUI") -> None:
             assert file.filename is not None
             filename = secure_filename(file.filename)
 
+            # secure_filename() strips characters it can't represent in
+            # ASCII. For filenames made up entirely of such characters
+            # (e.g. non-Latin scripts or emoji), this can strip away the
+            # ".mp3" extension too, silently producing an unusable file.
+            # Guard against that here so we fail loudly instead.
+            if not filename or not filename.lower().endswith(".mp3"):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "Invalid filename. Please rename the file "
+                                "using letters, numbers, dashes, or "
+                                "underscores before uploading."
+                            )
+                        }
+                    ),
+                    400,
+                )
+
             # Ensure sound path exists
             sound_path = webui.presets.sound_path
             os.makedirs(sound_path, exist_ok=True)

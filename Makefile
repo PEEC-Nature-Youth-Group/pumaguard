@@ -19,9 +19,10 @@ ANSIBLE_SKIP_TAGS ?=
 ANSIBLE_TAGS ?=
 NEW_MODEL ?=
 TEST_NAME ?= pumaguard-test
+PYTHON_VERSION ?= 3.12
 
 .venv:
-	uv venv
+	uv venv --python $(PYTHON_VERSION)
 	uv pip install --system-certs --upgrade pip
 
 .PHONY: clean

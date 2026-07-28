@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -70,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: ./.github/actions/setup-python
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Create UI version
@@ -125,7 +125,7 @@ jobs:
       - compress-submodules
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: false
       - uses: ./.github/actions/clean-runner
@@ -162,7 +162,7 @@ jobs:
       - lint-ui
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -175,7 +175,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -203,7 +203,7 @@ jobs:
       - build
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
         with:
@@ -251,7 +251,7 @@ jobs:
       - get-version
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -302,7 +302,7 @@ jobs:
       - get-version
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
         with:
@@ -342,7 +342,7 @@ jobs:
     permissions: write-all
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
       - uses: ./.github/actions/clean-runner
       - name: Upload release artifacts
@@ -382,7 +382,7 @@ jobs:
       - build
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
         with:
@@ -427,7 +427,7 @@ jobs:
       - build-snap
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
       - name: Unpack models
@@ -463,7 +463,7 @@ jobs:
       - build
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
         with:
@@ -499,7 +499,7 @@ jobs:
       - build-snap
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
       - name: Unpack models

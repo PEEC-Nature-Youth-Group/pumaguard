@@ -4,7 +4,9 @@
 # Pytest fixtures intentionally redefine names, and some variables
 # are unpacked from fixtures but not used in all tests
 
+import io
 import json
+import subprocess
 from unittest.mock import (
     MagicMock,
     mock_open,
@@ -1001,3 +1003,298 @@ def test_update_settings_all_allowed_fields(test_app):
     assert webui.presets.yolo_conf_thresh == 0.2
     assert webui.presets.yolo_max_dets == 500
     assert webui.presets.volume == 90
+
+
+# A minimal but well-formed MP3 payload: an ID3v2 header followed by
+# arbitrary bytes, which is enough to satisfy the signature check in
+# `_validate_mp3_file`.
+VALID_MP3_BYTES = b"ID3" + b"\x00" * 128
+
+
+def _mock_mpg123_success():
+    """Patch subprocess.run to simulate a successful mpg123 --test call."""
+    return patch(
+        "pumaguard.web_routes.settings.subprocess.run",
+        return_value=MagicMock(returncode=0),
+    )
+
+
+def test_upload_sound_success(test_app, tmp_path):
+    """Test POST /api/sounds/upload with a valid MP3 file."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "new_sound.mp3")}
+
+    with _mock_mpg123_success():
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    result = json.loads(response.data)
+    assert result["success"] is True
+    assert result["filename"] == "new_sound.mp3"
+    assert "size_mb" in result
+    assert (tmp_path / "new_sound.mp3").exists()
+    assert (tmp_path / "new_sound.mp3").read_bytes() == VALID_MP3_BYTES
+
+
+def test_upload_sound_no_file_provided(test_app, tmp_path):
+    """Test POST /api/sounds/upload with no file part in the request."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    response = client.post(
+        "/api/sounds/upload",
+        data={},
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert result["error"] == "No file provided"
+
+
+def test_upload_sound_no_filename(test_app, tmp_path):
+    """Test POST /api/sounds/upload with an empty filename."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "")}
+    response = client.post(
+        "/api/sounds/upload",
+        data=data,
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert result["error"] == "No file selected"
+
+
+def test_upload_sound_wrong_extension(test_app, tmp_path):
+    """Test POST /api/sounds/upload rejects non-MP3 extensions."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "sound.wav")}
+    response = client.post(
+        "/api/sounds/upload",
+        data=data,
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert "Unsupported file type" in result["error"]
+    assert not (tmp_path / "sound.wav").exists()
+
+
+def test_upload_sound_already_exists(test_app, tmp_path):
+    """Test POST /api/sounds/upload returns 409 for a duplicate filename."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    (tmp_path / "existing.mp3").write_bytes(VALID_MP3_BYTES)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "existing.mp3")}
+    response = client.post(
+        "/api/sounds/upload",
+        data=data,
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 409
+    result = json.loads(response.data)
+    assert "already exists" in result["error"]
+
+
+def test_upload_sound_empty_file(test_app, tmp_path):
+    """Test POST /api/sounds/upload rejects an empty file."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(b""), "empty.mp3")}
+    response = client.post(
+        "/api/sounds/upload",
+        data=data,
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert result["error"] == "Uploaded file is empty"
+    # The (empty) file should be cleaned up rather than left behind.
+    assert not (tmp_path / "empty.mp3").exists()
+
+
+def test_upload_sound_invalid_signature(test_app, tmp_path):
+    """Test POST /api/sounds/upload rejects a file with a bad MP3 header."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(b"this is not an mp3 file"), "bad.mp3")}
+    response = client.post(
+        "/api/sounds/upload",
+        data=data,
+        content_type="multipart/form-data",
+    )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert "does not appear to be a valid MP3" in result["error"]
+    assert not (tmp_path / "bad.mp3").exists()
+
+
+def test_upload_sound_mpg123_validation_fails(test_app, tmp_path):
+    """Test POST /api/sounds/upload rejects a file mpg123 can't play."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "corrupt.mp3")}
+    with patch(
+        "pumaguard.web_routes.settings.subprocess.run",
+        return_value=MagicMock(returncode=1),
+    ):
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert "MP3 file validation failed" in result["error"]
+    assert not (tmp_path / "corrupt.mp3").exists()
+
+
+def test_upload_sound_mpg123_timeout(test_app, tmp_path):
+    """Test POST /api/sounds/upload handles mpg123 timing out."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "slow.mp3")}
+    with patch(
+        "pumaguard.web_routes.settings.subprocess.run",
+        side_effect=subprocess.TimeoutExpired(cmd="mpg123", timeout=5),
+    ):
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 400
+    result = json.loads(response.data)
+    assert result["error"] == "File validation timeout"
+    assert not (tmp_path / "slow.mp3").exists()
+
+
+def test_upload_sound_mpg123_not_installed(test_app, tmp_path):
+    """Upload should still succeed if mpg123 isn't available."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "no_mpg123.mp3")}
+    with patch(
+        "pumaguard.web_routes.settings.subprocess.run",
+        side_effect=FileNotFoundError,
+    ):
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    result = json.loads(response.data)
+    assert result["success"] is True
+    assert (tmp_path / "no_mpg123.mp3").exists()
+
+
+def test_upload_sound_creates_sound_path_directory(test_app, tmp_path):
+    """Test POST /api/sounds/upload creates the sound directory if missing."""
+    app, webui = test_app
+    new_dir = tmp_path / "sounds_subdir"
+    webui.presets.sound_path = str(new_dir)
+    client = app.test_client()
+
+    assert not new_dir.exists()
+    data = {"file": (io.BytesIO(VALID_MP3_BYTES), "created_dir.mp3")}
+
+    with _mock_mpg123_success():
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    assert new_dir.exists()
+    assert (new_dir / "created_dir.mp3").exists()
+
+
+def test_upload_sound_sanitizes_filename(test_app, tmp_path):
+    """Test POST /api/sounds/upload sanitizes unsafe filenames."""
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    data = {
+        "file": (io.BytesIO(VALID_MP3_BYTES), "../../etc/my sound (1).mp3")
+    }
+
+    with _mock_mpg123_success():
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+    assert response.status_code == 200
+    result = json.loads(response.data)
+    assert result["filename"] == "etc_my_sound_1.mp3"
+    assert (tmp_path / "etc_my_sound_1.mp3").exists()
+    # Ensure no path traversal occurred outside of tmp_path.
+    assert list(tmp_path.iterdir()) == [tmp_path / "etc_my_sound_1.mp3"]
+
+
+def test_upload_sound_rejects_non_ascii_only_filename(test_app, tmp_path):
+    """Test upload rejects filenames that sanitize away entirely.
+
+    Regression test: filenames made up solely of characters that
+    `secure_filename()` cannot represent in ASCII (e.g. non-Latin
+    scripts or emoji) used to be silently saved without their ".mp3"
+    extension, causing the upload to "succeed" while producing a sound
+    file that could never be listed or played back.
+    """
+    app, webui = test_app
+    webui.presets.sound_path = str(tmp_path)
+    client = app.test_client()
+
+    for filename in ("哆哮.mp3", "\U0001f3b5.mp3"):
+        data = {"file": (io.BytesIO(VALID_MP3_BYTES), filename)}
+        response = client.post(
+            "/api/sounds/upload",
+            data=data,
+            content_type="multipart/form-data",
+        )
+
+        assert response.status_code == 400
+        result = json.loads(response.data)
+        assert "Invalid filename" in result["error"]
+
+    # Nothing should have been written to disk.
+    assert not list(tmp_path.iterdir())

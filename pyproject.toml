@@ -23,11 +23,11 @@ authors = [
 dependencies = [
     "flask ~= 3.1",
     "flask-cors ~= 6.0",
-    "matplotlib ~= 3.10",
+    "matplotlib ~= 3.11",
     "packaging ~= 26.0",
     "pillow ~= 12.1",
     "pyyaml ~= 6.0",
-    "tf-keras >= 2.18, < 2.21",
+    "tf-keras >= 2.18, < 2.22",
     "torch >= 2.10",
     "torchvision >= 0.25",
     "ultralytics ~= 8.3",
@@ -111,6 +111,7 @@ line-length = 79
 [tool.mypy]
 exclude = [
     "^pumaguard-ui/",
+    "^training-data/",
 ]
 
 [tool.basedpyright]

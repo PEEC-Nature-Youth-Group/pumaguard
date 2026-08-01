@@ -268,7 +268,7 @@ server-container-test:
 		echo "Container $(TEST_NAME) exists, updating..."; \
 	else \
 		echo "Container $(TEST_NAME) does not exist, creating..."; \
-		lxc init --vm ubuntu:noble $(TEST_NAME); \
+		lxc init --vm --device root,size=50GiB --config limits.memory=4GiB --config limits.cpu=2 ubuntu:resolute $(TEST_NAME); \
 	fi
 	$(MAKE) server-container-update
 
@@ -290,16 +290,22 @@ server-container-update:
 		lxc config device add $(TEST_NAME) watch disk source=$${PWD}/watch path=/watch
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
 	lxc start $(TEST_NAME) 2>/dev/null || echo "Container already running"
-	lxc exec $(TEST_NAME) -- cloud-init status --wait || echo "ignoring error"
+	while ! lxc exec $(TEST_NAME) -- pgrep cloud-init; do sleep 1; done
+	lxc exec $(TEST_NAME) -- cloud-init status --wait
 	lxc exec $(TEST_NAME) -- apt-get update
-	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx upgrade \
+	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1 alsa-utils
+	lxc exec $(TEST_NAME) -- snap install astral-uv --classic
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp uv python install --system-certs $(PYTHON_VERSION)
+	PY_INTERPRETER=$$(lxc exec $(TEST_NAME) -- sudo --user ubuntu --login uv python find $(PYTHON_VERSION)); \
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp pipx upgrade \
 		--verbose \
+		--python $$PY_INTERPRETER \
 		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
 		pumaguard || \
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx install \
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp pipx install \
 		--force \
 		--verbose \
+		--python $$PY_INTERPRETER \
 		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
 		/$$(ls dist/*whl)
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath

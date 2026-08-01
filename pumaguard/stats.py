@@ -15,7 +15,7 @@ def plot_training_progress(filename, full_history):
     plt.plot(full_history.history["val_accuracy"], label="Validation Accuracy")
     plt.legend(loc="lower right")
     plt.ylabel("Accuracy")
-    plt.ylim([min(plt.ylim()), 1])
+    plt.ylim((min(plt.ylim()), 1.0))
     plt.title("Training and Validation Accuracy")
 
     plt.subplot(1, 2, 2)
@@ -23,7 +23,7 @@ def plot_training_progress(filename, full_history):
     plt.plot(full_history.history["val_loss"], label="Validation Loss")
     plt.legend(loc="upper right")
     plt.ylabel("Cross Entropy")
-    plt.ylim([0, 1.0])
+    plt.ylim((0.0, 1.0))
     plt.title("Training and Validation Loss")
 
     print("Created plot of learning history")

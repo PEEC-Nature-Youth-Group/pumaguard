@@ -65,7 +65,7 @@ test: test-python test-ui
 
 .PHONY: test-python
 test-python: install-dev
-	timeout 300 uv run --system-certs --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
+	timeout --kill-after 10 300 uv run --system-certs --frozen pytest --verbose --cov=pumaguard --cov-report=term-missing
 
 .PHONY: lint-ui
 lint-ui:

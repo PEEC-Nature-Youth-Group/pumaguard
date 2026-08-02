@@ -15,6 +15,7 @@ from pathlib import (
     Path,
 )
 from typing import (
+    Any,
     Tuple,
 )
 
@@ -36,7 +37,7 @@ from pumaguard.presets import (
 
 logger = logging.getLogger("PumaGuard")
 
-_MODEL_CACHE = {}
+_MODEL_CACHE: dict[str, Any] = {}
 _CACHE_LOCK = threading.Lock()
 
 

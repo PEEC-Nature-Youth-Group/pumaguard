@@ -2274,7 +2274,7 @@ requires-dist = [
     { name = "torch", specifier = ">=2.10", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", specifier = ">=0.25", index = "https://download.pytorch.org/whl/cpu" },
     { name = "types-flask-cors", marker = "extra == 'dev'" },
-    { name = "types-protobuf", marker = "extra == 'dev'" },
+    { name = "types-protobuf", marker = "extra == 'dev'", specifier = "~=7.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'" },
     { name = "types-requests", marker = "extra == 'dev'" },
     { name = "types-setuptools", marker = "extra == 'dev'" },

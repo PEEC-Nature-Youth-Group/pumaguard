@@ -52,7 +52,7 @@ dev = [
     "pytest-cov ~= 7.0",
     "pytest ~= 9.0",
     "types-Flask-Cors",
-    "types-protobuf",
+    "types-protobuf ~= 7.0",
     "types-PyYAML",
     "types-requests",
     "types-setuptools",

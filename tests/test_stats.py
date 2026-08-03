@@ -180,9 +180,9 @@ class TestPlotTrainingProgress:
 
         plot_training_progress("test_plot.png", mock_history)
 
-        # Check that ylim was set to [0, 1.0] for loss
+        # Check that ylim was set to (0.0, 1.0) for loss
         ylim_calls = mock_plt.ylim.call_args_list
-        assert call([0, 1.0]) in ylim_calls
+        assert call((0.0, 1.0)) in ylim_calls
 
     @patch("pumaguard.stats.plt")
     def test_plot_training_progress_saves_file(self, mock_plt):

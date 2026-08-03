@@ -280,25 +280,124 @@ def register_photos_routes(app: "Flask", webui: "WebUI") -> None:
             )
         return jsonify({"success": True, "message": "Photo deleted"})
 
+    @app.route("/api/photos", methods=["DELETE"])
+    def delete_photos_bulk():
+        """
+        Delete multiple photos (and their cached thumbnails) in a single
+        request.
 
-def _delete_thumbnails(source_path: str) -> None:
+        Accepts a JSON body of the form ``{"paths": ["a.jpg", "b.jpg"]}``.
+
+        This exists so that clients deleting many images at once (e.g. a
+        multi-select in the UI) can do so with one HTTP round-trip instead
+        of one request per file, which is significantly faster.
+        """
+        payload = flask_request.get_json(silent=True) or {}
+        filepaths = payload.get("paths")
+
+        if not isinstance(filepaths, list) or not filepaths:
+            return jsonify({"error": "'paths' must be a non-empty list"}), 400
+
+        all_directories = (
+            webui.image_directories + webui.classification_directories
+        )
+
+        deleted: list[str] = []
+        failed: list[dict[str, str]] = []
+        # Cache thumbnail-directory listings so a batch of files that share
+        # a directory only pays the os.listdir() cost once.
+        thumb_dir_cache: dict[str, list[str]] = {}
+
+        for filepath in filepaths:
+            if not isinstance(filepath, str):
+                failed.append({"path": str(filepath), "error": "Invalid path"})
+                continue
+
+            abs_filepath = _resolve_image_path(filepath, all_directories)
+            if abs_filepath is None:
+                failed.append({"path": filepath, "error": "Access denied"})
+                continue
+
+            if not os.path.isfile(abs_filepath):
+                failed.append({"path": filepath, "error": "File not found"})
+                continue
+
+            ext = os.path.splitext(abs_filepath)[1].lower()
+            if ext not in IMAGE_EXTS:
+                failed.append({"path": filepath, "error": "Access denied"})
+                continue
+
+            try:
+                _delete_thumbnails(abs_filepath, cache=thumb_dir_cache)
+                os.remove(abs_filepath)
+                deleted.append(filepath)
+            except OSError as exc:
+                failed.append({"path": filepath, "error": str(exc)})
+
+        # Notify SSE clients once for the whole batch rather than once per
+        # file.
+        if deleted and webui.image_notification_callback is not None:
+            webui.image_notification_callback(
+                "image_deleted",
+                {"paths": deleted},
+            )
+
+        status_code = 200 if not failed else 207
+        return (
+            jsonify(
+                {
+                    "success": not failed,
+                    "deleted": deleted,
+                    "failed": failed,
+                }
+            ),
+            status_code,
+        )
+
+
+def _delete_thumbnails(
+    source_path: str,
+    cache: dict[str, list[str]] | None = None,
+) -> None:
     """
     Remove all cached thumbnails for *source_path* from its ``.thumbs/``
     sub-directory.  Failures are logged but not raised so that the caller
     can continue with source-image deletion regardless.
+
+    Args:
+        source_path: Absolute path to the source image being deleted.
+        cache: Optional dict used by bulk-delete callers to reuse a
+            directory listing across multiple files that share the same
+            ``.thumbs/`` directory, avoiding repeated ``os.listdir()``
+            calls.
     """
     source_dir = os.path.dirname(source_path)
     stem = os.path.splitext(os.path.basename(source_path))[0]
     thumb_dir = os.path.join(source_dir, _THUMB_DIR)
 
-    if not os.path.isdir(thumb_dir):
-        return
+    if cache is not None:
+        if thumb_dir not in cache:
+            cache[thumb_dir] = (
+                os.listdir(thumb_dir) if os.path.isdir(thumb_dir) else []
+            )
+        entries = cache[thumb_dir]
+    else:
+        if not os.path.isdir(thumb_dir):
+            return
+        entries = os.listdir(thumb_dir)
 
     prefix = f"{stem}_"
-    for entry in os.listdir(thumb_dir):
+    remaining: list[str] = []
+    for entry in entries:
         if entry.startswith(prefix) and entry.endswith(".jpg"):
             try:
                 os.remove(os.path.join(thumb_dir, entry))
                 logger.debug("Deleted thumbnail %s", entry)
             except OSError as exc:
                 logger.warning("Could not delete thumbnail %s: %s", entry, exc)
+                remaining.append(entry)
+        else:
+            remaining.append(entry)
+
+    if cache is not None:
+        cache[thumb_dir] = remaining

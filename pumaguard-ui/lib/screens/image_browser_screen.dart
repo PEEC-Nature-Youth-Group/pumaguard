@@ -493,26 +493,28 @@ class _ImageBrowserScreenState extends State<ImageBrowserScreen> {
 
     try {
       final imagesToDelete = _selectedImages.toList();
-      int successCount = 0;
-      int failCount = 0;
 
-      for (final imagePath in imagesToDelete) {
-        try {
-          await apiService.deletePhoto(imagePath);
-          successCount++;
+      // Delete all selected images in a single request instead of looping
+      // one HTTP call per image, which is much faster for large selections.
+      final result = await apiService.deletePhotosBulk(imagesToDelete);
+      final deleted = (result['deleted'] as List<dynamic>? ?? [])
+          .cast<String>();
+      final failed = (result['failed'] as List<dynamic>? ?? []);
+      final successCount = deleted.length;
+      final failCount = failed.length;
 
-          // Remove from local state
-          setState(() {
-            _allImages.removeWhere((img) => img['full_path'] == imagePath);
-            _selectedImages.remove(imagePath);
-          });
-        } catch (e) {
-          failCount++;
-          developer.log(
-            'Failed to delete $imagePath: $e',
-            name: 'ImageBrowser',
-          );
-        }
+      for (final entry in failed) {
+        developer.log(
+          'Failed to delete ${entry['path']}: ${entry['error']}',
+          name: 'ImageBrowser',
+        );
+      }
+
+      if (deleted.isNotEmpty) {
+        setState(() {
+          _allImages.removeWhere((img) => deleted.contains(img['full_path']));
+          _selectedImages.removeAll(deleted);
+        });
       }
 
       if (mounted) {

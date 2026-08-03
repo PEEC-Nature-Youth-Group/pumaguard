@@ -505,3 +505,143 @@ class TestDeletePhoto:
         response = test_client.delete(f"/api/photos/{filename}")
         assert response.status_code == 200
         assert not os.path.exists(filepath)
+
+
+class TestDeletePhotosBulk:
+    """Test the delete_photos_bulk endpoint."""
+
+    def test_delete_photos_bulk_success(self, client, temp_dirs):
+        """Test successfully deleting multiple photos in one request."""
+        tmpdir1, tmpdir2 = temp_dirs
+        filenames = ["one.jpg", "two.png"]
+        filepaths = []
+        for i, filename in enumerate(filenames):
+            base = tmpdir1 if i == 0 else tmpdir2
+            filepath = os.path.join(base, filename)
+            Path(filepath).write_text(filename, encoding="utf-8")
+            filepaths.append(filepath)
+
+        for filepath in filepaths:
+            assert os.path.exists(filepath)
+
+        response = client.delete("/api/photos", json={"paths": filenames})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["success"] is True
+        assert sorted(data["deleted"]) == sorted(filenames)
+        assert data["failed"] == []
+
+        for filepath in filepaths:
+            assert not os.path.exists(filepath)
+
+    def test_delete_photos_bulk_partial_failure(self, client, temp_dirs):
+        """Test that a mix of valid and invalid paths returns 207."""
+        tmpdir1, _ = temp_dirs
+        filename = "exists.jpg"
+        filepath = os.path.join(tmpdir1, filename)
+        Path(filepath).write_text("image", encoding="utf-8")
+
+        response = client.delete(
+            "/api/photos",
+            json={"paths": [filename, "does_not_exist.jpg"]},
+        )
+        assert response.status_code == 207
+        data = response.get_json()
+        assert data["success"] is False
+        assert data["deleted"] == [filename]
+        assert len(data["failed"]) == 1
+        assert data["failed"][0]["path"] == "does_not_exist.jpg"
+
+        assert not os.path.exists(filepath)
+
+    def test_delete_photos_bulk_empty_paths_returns_400(self, client):
+        """Test that an empty 'paths' list is rejected."""
+        response = client.delete("/api/photos", json={"paths": []})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+
+    def test_delete_photos_bulk_missing_paths_returns_400(self, client):
+        """Test that a missing 'paths' key is rejected."""
+        response = client.delete("/api/photos", json={})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+
+    def test_delete_photos_bulk_calls_notification_callback_once(
+        self, app, webui_mock, temp_dirs
+    ):
+        """
+        Deleting a batch of photos must invoke the notification callback
+        exactly once, with all deleted paths, rather than once per file.
+        """
+        tmpdir1, _ = temp_dirs
+        notification_callback = MagicMock()
+        webui_mock.image_notification_callback = notification_callback
+
+        register_photos_routes(app, webui_mock)
+        test_client = app.test_client()
+
+        filenames = ["a.jpg", "b.jpg", "c.jpg"]
+        for filename in filenames:
+            Path(os.path.join(tmpdir1, filename)).write_text(
+                filename, encoding="utf-8"
+            )
+
+        response = test_client.delete(
+            "/api/photos", json={"paths": filenames}
+        )
+        assert response.status_code == 200
+
+        notification_callback.assert_called_once()
+        event_type, event_data = notification_callback.call_args[0]
+        assert event_type == "image_deleted"
+        assert sorted(event_data["paths"]) == sorted(filenames)
+
+    def test_delete_photos_bulk_no_notification_when_all_fail(
+        self, app, webui_mock
+    ):
+        """
+        If every path in the batch fails, the notification callback must
+        not be invoked.
+        """
+        notification_callback = MagicMock()
+        webui_mock.image_notification_callback = notification_callback
+
+        register_photos_routes(app, webui_mock)
+        test_client = app.test_client()
+
+        response = test_client.delete(
+            "/api/photos", json={"paths": ["missing.jpg"]}
+        )
+        assert response.status_code == 207
+        notification_callback.assert_not_called()
+
+    def test_delete_photos_bulk_shares_thumbnail_listing(
+        self, client, temp_dirs
+    ):
+        """
+        Test that thumbnails for multiple images in the same directory are
+        each correctly removed when deleted together in one batch.
+        """
+        tmpdir1, _ = temp_dirs
+        thumb_dir = os.path.join(tmpdir1, ".thumbs")
+        os.makedirs(thumb_dir)
+
+        filenames = ["img1.jpg", "img2.jpg"]
+        for filename in filenames:
+            Path(os.path.join(tmpdir1, filename)).write_text(
+                filename, encoding="utf-8"
+            )
+            stem = os.path.splitext(filename)[0]
+            Path(os.path.join(thumb_dir, f"{stem}_320x320.jpg")).write_text(
+                "thumb", encoding="utf-8"
+            )
+
+        response = client.delete("/api/photos", json={"paths": filenames})
+        assert response.status_code == 200
+        data = response.get_json()
+        assert sorted(data["deleted"]) == sorted(filenames)
+
+        # Both thumbnails should have been removed.
+        assert os.listdir(thumb_dir) == []

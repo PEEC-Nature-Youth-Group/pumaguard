@@ -417,6 +417,30 @@ class ApiService {
     }
   }
 
+  /// Delete multiple photos/images in a single request.
+  ///
+  /// This is much faster than calling [deletePhoto] in a loop, since it
+  /// avoids one HTTP round-trip per file. Returns a map with `deleted`
+  /// (list of successfully deleted paths) and `failed` (list of
+  /// `{path, error}` maps for files that could not be deleted).
+  Future<Map<String, dynamic>> deletePhotosBulk(List<String> filepaths) async {
+    try {
+      final response = await http.delete(
+        Uri.parse(getApiUrl('/api/photos')),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'paths': filepaths}),
+      );
+
+      final Map<String, dynamic> body = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 207) {
+        return body;
+      }
+      throw Exception(body['error'] ?? 'Failed to delete photos');
+    } catch (e) {
+      throw Exception('Failed to delete photos: $e');
+    }
+  }
+
   /// Test deterrent sound playback
   Future<bool> testSound() async {
     try {

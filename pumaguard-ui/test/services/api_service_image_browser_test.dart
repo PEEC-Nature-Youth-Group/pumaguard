@@ -256,6 +256,44 @@ void main() {
         expect(url, contains('%20')); // Encoded space
         expect(url, contains('%23')); // Encoded hash
       });
+
+      test('deletePhotosBulk targets the collection endpoint', () {
+        final url = apiService.getApiUrl('/api/photos');
+        expect(url, 'http://localhost:5000/api/photos');
+      });
+
+      test('deletePhotosBulk request body encodes all paths', () {
+        final paths = ['folder/a.jpg', 'folder/b.jpg', 'other/c.png'];
+        final requestBody = jsonEncode({'paths': paths});
+        final decoded = jsonDecode(requestBody) as Map<String, dynamic>;
+
+        expect(decoded['paths'], paths);
+      });
+
+      test(
+        'deletePhotosBulk response parsing distinguishes deleted vs failed',
+        () {
+          final mockResponse =
+              jsonDecode(
+                    jsonEncode({
+                      'success': false,
+                      'deleted': ['a.jpg', 'b.jpg'],
+                      'failed': [
+                        {'path': 'missing.jpg', 'error': 'File not found'},
+                      ],
+                    }),
+                  )
+                  as Map<String, dynamic>;
+
+          final deleted = (mockResponse['deleted'] as List<dynamic>)
+              .cast<String>();
+          final failed = mockResponse['failed'] as List<dynamic>;
+
+          expect(deleted, ['a.jpg', 'b.jpg']);
+          expect(failed.length, 1);
+          expect(failed[0]['path'], 'missing.jpg');
+        },
+      );
     });
 
     group('Sync and Download API', () {

@@ -5,6 +5,7 @@ The presets for each model.
 import copy
 import logging
 import os
+import shutil
 from pathlib import (
     Path,
 )
@@ -96,6 +97,52 @@ def get_default_settings_file() -> str:
     return str(xdg_settings_file)
 
 
+def get_default_sound_path() -> str:
+    """
+    Get the default sound directory using XDG standards or Snap user data.
+
+    Checks in order:
+    1. If running as snap: SNAP_USER_DATA/pumaguard/sounds
+    2. XDG_DATA_HOME/pumaguard/sounds (e.g., ~/.local/share/pumaguard/sounds)
+
+    Ensures the directory exists and copies bundled default sounds into it
+    if they exist in the package/repo directory and aren't present yet.
+
+    Returns:
+        Path to the sound directory as a string.
+    """
+    snap_user_data = os.environ.get("SNAP_USER_DATA")
+    if snap_user_data:
+        sound_dir = Path(snap_user_data) / "pumaguard" / "sounds"
+    else:
+        sound_dir = get_xdg_data_home() / "pumaguard" / "sounds"
+
+    sound_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy bundled default sound files if present and not already in
+    # sound_dir. This covers both the installed package layout
+    # (pumaguard/../pumaguard-sounds) and a source checkout.
+    package_sound_dirs = [
+        Path(__file__).resolve().parent.parent / "pumaguard-sounds",
+        Path(__file__).resolve().parent / "pumaguard-sounds",
+    ]
+    for pkg_dir in package_sound_dirs:
+        if pkg_dir.exists() and pkg_dir.is_dir():
+            for item in pkg_dir.iterdir():
+                if item.is_file() and not (sound_dir / item.name).exists():
+                    try:
+                        shutil.copy2(item, sound_dir / item.name)
+                    except OSError as e:
+                        logger.warning(
+                            "Could not copy bundled sound file %s to %s: %s",
+                            item,
+                            sound_dir,
+                            e,
+                        )
+
+    return str(sound_dir)
+
+
 class PresetError(Exception):
     """
     Docstring for PresetError
@@ -122,9 +169,7 @@ class Settings:
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"
         )
-        self.sound_path = os.path.join(
-            os.path.dirname(__file__), "../pumaguard-sounds"
-        )
+        self.sound_path = get_default_sound_path()
         self.deterrent_sound_files = ["deterrent_puma.mp3"]
         self.verification_path = "data/stable/stable_test"
         self.notebook_number = 1
@@ -250,9 +295,7 @@ class Settings:
             "classifier-model-filename", "colorbw_111325.h5"
         )
         self.puma_threshold = settings.get("puma-threshold", 0.5)
-        self.sound_path = settings.get(
-            "sound-path", os.path.dirname(__file__) + "../pumaguard-sounds"
-        )
+        self.sound_path = settings.get("sound-path", get_default_sound_path())
         # Support both old single file (string) and new multiple files (list)
         deterrent_sound = settings.get("deterrent-sound-files", None)
         if deterrent_sound is None:

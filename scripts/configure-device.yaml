@@ -18,8 +18,11 @@
     - wireless_credentials.yaml
   vars:
     swap_size: "{{ 6 * 1024 }}"
-    wheelhouse_remote: /opt/pumaguard/wheels
-    wheelhouse_local_base: "{{ playbook_dir }}/.wheelhouse"
+    # A single, explicit pip cache directory on the device. Using this (via
+    # `--cache-dir`) instead of pip's hidden default (usually ~root/.cache/pip)
+    # keeps wheel caching to exactly one, known location that is easy to
+    # inspect or clear (`rm -rf {{ pip_cache_dir }}`) if disk space gets tight.
+    pip_cache_dir: /opt/pumaguard/wheels
     pumaguard_watch_dir: "/home/pumaguard/watch_folder"
     pumaguard_user: "{{ ansible_user }}"
     pumaguard_group: "{{ ansible_group }}"
@@ -387,6 +390,10 @@
           - vim
           - vsftpd
         update_cache: true
+
+    - name: Clean up downloaded .deb package archives
+      ansible.builtin.command: apt-get clean
+      changed_when: false
 
     - name: Wait for snapd to be ready
       ansible.builtin.command: snap wait system seed.loaded
@@ -790,48 +797,29 @@
     #
     # PumaGuard installation
     #
-    # Note: The wheelhouse cache is used by BOTH installation methods (PyPI and local)
-    # to ensure dependencies (TensorFlow, Flask, etc.) are installed from cache rather
-    # than downloaded repeatedly. Only the pumaguard package itself differs between methods.
+    # Note: pip is pointed at a single explicit cache directory
+    # ({{ pip_cache_dir }}, via --cache-dir) instead of its hidden default
+    # (~root/.cache/pip). This is used by BOTH installation methods (PyPI
+    # and local) so dependencies (TensorFlow, PyTorch, etc.) are reused from
+    # cache rather than re-downloaded, while keeping wheel caching confined
+    # to exactly one, easy-to-clear location on the (often disk-constrained)
+    # device's SD card.
     #
 
-    - name: Compute local wheelhouse path for this host arch
-      ansible.builtin.set_fact:
-        wheelhouse_local: "{{ wheelhouse_local_base }}/{{ ansible_facts['architecture'] }}"
-      tags:
-        - pumaguard
-
-    - name: Ensure local wheelhouse exists
+    - name: Ensure pip cache directory exists
       ansible.builtin.file:
-        path: "{{ wheelhouse_local }}"
-        state: directory
-        mode: "0755"
-      delegate_to: localhost
-      become: false
-      tags:
-        - pumaguard
-
-    # - name: Pre-download wheels for pumaguard and deps
-    #   delegate_to: localhost
-    #   ansible.builtin.command:
-    #     argv:
-    #       - "{{ playbook_dir }}/../.venv/bin/pip"
-    #       - download
-    #       - --dest
-    #       - "{{ wheelhouse_local }}"
-    #       - pumaguard
-    #   changed_when: false
-    #   become: false
-    #   tags:
-    #     - pumaguard
-
-    - name: Ensure remote wheelhouse dir exists
-      ansible.builtin.file:
-        path: "{{ wheelhouse_remote }}"
+        path: "{{ pip_cache_dir }}"
         state: directory
         owner: root
         group: root
         mode: "0755"
+      tags:
+        - pumaguard
+
+    - name: Purge legacy pip cache from previous installs
+      ansible.builtin.file:
+        path: /root/.cache/pip
+        state: absent
       tags:
         - pumaguard
 
@@ -918,7 +906,7 @@
           - pumaguard
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
-        extra_args: "--upgrade --find-links={{ wheelhouse_remote }} -v"
+        extra_args: "--upgrade --cache-dir={{ pip_cache_dir }} -v"
       notify: Reload systemd and restart pumaguard
       when: pumaguard_install_method == "pypi"
       tags:
@@ -930,8 +918,16 @@
         virtualenv_site_packages: false
         executable: /opt/pumaguard/bin/pip
         state: present
-        extra_args: "--upgrade --find-links={{ wheelhouse_remote }}"
+        extra_args: "--upgrade --cache-dir={{ pip_cache_dir }}"
       notify: Reload systemd and restart pumaguard
+      when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
+      tags:
+        - pumaguard
+
+    - name: Remove temporary local wheel copy from device
+      ansible.builtin.file:
+        path: "/tmp/{{ local_wheel_filename }}"
+        state: absent
       when: pumaguard_install_method == "local" and local_wheel_files.matched > 0
       tags:
         - pumaguard

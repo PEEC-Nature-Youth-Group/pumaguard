@@ -523,6 +523,19 @@ def main(options: argparse.Namespace, presets: Settings):
     Main entry point.
     """
 
+    # Increase the default stack size used for newly created threads.
+    # Inference with YOLO/PyTorch, TensorFlow/Keras, and matplotlib
+    # rendering can involve deep native call stacks; the platform default
+    # thread stack size has been observed to be marginal enough to trigger
+    # native stack overflows (surfacing as SIGSEGV) when this work runs in
+    # a background thread instead of the main thread. This must be called
+    # before any threads (web UI, observers, classification workers) are
+    # created.
+    try:
+        threading.stack_size(64 * 1024 * 1024)
+    except (ValueError, RuntimeError) as exc:
+        logger.warning("Could not set thread stack size: %s", exc)
+
     sound_path = (
         options.sound_path
         if hasattr(options, "sound_path") and options.sound_path
@@ -600,14 +613,21 @@ def main(options: argparse.Namespace, presets: Settings):
         presets.intermediate_other_dir,
     )
 
-    manager.start_all()
-
+    # Warm (eagerly load) the models on the main thread *before* starting
+    # any observer/worker threads. TensorFlow/Keras and PyTorch/Ultralytics
+    # must be initialized for the first time on the main thread: doing so
+    # lazily inside a short-lived per-file worker thread has been observed
+    # to cause native segfaults.
     lock = acquire_lock()
     cache_model_two_stage(
         yolo_model_filename=presets.yolo_model_filename,
         classifier_model_filename=presets.classifier_model_filename,
+        print_progress=presets.print_download_progress,
+        warm=True,
     )
     lock.release()
+
+    manager.start_all()
 
     def handle_termination(signum, frame):  # pylint: disable=unused-argument
         logger.info("Received termination signal (%d). Stopping...", signum)

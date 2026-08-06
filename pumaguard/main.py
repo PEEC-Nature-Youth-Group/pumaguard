@@ -3,6 +3,7 @@ PumaGuard
 """
 
 import argparse
+import faulthandler
 import logging
 import os
 import sys
@@ -186,6 +187,12 @@ def main():
     """
     Main entry point.
     """
+    # Enable the fault handler immediately so that, if the process
+    # crashes with a fatal signal (e.g. SIGSEGV), a Python-level
+    # traceback of all threads is printed. Without this, a native
+    # crash produces no diagnostic information at all beyond the exit
+    # code (systemd only reports "status=11/SEGV").
+    faulthandler.enable(all_threads=True)
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("PumaGuard")
 
@@ -223,6 +230,26 @@ def main():
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     logger.info("Logging to: %s", log_file)
+
+    # Also dump fatal-signal tracebacks to a dedicated file next to the
+    # log file, in addition to stderr, so they survive even if journald
+    # truncates or rotates its output. The file object is intentionally
+    # kept open (and referenced) for the remainder of the process.
+    crash_log_path = os.path.join(
+        os.path.dirname(log_file) or ".", "pumaguard-crash.log"
+    )
+    try:
+        crash_log_file = open(  # pylint: disable=consider-using-with
+            crash_log_path, "a", encoding="utf-8"
+        )
+        faulthandler.enable(file=crash_log_file, all_threads=True)
+        logger.info(
+            "Fatal-signal tracebacks will be written to: %s", crash_log_path
+        )
+    except OSError as exc:
+        logger.warning(
+            "Could not open crash log file %s: %s", crash_log_path, exc
+        )
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)

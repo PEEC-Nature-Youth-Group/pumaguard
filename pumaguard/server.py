@@ -30,6 +30,7 @@ from pumaguard.lock_manager import (
 )
 from pumaguard.presets import (
     Settings,
+    get_default_sound_path,
 )
 from pumaguard.shelly_control import (
     set_shelly_switch,
@@ -67,9 +68,7 @@ def configure_subparser(parser: argparse.ArgumentParser):
         type=str,
         default=os.getenv(
             "PUMAGUARD_SOUND_PATH",
-            default=os.path.join(
-                os.path.dirname(__file__), "../pumaguard-sounds"
-            ),
+            default=get_default_sound_path(),
         ),
     )
     parser.add_argument(

@@ -256,16 +256,16 @@ def cache_model_two_stage(
         classifier_model_filename: Filename of the classifier weights.
         print_progress: Whether to print model download progress.
         warm: If True, also eagerly load the models into memory (via
-            ``get_cached_model``). This forces the (heavy) first-time
-            initialization of TensorFlow/Keras and PyTorch/Ultralytics to
-            happen right now, in the calling thread. This should always
-            be done from the main thread at startup: lazily initializing
-            these native ML frameworks for the first time inside a
-            short-lived worker thread (e.g. while handling the first
-            detected file) has been observed to cause native segfaults,
-            since some of their C/C++ internals (signal handlers used for
-            stack-overflow protection, OpenMP/BLAS thread pools, etc.)
-            assume they are first touched on the main thread.
+        ``get_cached_model``). This forces the (heavy) first-time
+        initialization of TensorFlow/Keras and PyTorch/Ultralytics to
+        happen right now, in the calling thread. This should always
+        be done from the main thread at startup: lazily initializing
+        these native ML frameworks for the first time inside a
+        short-lived worker thread (e.g. while handling the first
+        detected file) has been observed to cause native segfaults,
+        since some of their C/C++ internals (signal handlers used for
+        stack-overflow protection, OpenMP/BLAS thread pools, etc.)
+        assume they are first touched on the main thread.
     """
     classifier_model_path = ensure_model_available(
         classifier_model_filename, print_progress

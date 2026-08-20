@@ -53,7 +53,7 @@ assemble:
 	fi
 
 .PHONY: install
-install: assemble .venv
+install: .venv
 	uv pip install --system-certs --editable .
 
 .PHONY: install-dev

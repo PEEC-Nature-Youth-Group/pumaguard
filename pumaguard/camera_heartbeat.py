@@ -46,7 +46,7 @@ class CameraHeartbeat(DeviceHeartbeat):
         webui: "WebUI",
         interval: int = 60,
         enabled: bool = True,
-        check_method: str = "tcp",
+        check_method: str = "both",
         tcp_port: int = 80,
         tcp_timeout: int = 3,
         icmp_timeout: int = 2,
@@ -117,6 +117,7 @@ class CameraHeartbeat(DeviceHeartbeat):
                 timeout=self.icmp_timeout + 1,
                 check=False,
             )
+            logger.debug("ICMP result: %s", result.stdout)
             return result.returncode == 0
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             logger.debug("ICMP ping failed for %s: %s", ip_address, str(e))
@@ -138,6 +139,7 @@ class CameraHeartbeat(DeviceHeartbeat):
             sock.settimeout(self.tcp_timeout)
             result = sock.connect_ex((ip_address, port))
             sock.close()
+            logger.debug("TCP returned %d", result)
             return result == 0
         except (socket.error, OSError) as e:
             logger.debug(
@@ -158,6 +160,7 @@ class CameraHeartbeat(DeviceHeartbeat):
         Returns:
             True if camera is reachable, False otherwise
         """
+        logger.debug("Checking camera at %s", ip_address)
         if self.check_method == "icmp":
             return self._check_icmp(ip_address)
         if self.check_method == "tcp":

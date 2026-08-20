@@ -51,6 +51,11 @@ if TYPE_CHECKING:
         WebUI,
     )
 
+CAMERA_NAMES = [
+    "Microseven",
+    "Reolink",
+]
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,7 +148,7 @@ def register_dhcp_routes(
             is_historical_plug = device_history.get("type") == "plug"
 
             is_camera = (
-                (hostname and hostname.startswith("Microseven"))
+                (hostname and hostname.startswith(tuple(CAMERA_NAMES)))
                 or is_known_camera
                 or is_historical_camera
             )

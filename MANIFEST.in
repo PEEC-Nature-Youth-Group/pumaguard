@@ -1,3 +1,1 @@
-include pumaguard-sounds/cougar_call.mp3
-include pumaguard-sounds/deterrent_puma.mp3
 recursive-include pumaguard/pumaguard-ui *

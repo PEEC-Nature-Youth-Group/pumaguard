@@ -912,7 +912,7 @@
       tags:
         - pumaguard
 
-    - name: Install PumaGuard
+    - name: Install PumaGuard (local)
       ansible.builtin.pip:
         name: "file:///tmp/{{ local_wheel_filename }}"
         virtualenv_site_packages: false

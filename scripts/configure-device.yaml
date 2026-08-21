@@ -392,7 +392,8 @@
         update_cache: true
 
     - name: Clean up downloaded .deb package archives
-      ansible.builtin.command: apt-get clean
+      ansible.builtin.apt:
+        clean: true
       changed_when: false
 
     - name: Wait for snapd to be ready

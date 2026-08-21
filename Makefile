@@ -268,7 +268,7 @@ server-container-test:
 		echo "Container $(TEST_NAME) exists, updating..."; \
 	else \
 		echo "Container $(TEST_NAME) does not exist, creating..."; \
-		lxc init --vm --device root,size=50GiB --config limits.memory=4GiB --config limits.cpu=2 ubuntu:resolute $(TEST_NAME); \
+		lxc init --vm --device root,size=50GiB --config limits.memory=4GiB --config limits.cpu=2 ubuntu:noble $(TEST_NAME); \
 	fi
 	$(MAKE) server-container-update
 
@@ -279,15 +279,11 @@ server-container-update:
 	$(MAKE) build
 	[ -d wheelhouse ] && gio trash wheelhouse || echo "no wheelhouse, ignoring"
 	mkdir --parents wheelhouse
-	. .venv/bin/activate && python -m pip download --dest wheelhouse $$(ls dist/*.whl)
+	.venv/bin/python -m pip download --dest wheelhouse $$(ls dist/*.whl)
 	[ -d watch ] && gio trash watch || echo "no watch folder, ignoring"
 	mkdir --parents watch
-	lxc config device show $(TEST_NAME) | grep -q "^dist:" || \
-		lxc config device add $(TEST_NAME) dist disk source=$${PWD}/dist path=/dist
-	lxc config device show $(TEST_NAME) | grep -q "^wheelhouse:" || \
-		lxc config device add $(TEST_NAME) wheelhouse disk source=$${PWD}/wheelhouse path=/wheelhouse
-	lxc config device show $(TEST_NAME) | grep -q "^watch:" || \
-		lxc config device add $(TEST_NAME) watch disk source=$${PWD}/watch path=/watch
+	lxc config device list $(TEST_NAME) | grep -q "^pumaguard$$" || \
+		lxc config device add $(TEST_NAME) pumaguard disk source=$${PWD} path=/home/ubuntu/pumaguard
 	printf "uid 1000 $$(id --user)\ngid 1000 $$(id --group)" | lxc config set $(TEST_NAME) raw.idmap -
 	lxc start $(TEST_NAME) 2>/dev/null || echo "Container already running"
 	while ! lxc exec $(TEST_NAME) -- pgrep cloud-init; do sleep 1; done
@@ -295,21 +291,24 @@ server-container-update:
 	lxc exec $(TEST_NAME) -- apt-get update
 	lxc exec $(TEST_NAME) -- apt-get install --no-install-recommends --yes pipx mpg123 libgl1 alsa-utils
 	lxc exec $(TEST_NAME) -- snap install astral-uv --classic
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login uv python update-shell
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp uv python install --system-certs $(PYTHON_VERSION)
 	PY_INTERPRETER=$$(lxc exec $(TEST_NAME) -- sudo --user ubuntu --login uv python find $(PYTHON_VERSION)); \
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp pipx upgrade \
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp \
+	  pipx upgrade \
 		--verbose \
 		--python $$PY_INTERPRETER \
-		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
+		--pip-args="--no-index --find-links=/home/ubuntu/pumaguard/wheelhouse --verbose" \
 		pumaguard || \
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp pipx install \
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login env TMPDIR=/var/tmp \
+	  pipx install \
 		--force \
 		--verbose \
 		--python $$PY_INTERPRETER \
-		--pip-args="--no-index --find-links=/wheelhouse --verbose" \
-		/$$(ls dist/*whl)
+		--pip-args="--no-index --find-links=/home/ubuntu/pumaguard/wheelhouse --verbose" \
+		/$$(ls /home/ubuntu/dist/*whl)
 	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pipx ensurepath
-	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug /watch
+	lxc exec $(TEST_NAME) -- sudo --user ubuntu --login pumaguard server --debug /home/ubuntu/watch
 
 .PHONY: server-container-delete
 server-container-delete:

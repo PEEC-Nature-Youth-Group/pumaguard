@@ -66,7 +66,7 @@ def test_heartbeat_initialization(mock_webui):
     assert heartbeat.webui == mock_webui
     assert heartbeat.interval == 60
     assert heartbeat.enabled is True
-    assert heartbeat.check_method == "tcp"
+    assert heartbeat.check_method == "both"
     assert heartbeat.tcp_port == 80
     assert heartbeat.tcp_timeout == 3
     assert heartbeat.icmp_timeout == 2

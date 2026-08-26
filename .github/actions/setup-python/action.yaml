@@ -16,6 +16,7 @@ runs:
         python-version: ${{ inputs.python-version }}
     - uses: astral-sh/setup-uv@v7
       with:
+        version: "latest"
         enable-cache: auto
         cache-suffix: ${{ runner.arch }}
     - name: Install dependencies

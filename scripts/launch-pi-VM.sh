@@ -1,9 +1,9 @@
 #!/bin/bash
 
-set -e -u
+set -e -u -o pipefail
 
 declare force=0
-declare vm_name=""
+declare vm_name=${vm_name:=pumaguard}
 declare model="zero"
 declare -A resource_limits=(
     ["0"]="512M 64G 1"

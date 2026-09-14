@@ -82,7 +82,7 @@ class TestFolderObserver(unittest.TestCase):
             mock_wait.assert_called_once_with("test_folder/new_file.jpg")
             mock_cache.assert_called_with(
                 yolo_model_filename="yolov8s_101425.pt",
-                classifier_model_filename="colorbw_111325.h5",
+                classifier_model_filename="model_full_091426.h5",
                 print_progress=True,
             )
 

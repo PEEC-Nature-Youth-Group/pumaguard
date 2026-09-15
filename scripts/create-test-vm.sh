@@ -32,21 +32,33 @@ EOF
 
 cat <<EOF | lxc profile set pumaguard user.user-data -
 #cloud-config
+package_update: true
 users:
     - name: pumaguard
       shell: /bin/bash
       groups: [sudo, adm]
       passwd: ${HASHED}
       lock_passwd: false
+write_files:
+    - path: /etc/modprobe.d/mac80211_hwsim.conf
+      content: |
+        options mac80211_hwsim radios=1
+      permissions: '0644'
+    - path: /etc/modules-load.d/mac80211_hwsim.conf
+      content: |
+        mac80211_hwsim
+      permissions: '0644'
 runcmd:
     - sudo -u pumaguard ssh-import-id lp:nicolasbock
-    - apt-get install -y linux-modules-extra-\$(uname -r)
-    - echo 'options mac80211_hwsim radios=1' > /etc/modprobe.d/mac80211_hwsim.conf
-    - echo 'mac80211_hwsim' > /etc/modules-load.d/mac80211_hwsim.conf
+    - sudo apt-get install --assume-yes linux-modules-extra-\$(uname -r)
     - modprobe mac80211_hwsim radios=1
 EOF
 
-lxc launch --vm --device root,size=50GiB --profile pumaguard ubuntu:noble pumaguard
+lxc launch --vm \
+    --config limits.memory=2GiB \
+    --device root,size=50GiB \
+    --profile pumaguard \
+    ubuntu:noble pumaguard
 
 set +x
 echo -n "Starting VM: "

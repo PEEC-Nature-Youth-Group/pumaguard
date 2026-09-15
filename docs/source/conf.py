@@ -55,6 +55,7 @@ numfig = True
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'myst_parser',
     'sphinx_copybutton',
     'sphinx_new_tab_link',
     'sphinx.ext.autodoc',

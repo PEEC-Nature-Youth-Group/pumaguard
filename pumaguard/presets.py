@@ -164,7 +164,7 @@ class Settings:
         self.yolo_conf_thresh = 0.15
         self.yolo_max_dets = 2
         self.yolo_model_filename = "yolov8s_101425.pt"
-        self.classifier_model_filename = "colorbw_111325.h5"
+        self.classifier_model_filename = "model_full_091426.h5"
         self.puma_threshold = 0.5
         self.base_output_directory = os.path.join(
             os.path.dirname(__file__), "../pumaguard-models"

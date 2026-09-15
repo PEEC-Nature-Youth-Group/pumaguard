@@ -132,15 +132,15 @@ run-functional:
 
 .PHONY: check-functional
 check-functional:
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.5/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.92%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.5/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '98.33%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.10/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.99%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.10/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '100.00%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.15/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.99%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*lion\.15/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '99.95%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
@@ -148,11 +148,11 @@ check-functional:
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.7/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.00%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.7/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '0.01%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi; \
-	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.17/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '10.27%' ]; then \
+	if [ "$$(sed --quiet --regexp-extended '/^Predicted.*other\.17/s/^.*:\s*([0-9.%]+).*$$/\1/p' functional-test.output)" != '1.19%' ]; then \
 		cat functional-test.output; \
 		exit 1; \
 	fi

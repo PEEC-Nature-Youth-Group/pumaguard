@@ -37,6 +37,11 @@ and validated using a separate set of images.
 The proposed targeted mitigation workflow is shown in
 :numref:`figure-workflow`.
 
+Release Process
+---------------
+
+.. include:: RELEASE.rst
+
 Installing PumaGuard
 --------------------
 
@@ -135,6 +140,7 @@ Further Reading
    :maxdepth: 2
 
    About
+   RELEASE
    HLD
    Parts
    Camera_parts

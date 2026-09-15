@@ -64,6 +64,7 @@ extra-dev = [
 docs = [
     "cloud-sptheme",
     "matplotlib ~= 3.10",
+    "myst-parser",
     "pandas ~= 2.0",
     "pillow ~= 12.1",
     "playsound3",

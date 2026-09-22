@@ -88,7 +88,7 @@ def verify_file_checksum(file_path: Path, expected_sha256: str) -> bool:
     return computed_hash == expected_sha256
 
 
-def download_file(
+def download_file(  # pylint: disable=too-many-branches
     url: str,
     destination: Path,
     expected_sha256: str | None = None,
@@ -96,6 +96,14 @@ def download_file(
 ) -> bool:
     """
     Download a file from URL to destination with progress reporting.
+
+    The file is downloaded to a temporary path first and only moved into
+    place (atomically, via ``os.replace``) once the download (and, if
+    requested, the checksum verification) has succeeded. This guarantees
+    that a pre-existing, working file at ``destination`` is never deleted
+    or truncated just because a *replacement* download failed (e.g.
+    because the device has no network access) or was corrupted in
+    transit.
 
     Args:
         url: URL to download from
@@ -105,6 +113,7 @@ def download_file(
     Returns:
         bool: True if download and verification successful
     """
+    tmp_destination = destination.with_name(destination.name + ".part")
     try:
         logger.info("Downloading %s to %s", url, destination)
 
@@ -141,7 +150,7 @@ def download_file(
         total_size = int(response.headers.get("content-length", 0))
         downloaded = 0
 
-        with open(destination, "wb") as f:
+        with open(tmp_destination, "wb") as f:
             for chunk in response.iter_content(chunk_size=25 * 1024):
                 if chunk:
                     f.write(chunk)
@@ -159,25 +168,37 @@ def download_file(
 
         # Verify checksum if provided
         if expected_sha256:
-            if not verify_file_checksum(destination, expected_sha256):
+            if not verify_file_checksum(tmp_destination, expected_sha256):
                 logger.error(
                     "Checksum verification failed for %s", destination
                 )
-                destination.unlink()  # Remove corrupted file
+                tmp_destination.unlink()  # Remove corrupted temp file
                 return False
             logger.debug("Checksum verification passed for %s", destination)
+
+        # Only now that the download is known-good do we replace any
+        # existing file at the destination. This is atomic on POSIX
+        # filesystems, so a reader never observes a partially-written
+        # file at `destination`.
+        os.replace(tmp_destination, destination)
 
         logger.info("Successfully downloaded %s", destination)
         return True
 
-    except requests.HTTPError as e:
+    except requests.RequestException as e:
+        # Covers connection errors, DNS failures, timeouts, HTTP errors,
+        # etc. This is an expected failure mode (e.g. the device has no
+        # network access) and must never take down the pre-existing
+        # `destination` file with it.
         logger.error("Failed to download %s: %s", url, e)
-        if destination.exists():
-            destination.unlink()  # Clean up partial download
+        if tmp_destination.exists():
+            tmp_destination.unlink()  # Clean up partial download
         return False
 
     except Exception:
         logger.error("uncaught exception")
+        if tmp_destination.exists():
+            tmp_destination.unlink()  # Clean up partial download
         raise
 
 
@@ -190,6 +211,12 @@ def assemble_model_fragments(
     Assemble model fragments into a single file (equivalent
     to 'cat file* > output').
 
+    The fragments are assembled into a temporary file which is only
+    moved into place (atomically) once assembly and checksum
+    verification succeed. This ensures a pre-existing, working file at
+    ``output_path`` is never clobbered by a failed or incomplete
+    assembly attempt.
+
     Args:
         fragment_paths: List of paths to fragment files (in order)
         output_path: Path where assembled file should be written
@@ -197,15 +224,17 @@ def assemble_model_fragments(
     Returns:
         bool: True if assembly successful
     """
+    tmp_output_path = output_path.with_name(output_path.name + ".part")
     try:
         logger.info(
             "Assembling %d fragments into %s", len(fragment_paths), output_path
         )
 
-        with open(output_path, "wb") as output_file:
+        with open(tmp_output_path, "wb") as output_file:
             for i, fragment_path in enumerate(fragment_paths):
                 if not fragment_path.exists():
                     logger.error("Fragment %s does not exist", fragment_path)
+                    tmp_output_path.unlink()
                     return False
 
                 logger.debug(
@@ -225,21 +254,23 @@ def assemble_model_fragments(
 
         # Verify checksum if provided
         if expected_sha256:
-            if not verify_file_checksum(output_path, expected_sha256):
+            if not verify_file_checksum(tmp_output_path, expected_sha256):
                 logger.error(
                     "Checksum verification failed for %s", output_path
                 )
-                output_path.unlink()  # Remove corrupted file
+                tmp_output_path.unlink()  # Remove corrupted temp file
                 return False
             logger.debug("Checksum verification passed for %s", output_path)
+
+        os.replace(tmp_output_path, output_path)
 
         logger.info("Successfully assembled model: %s", output_path)
         return True
 
     except OSError as e:
         logger.error("Failed to assemble fragments: %s", e)
-        if output_path.exists():
-            output_path.unlink()  # Clean up partial file
+        if tmp_output_path.exists():
+            tmp_output_path.unlink()  # Clean up partial file
         return False
 
 
@@ -306,7 +337,8 @@ def ensure_model_available(
     logger.debug("model_path = %s", model_path)
 
     # Check if model already exists and is valid
-    if model_path.exists():
+    model_already_present = model_path.exists()
+    if model_already_present:
         model_info = MODEL_REGISTRY[model_name]
         sha256 = model_info.get("sha256")
         if isinstance(sha256, str) and verify_file_checksum(
@@ -318,62 +350,106 @@ def ensure_model_available(
             return model_path
         if not isinstance(sha256, str):
             raise RuntimeError("Could not get sha256")
+        # Intentionally *not* deleting the existing file here. Downloads
+        # below are written atomically and only replace `model_path` once
+        # a verified replacement is fully available, so the current
+        # (checksum-mismatched) file is kept as a fallback in case a
+        # refresh can't be completed (e.g. no network connectivity).
         logger.warning(
-            "Model %s exists but failed checksum, re-downloading", model_name
+            "Model %s exists at %s but failed checksum verification; "
+            "attempting to download a fresh copy. The existing file "
+            "will be kept and used as a fallback if the download "
+            "cannot be completed.",
+            model_name,
+            model_path,
         )
-        model_path.unlink()
 
     model_info = MODEL_REGISTRY[model_name]
 
-    # Handle fragmented models
-    if "fragments" in model_info:
-        fragment_urls: str | dict[str, dict[str, str]] = model_info[
-            "fragments"
-        ]
-        logger.info(
-            "Downloading fragmented model %s (%d fragments)",
-            model_name,
-            len(fragment_urls),
-        )
+    try:
+        # Handle fragmented models
+        if "fragments" in model_info:
+            fragment_urls: str | dict[str, dict[str, str]] = model_info[
+                "fragments"
+            ]
+            logger.info(
+                "Downloading fragmented model %s (%d fragments)",
+                model_name,
+                len(fragment_urls),
+            )
 
-        logger.debug("fragment_urls = %s", fragment_urls)
+            logger.debug("fragment_urls = %s", fragment_urls)
 
-        # Download all fragments
-        fragment_paths: list[Path] = []
-        if not isinstance(fragment_urls, dict):
-            raise RuntimeError("Unexpected type for fragment_urls")
-        for fragment_name, fragment_data in fragment_urls.items():
-            url = MODEL_BASE_URI + "/" + MODEL_TAG + "/" + fragment_name
-            if not download_file(
-                url,
-                models_dir / fragment_name,
-                fragment_data["sha256"],
-                print_progress=print_progress,
+            # Download all fragments
+            fragment_paths: list[Path] = []
+            if not isinstance(fragment_urls, dict):
+                raise RuntimeError("Unexpected type for fragment_urls")
+            for fragment_name, fragment_data in fragment_urls.items():
+                fragment_path = models_dir / fragment_name
+                fragment_sha256 = fragment_data["sha256"]
+
+                # If we already have a valid copy of this fragment
+                # (e.g. from a previous, partially-completed download),
+                # reuse it instead of hitting the network again. This
+                # also allows fully offline recovery when only the
+                # assembled model file was lost but its fragments are
+                # still cached locally.
+                if fragment_path.exists() and verify_file_checksum(
+                    fragment_path, fragment_sha256
+                ):
+                    logger.debug(
+                        "Fragment %s already cached at %s",
+                        fragment_name,
+                        fragment_path,
+                    )
+                else:
+                    url = (
+                        MODEL_BASE_URI + "/" + MODEL_TAG + "/" + fragment_name
+                    )
+                    if not download_file(
+                        url,
+                        fragment_path,
+                        fragment_sha256,
+                        print_progress=print_progress,
+                    ):
+                        raise RuntimeError(
+                            f"Failed to download fragment: {fragment_name}"
+                        )
+                fragment_paths.append(fragment_path)
+
+            # Assemble fragments into final model
+            sha256 = model_info.get("sha256")
+            if not isinstance(sha256, str):
+                raise RuntimeError("Could not get sha256 for model assembly")
+            if not assemble_model_fragments(
+                fragment_paths, model_path, sha256
             ):
                 raise RuntimeError(
-                    f"Failed to download fragment: {fragment_name}"
+                    f"Failed to assemble model fragments for: {model_name}"
                 )
-            fragment_paths.append(models_dir / fragment_name)
 
-        # Assemble fragments into final model
-        sha256 = model_info.get("sha256")
-        if not isinstance(sha256, str):
-            raise RuntimeError("Could not get sha256 for model assembly")
-        if not assemble_model_fragments(fragment_paths, model_path, sha256):
-            raise RuntimeError(
-                f"Failed to assemble model fragments for: {model_name}"
+        # Handle single-file models
+        else:
+            url = MODEL_BASE_URI + "/" + MODEL_TAG + "/" + model_name
+            sha256 = model_info.get("sha256")
+            if not isinstance(sha256, str):
+                raise RuntimeError(
+                    f"Invalid or missing sha256 for model: {model_name}"
+                )
+            if not download_file(url, model_path, sha256, print_progress):
+                raise RuntimeError(f"Failed to download model: {model_name}")
+    except RuntimeError:
+        if model_already_present and model_path.exists():
+            logger.error(
+                "Could not refresh model %s (download/assembly failed, "
+                "possibly due to lack of network access); continuing to "
+                "use the existing local copy at %s even though it failed "
+                "checksum verification.",
+                model_name,
+                model_path,
             )
-
-    # Handle single-file models
-    else:
-        url = MODEL_BASE_URI + "/" + MODEL_TAG + "/" + model_name
-        sha256 = model_info.get("sha256")
-        if not isinstance(sha256, str):
-            raise RuntimeError(
-                f"Invalid or missing sha256 for model: {model_name}"
-            )
-        if not download_file(url, model_path, sha256, print_progress):
-            raise RuntimeError(f"Failed to download model: {model_name}")
+            return model_path
+        raise
 
     return model_path
 

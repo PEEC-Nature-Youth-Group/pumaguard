@@ -306,6 +306,54 @@ def test_download_file_http_error(tmp_path):
         assert not destination.exists()
 
 
+def test_download_file_connection_error_returns_false(tmp_path):
+    """
+    Test download_file handles connection-level errors (e.g. no network
+    access / DNS resolution failure) the same way as HTTP errors: by
+    returning False instead of letting the exception propagate.
+    """
+    url = "https://example.com/missing.h5"
+    destination = tmp_path / "model.h5"
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.side_effect = requests.exceptions.ConnectionError(
+            "Failed to resolve host"
+        )
+
+        result = download_file(url, destination, print_progress=False)
+
+        assert result is False
+        assert not destination.exists()
+
+
+def test_download_file_failure_does_not_delete_existing_destination(
+    tmp_path,
+):
+    """
+    Test that a failed download never deletes/corrupts a pre-existing,
+    working file at the destination. This matters when refreshing a
+    model that already exists locally: if the device has no network
+    access, the previously-working model must be left intact.
+    """
+    url = "https://example.com/model.h5"
+    destination = tmp_path / "model.h5"
+    existing_content = b"already working model bytes"
+    destination.write_bytes(existing_content)
+
+    with patch("pumaguard.model_downloader.requests.get") as mock_get:
+        mock_get.side_effect = requests.exceptions.ConnectionError(
+            "Failed to resolve host"
+        )
+
+        result = download_file(url, destination, print_progress=False)
+
+        assert result is False
+        assert destination.exists()
+        assert destination.read_bytes() == existing_content
+        # No leftover temp file.
+        assert not (tmp_path / "model.h5.part").exists()
+
+
 def test_download_file_without_checksum(tmp_path):
     """Test download_file works without checksum verification."""
     url = "https://example.com/model.h5"
@@ -679,6 +727,95 @@ def test_ensure_model_available_download_failure_raises(tmp_path):
                     RuntimeError, match="Failed to download model"
                 ):
                     ensure_model_available(test_model, print_progress=False)
+
+
+def test_ensure_model_available_falls_back_to_existing_on_offline_failure(
+    tmp_path,
+):
+    """
+    If a cached model fails checksum verification but a replacement
+    can't be downloaded (e.g. the device is offline), the existing
+    local copy must be kept and returned instead of being deleted and
+    the caller crashing.
+    """
+    test_model = "test_offline_fallback.h5"
+    test_hash = hashlib.sha256(b"correct data").hexdigest()
+    existing_content = b"stale but still usable data"
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {test_model: {"sha256": test_hash}},
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+            model_path = tmp_path / test_model
+            model_path.write_bytes(existing_content)
+
+            with patch(
+                "pumaguard.model_downloader.download_file"
+            ) as mock_download:
+                mock_download.return_value = False
+
+                result = ensure_model_available(
+                    test_model, print_progress=False
+                )
+
+                assert result == model_path
+                # The stale file must still be there, untouched.
+                assert model_path.exists()
+                assert model_path.read_bytes() == existing_content
+
+
+def test_ensure_model_available_reuses_valid_cached_fragments(tmp_path):
+    """
+    Test that already-cached, checksum-valid fragments are reused
+    instead of being re-downloaded, allowing fully offline reassembly.
+    """
+    test_model = "test_cached_fragments.h5"
+    frag1_content = b"frag1"
+    frag2_content = b"frag2"
+    combined = frag1_content + frag2_content
+    test_hash = hashlib.sha256(combined).hexdigest()
+    frag1_hash = hashlib.sha256(frag1_content).hexdigest()
+    frag2_hash = hashlib.sha256(frag2_content).hexdigest()
+
+    with patch.dict(
+        "pumaguard.model_downloader.MODEL_REGISTRY",
+        {
+            test_model: {
+                "sha256": test_hash,
+                "fragments": {
+                    "test_cached_fragments.h5_aa": {"sha256": frag1_hash},
+                    "test_cached_fragments.h5_ab": {"sha256": frag2_hash},
+                },
+            }
+        },
+    ):
+        with patch(
+            "pumaguard.model_downloader.get_models_directory"
+        ) as mock_dir:
+            mock_dir.return_value = tmp_path
+            # Both fragments are already cached locally and valid.
+            (tmp_path / "test_cached_fragments.h5_aa").write_bytes(
+                frag1_content
+            )
+            (tmp_path / "test_cached_fragments.h5_ab").write_bytes(
+                frag2_content
+            )
+
+            with patch(
+                "pumaguard.model_downloader.download_file"
+            ) as mock_download:
+                result = ensure_model_available(
+                    test_model, print_progress=False
+                )
+
+                assert result == tmp_path / test_model
+                assert result.read_bytes() == combined
+                # No network calls should have been necessary.
+                mock_download.assert_not_called()
 
 
 # Tests for clear_model_cache

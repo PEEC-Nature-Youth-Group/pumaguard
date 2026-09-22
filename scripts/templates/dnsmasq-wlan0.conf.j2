@@ -58,8 +58,8 @@ dhcp-range={{ dnsmasq_ipv6_prefix }}:10,{{ dnsmasq_ipv6_prefix }}:2000,{{ dnsmas
 server={{ dnsmasq_wired_gateway }}
 
 # Enable logging
-log-queries
-log-dhcp
+# log-queries
+# log-dhcp
 
 # Call script when DHCP lease events occur.
 # script-on-renewal ensures the script is also called for routine DHCP

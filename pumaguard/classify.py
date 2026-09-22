@@ -2,8 +2,6 @@
 This script classifies images.
 """
 
-# pylint: disable=redefined-outer-name
-
 import argparse
 import logging
 

@@ -79,6 +79,7 @@ network:
 EOF
 
 # Write user-data: create the pumaguard user and import the SSH public key.
+make install-dev
 PASSWORD=$(uv run ansible-vault view \
     "$(realpath $(dirname $0))/secrets.yaml" | yq '.password')
 HASHED=$(openssl passwd "${PASSWORD}")

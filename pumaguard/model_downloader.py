@@ -2,6 +2,8 @@
 Model downloader utility for PumaGuard.
 """
 
+# pyright: reportAny=false
+# pyright: reportExplicitAny=false
 import datetime
 import hashlib
 import json
@@ -10,6 +12,9 @@ import os
 import shutil
 from pathlib import (
     Path,
+)
+from typing import (
+    Any,
 )
 
 import requests
@@ -86,6 +91,84 @@ def verify_file_checksum(file_path: Path, expected_sha256: str) -> bool:
 
     computed_hash = sha256_hash.hexdigest()
     return computed_hash == expected_sha256
+
+
+def _local_registry_path(models_dir: Path) -> Path:
+    return models_dir / "model-resgistry.json"
+
+
+def _load_local_registry(models_dir: Path) -> dict[str, Any]:
+    try:
+        with open(_local_registry_path(models_dir), encoding="utf-8") as fd:
+            return json.load(fd)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_local_registry(models_dir: Path, data: dict[str, Any]) -> None:
+    registry_file = _local_registry_path(models_dir)
+    tmp_file = registry_file.with_suffix(".json.tmp")
+    with open(tmp_file, "w", encoding="utf-8") as fd:
+        json.dump(data, fd, indent=2, ensure_ascii=False)
+    os.replace(tmp_file, registry_file)
+
+
+def get_cached_verification(
+    models_dir: Path, model_name: str
+) -> dict[str, Any] | None:
+    """
+    Get the cached checksum-verification record for a model, if any.
+    """
+    return (
+        _load_local_registry(models_dir)
+        .get("cached-models", {})
+        .get(model_name)
+    )
+
+
+def set_cached_verification(
+    models_dir: Path,
+    model_name: str,
+    sha256: str,
+    stat_result: os.stat_result,
+) -> None:
+    """
+    Record that ``model_name``'s checksum was successfully verified
+    against its current on-disk size/mtime, so future calls can skip
+    re-hashing the (potentially large) file as long as it hasn't
+    changed on disk and the registry's expected checksum hasn't
+    changed either.
+    """
+    data = _load_local_registry(models_dir)
+    data.setdefault("cached-models", {})[model_name] = {
+        "sha256": sha256,
+        "size": stat_result.st_size,
+        "mtime": stat_result.st_mtime,
+        "verified": datetime.datetime.now().isoformat(),
+    }
+    data["last-updated"] = datetime.datetime.now().isoformat()
+    _save_local_registry(models_dir, data)
+
+
+def is_verification_cached(
+    models_dir: Path,
+    model_name: str,
+    sha256: str,
+    stat_result: os.stat_result,
+) -> bool:
+    """
+    Check whether this exact file (matching size and mtime) has
+    already been verified against this exact expected checksum, so the
+    (potentially expensive) hash computation can be skipped.
+    """
+    cached = get_cached_verification(models_dir, model_name)
+    if cached is None:
+        return False
+    return (
+        cached.get("sha256") == sha256
+        and cached.get("size") == stat_result.st_size
+        and cached.get("mtime") == stat_result.st_mtime
+    )
 
 
 def download_file(  # pylint: disable=too-many-branches
@@ -341,15 +424,26 @@ def ensure_model_available(
     if model_already_present:
         model_info = MODEL_REGISTRY[model_name]
         sha256 = model_info.get("sha256")
-        if isinstance(sha256, str) and verify_file_checksum(
-            model_path, sha256
-        ):
+        if not isinstance(sha256, str):
+            raise RuntimeError("Could not get sha256")
+
+        stat_result = model_path.stat()
+        if is_verification_cached(models_dir, model_name, sha256, stat_result):
+            logger.debug(
+                "Model %s was already verified previously and hasn't "
+                + "changed since; skipping checksum recomputation for %s",
+                model_name,
+                model_path,
+            )
+            return model_path
+        if verify_file_checksum(model_path, sha256):
             logger.debug(
                 "Model %s already available at %s", model_name, model_path
             )
+            set_cached_verification(
+                models_dir, model_name, sha256, stat_result
+            )
             return model_path
-        if not isinstance(sha256, str):
-            raise RuntimeError("Could not get sha256")
         # Intentionally *not* deleting the existing file here. Downloads
         # below are written atomically and only replace `model_path` once
         # a verified replacement is fully available, so the current
@@ -451,6 +545,10 @@ def ensure_model_available(
             return model_path
         raise
 
+    # The model was just downloaded and/or assembled, which already
+    # verified its checksum; record that so the *next* call doesn't
+    # need to re-hash the file from scratch.
+    set_cached_verification(models_dir, model_name, sha256, model_path.stat())
     return model_path
 
 

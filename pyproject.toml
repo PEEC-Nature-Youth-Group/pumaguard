@@ -59,7 +59,7 @@ dev = [
 ]
 extra-dev = [
     "ipykernel ~= 7.2",
-    "plotly ~= 6.0",
+    "plotly~=7.1",
 ]
 docs = [
     "cloud-sptheme",

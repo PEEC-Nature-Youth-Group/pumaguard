@@ -98,5 +98,6 @@ users:
       passwd: ${HASHED}
       lock_passwd: false
 runcmd:
-    - sudo -u pumaguard ssh-import-id lp:nicolasbock
+    - sudo -u pumaguard -i mkdir --parents .ssh
+    - echo "$(cat ~/.ssh/id_rsa.pub)" | sudo -u pumaguard -i tee --append .ssh/authorized_keys
 EOF

@@ -15,6 +15,8 @@ from pathlib import (
 )
 from typing import (
     Any,
+    NotRequired,
+    TypedDict,
 )
 
 import requests
@@ -27,13 +29,41 @@ MODEL_BASE_URI = (
     "https://github.com/PEEC-Nature-Youth-Group/pumaguard-models/raw"
 )
 
+
+class ModelFragmentInfo(TypedDict):
+    """
+    Checksum metadata for a single fragment of a split model file.
+    """
+
+    sha256: str
+
+
+class ModelRegistryEntry(TypedDict):
+    """
+    Registry metadata for a single model file.
+
+    ``fragments`` is only present for models that are distributed as
+    multiple downloadable fragments that get concatenated together.
+    """
+
+    sha256: str
+    fragments: NotRequired[dict[str, ModelFragmentInfo]]
+
+
+# The schema of ``model-registry.yaml``: a mapping of model file name
+# to its registry entry. Note that this is a static type-checker hint
+# only; PyYAML does not validate the file's contents against it at
+# load time, so runtime checks are still used where this data feeds
+# security-relevant logic (e.g. checksum verification).
+ModelRegistry = dict[str, ModelRegistryEntry]
+
 _settings_file = Path(__file__).parent / "model-registry.yaml"
 if not _settings_file.exists():
     raise FileNotFoundError("Could not open model registry")
 
 with open(_settings_file, encoding="utf-8") as fd_registry:
-    MODEL_REGISTRY: dict[str, dict[str, str | dict[str, dict[str, str]]]] = (
-        yaml.load(fd_registry, Loader=yaml.SafeLoader)
+    MODEL_REGISTRY: ModelRegistry = yaml.load(
+        fd_registry, Loader=yaml.SafeLoader
     )
 
 
@@ -463,7 +493,7 @@ def ensure_model_available(
     try:
         # Handle fragmented models
         if "fragments" in model_info:
-            fragment_urls: str | dict[str, dict[str, str]] = model_info[
+            fragment_urls: dict[str, ModelFragmentInfo] = model_info[
                 "fragments"
             ]
             logger.info(
@@ -476,8 +506,6 @@ def ensure_model_available(
 
             # Download all fragments
             fragment_paths: list[Path] = []
-            if not isinstance(fragment_urls, dict):
-                raise RuntimeError("Unexpected type for fragment_urls")
             for fragment_name, fragment_data in fragment_urls.items():
                 fragment_path = models_dir / fragment_name
                 fragment_sha256 = fragment_data["sha256"]

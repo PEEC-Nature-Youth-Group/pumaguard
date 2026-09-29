@@ -54,7 +54,18 @@ poetry install
 
 ## Parallel Backend and UI Development
 
-The PumaGuard UI is maintained as a separate Git submodule under `pumaguard-ui/`. The Flask backend serves the built Flutter web app as static files. This architecture allows independent development and testing.
+PumaGuard is a monorepo: the Flutter web UI lives directly in
+`pumaguard-ui/` as a regular tracked directory (it is **not** a Git
+submodule, despite some historical references to the contrary — it
+was merged into this repository by the "Prepare for monorepo"
+commit). The Flask backend serves the built Flutter web app as static
+files. Backend and UI code are versioned and reviewed together in a
+single PR, but can still be developed and tested independently thanks
+to the dev servers below.
+
+Note that `pumaguard-models/` and `training-data/` are genuine Git
+submodules (see `.gitmodules`) — only `pumaguard-ui/` is a plain
+directory.
 
 ### Development Workflow
 
@@ -111,45 +122,20 @@ make build-ui
 
 ### Working with UI Changes
 
-#### Updating the UI Submodule
+Since `pumaguard-ui/` is a plain directory in this monorepo, UI changes
+are made and committed the same way as backend changes — no submodule
+pointer bookkeeping is required.
 
-To pull the latest UI changes from the tracked branch:
-
-```bash
-make update-ui
-```
-
-This fetches updates and merges them into your local submodule. Review the changes, then commit the submodule pointer update:
-
-```bash
-git commit -m "chore(ui): bump submodule to latest"
-```
-
-#### Making UI Changes
-
-1. **Create matching branches**: Create a feature branch in both repos with the same name for clarity
-2. **Work in the submodule**: `cd pumaguard-ui` and make your changes
-3. **Test with live backend**: Use `make dev-backend` (in parent repo) and `make dev-ui-web`
-4. **Commit UI changes**: Commit and push from within `pumaguard-ui/`
-5. **Update parent repo**: The parent repo's submodule pointer will automatically update. Commit this change:
-   ```bash
-   git add pumaguard-ui
-   git commit -m "chore(ui): update submodule to feature/my-feature"
-   ```
-6. **Submit PRs**: Open separate pull requests for both the UI repo and the parent repo
-
-#### Branch Pairing Strategy
-
-For changes that span both backend and UI:
-
-1. Create a feature branch in `pumaguard-ui`: `git checkout -b feature/my-feature`
-2. Push your UI changes and open a PR in the UI repository
-3. In the parent repo, create a matching branch: `git checkout -b feature/my-feature`
-4. Update the submodule pointer to your UI branch commit: `git add pumaguard-ui`
-5. Make your backend changes
-6. Open a PR in the parent repository (which will reference the UI PR via the submodule)
-
-When both PRs are approved, merge the UI PR first, then update the parent repo's submodule pointer to the merged commit before merging the parent PR.
+1. **Create a feature branch** in the main repo (covering both backend
+   and UI changes, if any): `git checkout -b feature/my-feature`
+2. **Make your changes** under `pumaguard-ui/` (Flutter/Dart code) and/or
+   the top-level `pumaguard/` package (Flask backend) as needed
+3. **Test with live backend**: use `make dev-backend` (in one terminal)
+   and `make dev-ui-web` (in another) to iterate with hot-reload
+4. **Commit and push**: commit everything (backend and UI changes
+   together) in the main repo and push your branch
+5. **Submit a single PR**: open one pull request in this repository
+   covering both the backend and UI changes
 
 ## Testing
 

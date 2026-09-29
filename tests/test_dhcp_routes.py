@@ -1113,6 +1113,288 @@ def test_clear_plugs_empty(test_app):
     assert "Cleared 0 plug record(s)" in data["message"]
 
 
+def _connected_plug(mac_address="11:22:33:44:55:66", mode="automatic"):
+    """Build a plug dict representing a connected Shelly plug."""
+    return {
+        "hostname": "ShellyPlug",
+        "ip_address": "192.168.52.150",
+        "mac_address": mac_address,
+        "last_seen": "2024-01-15T10:00:00Z",
+        "status": "connected",
+        "mode": mode,
+    }
+
+
+def test_set_plug_mode_no_json_data(test_app):
+    """Empty JSON body is rejected with 400."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "error" in json.loads(response.data)
+
+
+def test_set_plug_mode_invalid_mode(test_app):
+    """An unrecognized mode value is rejected with 400."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug()
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "bogus"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "Invalid mode" in json.loads(response.data)["error"]
+
+
+def test_set_plug_mode_plug_not_found(test_app):
+    """Setting the mode of an unknown plug returns 404."""
+    app, _webui = test_app
+    client = app.test_client()
+
+    response = client.put(
+        "/api/dhcp/plugs/99:99:99:99:99:99/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 404
+    data = json.loads(response.data)
+    assert data["error"] == "Plug not found"
+    assert data["mac_address"] == "99:99:99:99:99:99"
+
+
+def test_set_plug_mode_normalizes_mac_case(test_app):
+    """The mac address is looked up case-insensitively."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="off")
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode".upper().replace(
+            "/API/DHCP/PLUGS/", "/api/dhcp/plugs/"
+        ),
+        data=json.dumps({"mode": "automatic"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert webui.plugs["11:22:33:44:55:66"]["mode"] == "automatic"
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_automatic_skips_enforcement(mock_get, test_app):
+    """Switching to 'automatic' does not call out to the Shelly device."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="on")
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "automatic"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert webui.plugs["11:22:33:44:55:66"]["mode"] == "automatic"
+    mock_get.assert_not_called()
+    webui.presets.save.assert_called_once()
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_not_connected_skips_enforcement(mock_get, test_app):
+    """A disconnected plug's mode is updated without a Shelly HTTP call."""
+    app, webui = test_app
+    client = app.test_client()
+    plug = _connected_plug(mode="automatic")
+    plug["status"] = "disconnected"
+    webui.plugs["11:22:33:44:55:66"] = plug
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    mock_get.assert_not_called()
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_enforces_on(mock_get, test_app):
+    """Setting mode 'on' issues a Switch.Set?on=true call to the plug."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="automatic")
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_get.return_value = mock_response
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["status"] == "success"
+    assert data["plug"]["mode"] == "on"
+    mock_get.assert_called_once_with(
+        "http://192.168.52.150/rpc/Switch.Set?id=0&on=true", timeout=5
+    )
+    assert webui.presets.plugs == [
+        {
+            "hostname": "ShellyPlug",
+            "ip_address": "192.168.52.150",
+            "mac_address": "11:22:33:44:55:66",
+            "last_seen": "2024-01-15T10:00:00Z",
+            "status": "connected",
+            "mode": "on",
+        }
+    ]
+    webui.presets.save.assert_called_once()
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_enforces_off(mock_get, test_app):
+    """Setting mode 'off' issues a Switch.Set?on=false call to the plug."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="on")
+
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_get.return_value = mock_response
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "off"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    mock_get.assert_called_once_with(
+        "http://192.168.52.150/rpc/Switch.Set?id=0&on=false", timeout=5
+    )
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_enforcement_timeout_not_fatal(mock_get, test_app):
+    """A Shelly timeout while enforcing the mode does not fail the request."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="automatic")
+    mock_get.side_effect = requests.exceptions.Timeout()
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.data)["status"] == "success"
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_enforcement_request_exception_not_fatal(
+    mock_get, test_app
+):
+    """A generic requests exception while enforcing is logged, not fatal."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="automatic")
+    mock_get.side_effect = requests.exceptions.ConnectionError("refused")
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.data)["status"] == "success"
+
+
+@patch("pumaguard.web_routes.dhcp.requests.get")
+def test_set_plug_mode_enforcement_generic_exception_not_fatal(
+    mock_get, test_app
+):
+    """An unexpected exception while enforcing is logged, not fatal."""
+    app, webui = test_app
+    client = app.test_client()
+    webui.plugs["11:22:33:44:55:66"] = _connected_plug(mode="automatic")
+    mock_get.side_effect = RuntimeError("boom")
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "on"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.data)["status"] == "success"
+
+
+def test_set_plug_mode_save_failure_not_fatal(test_app):
+    """A settings-save failure is logged but does not fail the request."""
+    app, webui = test_app
+    client = app.test_client()
+    plug = _connected_plug(mode="automatic")
+    plug["status"] = "disconnected"
+    webui.plugs["11:22:33:44:55:66"] = plug
+    webui.presets.save.side_effect = OSError("disk full")
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "off"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response.data)["status"] == "success"
+
+
+class _ExplodingPlugs(dict):
+    """A dict whose .items() raises, to exercise the outer except clause."""
+
+    def items(self):
+        raise RuntimeError("unexpected failure enumerating plugs")
+
+
+def test_set_plug_mode_unexpected_exception(test_app):
+    """An unexpected exception anywhere in the handler yields a 500."""
+    app, webui = test_app
+    client = app.test_client()
+    plug = _connected_plug(mode="automatic")
+    plug["status"] = "disconnected"
+    webui.plugs = _ExplodingPlugs(
+        {"11:22:33:44:55:66": plug}
+    )
+
+    response = client.put(
+        "/api/dhcp/plugs/11:22:33:44:55:66/mode",
+        data=json.dumps({"mode": "off"}),
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    assert "Failed to set plug mode" in json.loads(response.data)["error"]
+
+
 def test_dhcp_event_unknown_device(test_app):
     """Test DHCP event with unknown device (not camera or plug)."""
     app, webui = test_app
@@ -1121,10 +1403,6 @@ def test_dhcp_event_unknown_device(test_app):
     payload = {
         "action": "add",
         "mac_address": "99:88:77:66:55:44",
-        "ip_address": "192.168.52.199",
-        "hostname": "UnknownDevice",
-        "timestamp": "2024-01-15T10:30:00Z",
-    }
 
     response = client.post(
         "/api/dhcp/event",

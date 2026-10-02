@@ -317,7 +317,7 @@ class Settings:
         self.volume = settings.get("volume", 80)
         self.notebook_number = settings.get("notebook", 1)
         self.epochs = settings.get("epochs", 1)
-        dimensions = settings.get("image-dimensions", [0, 0])
+        dimensions: list[int] = settings.get("image-dimensions", [0, 0])
         if (
             not isinstance(dimensions, list)
             or len(dimensions) != 2

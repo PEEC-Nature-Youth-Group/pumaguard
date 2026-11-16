@@ -31,6 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # Official Material Design widget library, split from the Flutter SDK.
+  material_ui: ^1.11.0
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8

@@ -128,7 +128,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: false
-      - uses: ./.github/actions/clean-runner
+      # - uses: ./.github/actions/clean-runner
       - uses: actions/download-artifact@v8
         with:
           name: submodule-models
